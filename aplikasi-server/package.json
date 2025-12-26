@@ -1,0 +1,33 @@
+{
+  "name": "specweave-server",
+  "version": "1.0.0",
+  "description": "SpecWeave Backend API - Convert User Stories to Gherkin",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "gherkin",
+    "user-story",
+    "ai",
+    "bdd"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.87.1",
+    "better-sqlite3": "^12.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.3.1",
+    "groq-sdk": "^0.7.0",
+    "node-fetch": "^3.3.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
