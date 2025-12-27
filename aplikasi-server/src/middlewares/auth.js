@@ -6,25 +6,45 @@ import { AppError } from './errorHandler.js';
  */
 export const authenticate = async (req, res, next) => {
   try {
+    console.log('🔐 [AUTH-MIDDLEWARE] Processing authentication...');
+    
     const authHeader = req.headers.authorization;
+    console.log('🔍 [AUTH-MIDDLEWARE] Auth header present:', !!authHeader);
+    
     const token = authService.extractToken(authHeader);
+    console.log('🔍 [AUTH-MIDDLEWARE] Token extracted:', !!token);
 
     if (!token) {
+      console.warn('⚠️ [AUTH-MIDDLEWARE] No token provided');
       throw new AppError('Access token is required', 401);
     }
 
+    console.log('🔍 [AUTH-MIDDLEWARE] Verifying token...');
     const user = await authService.verifyToken(token);
     
     if (!user) {
+      console.warn('⚠️ [AUTH-MIDDLEWARE] Token verification failed');
       throw new AppError('Invalid or expired token', 401);
     }
 
-    // Get full user profile
-    const userProfile = await authService.getUserProfile(user.id);
-    req.user = userProfile;
+    console.log('✅ [AUTH-MIDDLEWARE] User authenticated:', user.email);
+
+    // TEMPORARY FIX: Use user data from JWT token directly
+    // Skip getUserProfile since it's failing due to Supabase project mismatch
+    req.user = {
+      id: user.id,
+      email: user.email,
+      profile: {
+        name: user.email.split('@')[0], // Use email prefix as name
+        role: 'user',
+        preferences: {}
+      }
+    };
     
+    console.log('✅ [AUTH-MIDDLEWARE] Authentication successful (using JWT data)');
     next();
   } catch (error) {
+    console.error('❌ [AUTH-MIDDLEWARE] Authentication failed:', error.message);
     if (error instanceof AppError) {
       next(error);
     } else {

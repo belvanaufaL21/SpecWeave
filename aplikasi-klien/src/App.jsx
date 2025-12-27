@@ -10,6 +10,7 @@ import Landing from './pages/Landing';
 import ChatRefined from './pages/ChatRefined';
 import Dashboard from './pages/Dashboard';
 import JiraCallback from './pages/JiraCallback';
+import AuthCallback from './pages/AuthCallback';
 import MeteorResults from './pages/MeteorResults';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             
             {/* OAuth Callback Routes */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route 
               path="/auth/jira/callback" 
               element={

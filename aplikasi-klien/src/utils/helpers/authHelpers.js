@@ -15,15 +15,34 @@ export const createTimeoutPromise = (timeout, errorMessage) => {
 /**
  * Create default profile object
  * @param {string} userId - User ID
+ * @param {Object} userMetadata - Optional user metadata from OAuth providers
  * @returns {Object} - Default profile object
  */
-export const createDefaultProfile = (userId) => ({
-  id: userId,
-  name: null,
-  role: 'user',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-});
+export const createDefaultProfile = (userId, userMetadata = {}) => {
+  // Extract name from various sources
+  let name = null;
+  
+  if (userMetadata.name) {
+    name = userMetadata.name;
+  } else if (userMetadata.full_name) {
+    name = userMetadata.full_name;
+  } else if (userMetadata.first_name && userMetadata.last_name) {
+    name = `${userMetadata.first_name} ${userMetadata.last_name}`;
+  } else if (userMetadata.email) {
+    name = extractNameFromEmail(userMetadata.email);
+  }
+
+  return {
+    id: userId,
+    name: name,
+    email: userMetadata.email || null, // CRITICAL: Add email field
+    avatar_url: userMetadata.avatar_url || userMetadata.picture || null,
+    role: 'user',
+    email_verified: userMetadata.email_verified || false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+};
 
 /**
  * Check if user is new (created within threshold)

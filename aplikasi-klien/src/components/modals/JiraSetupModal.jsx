@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { jiraService } from '../../services/jiraService';
 import { useJira } from '../../contexts/JiraContext';
 
@@ -14,6 +14,22 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
     projectKey: '',
     issueType: 'Story'
   });
+
+  // Reset modal state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setError('');
+      setLoading(false);
+      setFormData({
+        jiraUrl: '',
+        email: '',
+        apiToken: '',
+        projectKey: '',
+        issueType: 'Story'
+      });
+    }
+  }, [isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

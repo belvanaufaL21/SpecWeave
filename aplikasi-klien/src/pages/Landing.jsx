@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { isUserRegistered, registerUser } from '../utils/userValidation';
 import Logo from '../components/common/Logo';
 
 // Custom hook for scroll animation
@@ -67,6 +68,7 @@ const Landing = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -75,6 +77,51 @@ const Landing = () => {
     }
   }, [user, navigate]);
 
+  // Check URL params for mode and error
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const errorParam = urlParams.get('error');
+    const messageParam = urlParams.get('message');
+    
+    if (mode === 'signup') {
+      setIsSignup(true);
+    } else if (mode === 'signin') {
+      setIsSignup(false);
+    }
+    
+    // Handle error from redirect
+    if (errorParam === 'not_registered') {
+      const errorMessage = messageParam 
+        ? decodeURIComponent(messageParam)
+        : 'Sign-in failed: Account not found. Please sign up first with your Google account.';
+      setError(errorMessage);
+      setIsSignup(true); // Force to signup mode
+    } else if (errorParam === 'signin_blocked') {
+      const errorMessage = messageParam 
+        ? decodeURIComponent(messageParam)
+        : 'Access denied. Your Google account is not registered in our system. Please sign up first to create your account.';
+      setError(errorMessage);
+      setIsSignup(true); // Force to signup mode
+    } else if (errorParam === 'validation_failed') {
+      const errorMessage = messageParam 
+        ? decodeURIComponent(messageParam)
+        : 'Authentication validation failed. Please try again.';
+      setError(errorMessage);
+    } else if (errorParam === 'invalid_session') {
+      const errorMessage = messageParam 
+        ? decodeURIComponent(messageParam)
+        : 'Invalid authentication session. Please sign up or sign in again.';
+      setError(errorMessage);
+    }
+    
+    // Clear URL parameters after handling
+    if (errorParam || messageParam) {
+      const newUrl = window.location.pathname + (mode ? `?mode=${mode}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   // Scroll animation refs
   const [heroRef, heroVisible] = useScrollAnimation();
   const [statsRef, statsVisible] = useScrollAnimation();
@@ -82,66 +129,190 @@ const Landing = () => {
   const [caraKerjaRef, caraKerjaVisible] = useScrollAnimation();
   const [keuntunganRef, keuntunganVisible] = useScrollAnimation();
 
+  // Enhanced email validation
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Enhanced password validation
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    
+    return {
+      isValid: minLength && hasUpperCase && hasLowerCase && hasNumbers,
+      minLength,
+      hasUpperCase,
+      hasLowerCase,
+      hasNumbers
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
     try {
+      // Enhanced validation for both login and signup
+      if (!email.trim()) {
+        setError('Email is required');
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+
+      if (!password) {
+        setError('Password is required');
+        return;
+      }
+
       if (isSignup) {
-        // Signup validation
+        // Enhanced signup validation
         if (!name.trim()) {
-          setError('Name is required');
+          setError('Full name is required');
           return;
         }
-        if (password.length < 8) {
-          setError('Password must be at least 8 characters long');
+
+        if (name.trim().length < 2) {
+          setError('Name must be at least 2 characters long');
           return;
         }
+
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          let errorMsg = 'Password must contain:';
+          if (!passwordValidation.minLength) errorMsg += ' at least 8 characters,';
+          if (!passwordValidation.hasUpperCase) errorMsg += ' uppercase letter,';
+          if (!passwordValidation.hasLowerCase) errorMsg += ' lowercase letter,';
+          if (!passwordValidation.hasNumbers) errorMsg += ' number,';
+          setError(errorMsg.slice(0, -1)); // Remove trailing comma
+          return;
+        }
+
         if (password !== confirmPassword) {
           setError('Passwords do not match');
           return;
         }
 
-        const { data, error } = await signUp(email, password, { name: name.trim() });
+        // Attempt signup with enhanced error handling
+        const { data, error } = await signUp(email.trim().toLowerCase(), password, { 
+          name: name.trim() 
+        });
+        
         if (error) {
-          setError(error.message);
+          // Enhanced error messages for better UX
+          if (error.message.includes('already registered')) {
+            setError('An account with this email already exists. Please try logging in instead.');
+          } else if (error.message.includes('invalid email')) {
+            setError('Please enter a valid email address');
+          } else if (error.message.includes('weak password')) {
+            setError('Password is too weak. Please choose a stronger password.');
+          } else {
+            setError(error.message || 'Failed to create account. Please try again.');
+          }
         } else if (data.user) {
           // Show success message for signup
           setError('');
-          // User will be redirected by useEffect when user state updates
+          setSuccessMessage('Account created successfully! Please check your email to verify your account.');
+          // Note: User will be redirected by useEffect when user state updates
+          console.log('Signup successful:', data.user);
         }
       } else {
-        // Login
-        const { data, error } = await signInWithEmail(email, password);
+        // Enhanced login validation and error handling
+        const { data, error } = await signInWithEmail(email.trim().toLowerCase(), password);
+        
         if (error) {
-          setError(error.message);
+          // Enhanced error messages for login
+          if (error.message.includes('Invalid login credentials')) {
+            setError('Invalid email or password. Please check your credentials and try again.');
+          } else if (error.message.includes('Email not confirmed')) {
+            setError('Please check your email and click the confirmation link before logging in.');
+          } else if (error.message.includes('too many requests')) {
+            setError('Too many login attempts. Please wait a few minutes before trying again.');
+          } else {
+            setError(error.message || 'Login failed. Please try again.');
+          }
         } else if (data.user) {
           // User will be redirected by useEffect when user state updates
+          console.log('Login successful:', data.user);
         }
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('Authentication error:', err);
+      setError('An unexpected error occurred. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleAuth = async (mode = 'signup') => {
     setError('');
+    setSuccessMessage('');
+    setIsSubmitting(true);
+    
     try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        setError(error.message);
+      console.log(`🚀 [LANDING] Initiating Google ${mode}...`);
+      console.log(`🔍 [LANDING] Current registered users:`, JSON.parse(localStorage.getItem('specweave_registered_users') || '[]'));
+      
+      // Untuk mode signin, kita akan melakukan validasi setelah Google OAuth berhasil
+      // Karena kita perlu email dari Google terlebih dahulu
+      
+      if (mode === 'signin') {
+        setSuccessMessage('Checking account and signing in...');
+      } else {
+        // Mode signup
+        setSuccessMessage('Creating new account with Google...');
       }
+      
+      // Store mode in sessionStorage untuk digunakan di callback
+      sessionStorage.setItem('auth_mode', mode);
+      
+      const { error } = await signInWithGoogle(mode);
+      if (error) {
+        console.error(`❌ [LANDING] Google ${mode} error:`, error);
+        
+        // Enhanced error handling for Google OAuth
+        if (error.message.includes('popup_closed_by_user')) {
+          setError(`Google ${mode} was cancelled. Please try again.`);
+        } else if (error.message.includes('access_denied')) {
+          setError('Access denied. Please grant permission to continue with Google.');
+        } else if (error.message.includes('network')) {
+          setError('Network error. Please check your connection and try again.');
+        } else if (error.message.includes('invalid_request')) {
+          setError('Invalid request. Please try again or contact support if the problem persists.');
+        } else if (error.message.includes('temporarily_unavailable')) {
+          setError('Google authentication is temporarily unavailable. Please try again in a few minutes.');
+        } else if (error.message.includes('redirect_uri_mismatch')) {
+          setError('Configuration error. Please contact support - redirect URI mismatch.');
+        } else if (error.message.includes('invalid_client')) {
+          setError('Configuration error. Please contact support - invalid client configuration.');
+        } else {
+          setError(error.message || `Google ${mode} failed. Please try again.`);
+        }
+      } else {
+        console.log(`✅ [LANDING] Google ${mode} initiated successfully`);
+      }
+      // Note: Success will be handled by the auth state change listener or callback page
     } catch (err) {
-      setError('Google sign in failed. Please try again.');
+      console.error(`❌ [LANDING] Google ${mode} exception:`, err);
+      setError(`Google ${mode} failed. Please try again or use email ${mode}.`);
+    } finally {
+      // Don't set loading to false immediately for successful redirects
+      setTimeout(() => setIsSubmitting(false), 1000);
     }
   };
 
   const toggleAuthMode = () => {
     setIsSignup(!isSignup);
     setError('');
+    setSuccessMessage('');
     setName('');
     setConfirmPassword('');
   };
@@ -327,17 +498,94 @@ const Landing = () => {
                         </svg>
                      </div>
                      <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                       {isSignup ? 'Buat Akun' : 'Mulai Sekarang'}
+                       {isSignup ? 'Buat Akun Baru' : 'Masuk ke Akun'}
                      </h3>
                      <p className="text-gray-400 text-sm">
-                       {isSignup ? 'Bergabung dengan SpecWeave sekarang' : 'Gratis untuk semua pengguna. Tanpa ribet!!'}
+                       {isSignup ? 'Bergabung dengan SpecWeave untuk mulai membuat scenarios' : 'Masuk ke akun SpecWeave yang sudah ada'}
                      </p>
                   </div>
 
-                  {/* Error Message */}
+                  {/* Development Info - Show registered users */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-500/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-blue-400 font-medium text-sm">Development Mode</span>
+                      </div>
+                      <p className="text-blue-300 text-xs mb-2">
+                        Registered users: {JSON.parse(localStorage.getItem('specweave_registered_users') || '[]').length}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const users = JSON.parse(localStorage.getItem('specweave_registered_users') || '[]');
+                            alert('Registered users:\n' + (users.length > 0 ? users.join('\n') : 'None'));
+                          }}
+                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Show Users
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.removeItem('specweave_registered_users');
+                            alert('All registered users cleared!');
+                          }}
+                          className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!isSignup && (
+                    <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <span className="text-yellow-400 font-medium text-sm">Perhatian</span>
+                      </div>
+                      <p className="text-yellow-300 text-sm">
+                        Anda hanya bisa sign in jika sudah pernah membuat akun sebelumnya. 
+                        Jika belum punya akun, silakan <button 
+                          onClick={toggleAuthMode} 
+                          className="underline hover:text-yellow-200 font-medium"
+                        >
+                          daftar terlebih dahulu
+                        </button>.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Info untuk Sign Up mode */}
+                  {isSignup && (
+                    <div className="mb-6 p-4 bg-green-900/20 border border-green-500/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-green-400 font-medium text-sm">Selamat Datang!</span>
+                      </div>
+                      <p className="text-green-300 text-sm">
+                        Buat akun baru untuk mulai menggunakan SpecWeave. 
+                        Gratis dan mudah - hanya butuh beberapa detik!
+                      </p>
+                    </div>
+                  )}
                   {error && (
                     <div className="mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
                       <p className="text-red-400 text-sm">{error}</p>
+                    </div>
+                  )}
+
+                  {/* Success Message */}
+                  {successMessage && (
+                    <div className="mb-6 p-4 bg-green-900/20 border border-green-500/50 rounded-lg">
+                      <p className="text-green-400 text-sm">{successMessage}</p>
                     </div>
                   )}
 
@@ -354,7 +602,11 @@ const Landing = () => {
                           <input
                             type="text"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                              setName(e.target.value);
+                              setError('');
+                              setSuccessMessage('');
+                            }}
                             placeholder="Nama lengkap Anda"
                             className="w-full pl-12 pr-4 py-3.5 bg-[#050507] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:bg-[#0c0c12] focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 text-sm font-medium"
                             disabled={isSubmitting || loading}
@@ -374,7 +626,11 @@ const Landing = () => {
                         <input
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setError('');
+                            setSuccessMessage('');
+                          }}
                           placeholder="nama@perusahaan.com"
                           className="w-full pl-12 pr-4 py-3.5 bg-[#050507] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:bg-[#0c0c12] focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 text-sm font-medium"
                           disabled={isSubmitting || loading}
@@ -394,7 +650,11 @@ const Landing = () => {
                         <input
                           type={showPassword ? "text" : "password"}
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            setError('');
+                            setSuccessMessage('');
+                          }}
                           placeholder="••••••••"
                           className="w-full pl-12 pr-12 py-3.5 bg-[#050507] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:bg-[#0c0c12] focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 text-sm font-medium"
                           disabled={isSubmitting || loading}
@@ -419,9 +679,29 @@ const Landing = () => {
                         </button>
                       </div>
                       {isSignup && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Minimal 8 karakter dengan huruf besar, kecil, dan angka
-                        </p>
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-2">
+                            Password must contain:
+                          </p>
+                          <div className="space-y-1">
+                            <div className={`flex items-center gap-2 text-xs ${password.length >= 8 ? 'text-green-400' : 'text-gray-500'}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${password.length >= 8 ? 'bg-green-400' : 'bg-gray-600'}`} />
+                              At least 8 characters
+                            </div>
+                            <div className={`flex items-center gap-2 text-xs ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(password) ? 'bg-green-400' : 'bg-gray-600'}`} />
+                              Uppercase letter
+                            </div>
+                            <div className={`flex items-center gap-2 text-xs ${/[a-z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(password) ? 'bg-green-400' : 'bg-gray-600'}`} />
+                              Lowercase letter
+                            </div>
+                            <div className={`flex items-center gap-2 text-xs ${/\d/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${/\d/.test(password) ? 'bg-green-400' : 'bg-gray-600'}`} />
+                              Number
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -437,7 +717,11 @@ const Landing = () => {
                           <input
                             type="password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              setError('');
+                              setSuccessMessage('');
+                            }}
                             placeholder="••••••••"
                             className="w-full pl-12 pr-4 py-3.5 bg-[#050507] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:bg-[#0c0c12] focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 text-sm font-medium"
                             disabled={isSubmitting || loading}
@@ -459,7 +743,7 @@ const Landing = () => {
                         </div>
                       ) : (
                         <>
-                          {isSignup ? 'Buat Akun' : 'Mulai'}
+                          {isSignup ? 'Buat Akun Baru' : 'Masuk ke Akun'}
                           <svg className="w-4 h-4 inline-block ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                           </svg>
@@ -489,32 +773,71 @@ const Landing = () => {
                       </div>
                     </div>
 
-                    <button 
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                      disabled={loading || isSubmitting}
-                      className="w-full py-3 bg-white hover:bg-gray-100 text-black rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-3 shadow-lg transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                       <svg className="w-5 h-5" viewBox="0 0 24 24">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                       </svg>
-                       <span>Continue with Google</span>
-                    </button>
+                    {/* Google Sign Up Button (for signup mode) */}
+                    {isSignup && (
+                      <button 
+                        type="button"
+                        onClick={() => handleGoogleAuth('signup')}
+                        disabled={loading || isSubmitting}
+                        className="w-full py-3 bg-white hover:bg-gray-100 text-black rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-3 shadow-lg transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin mr-2"></div>
+                            Creating account...
+                          </div>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                            <span>Sign Up with Google</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Google Sign In Button (for login mode) */}
+                    {!isSignup && (
+                      <button 
+                        type="button"
+                        onClick={() => handleGoogleAuth('signin')}
+                        disabled={loading || isSubmitting}
+                        className="w-full py-3 bg-white hover:bg-gray-100 text-black rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-3 shadow-lg transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin mr-2"></div>
+                            Signing in...
+                          </div>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                            <span>Sign In with Google</span>
+                          </>
+                        )}
+                      </button>
+                    )}
 
                     {/* Auth Mode Toggle */}
                     <div className="text-center pt-4">
                       <p className="text-gray-400 text-sm">
-                        {isSignup ? 'Sudah punya akun?' : 'Belum punya akun?'}{' '}
+                        {isSignup ? 'Sudah punya akun SpecWeave?' : 'Belum punya akun SpecWeave?'}{' '}
                         <button
                           type="button"
                           onClick={toggleAuthMode}
                           className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
                           disabled={isSubmitting || loading}
                         >
-                          {isSignup ? 'Masuk di sini' : 'Daftar sekarang'}
+                          {isSignup ? 'Masuk ke akun yang ada' : 'Buat akun baru'}
                         </button>
                       </p>
                     </div>

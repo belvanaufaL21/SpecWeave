@@ -1,0 +1,13 @@
+# Requirements for Supabase migration scripts
+
+# Supabase Python client
+supabase>=2.0.0
+
+# File type detection for storage migration
+python-magic>=0.4.27
+
+# For Windows users (alternative to python-magic)
+# python-magic-bin>=0.4.14
+
+# Additional utilities
+requests>=2.31.0

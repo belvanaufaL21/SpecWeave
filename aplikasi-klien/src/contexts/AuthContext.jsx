@@ -76,18 +76,63 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
+          console.log('🔄 [AUTH-CONTEXT] Auth state change:', event, session?.user?.email);
+          
+          // CRITICAL: Skip validation if in callback page - let AuthCallback handle it
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('🔄 [AUTH-CONTEXT] SIGNED_IN event detected');
+            
+            // Check if we're in a callback page - if so, let AuthCallback handle validation
+            if (window.location.pathname.includes('/auth/callback')) {
+              console.log('🔄 [AUTH-CONTEXT] In callback page, skipping validation - AuthCallback will handle it');
+              setSession(session);
+              setUser(session.user);
+              return;
+            }
+            
+            // For non-callback pages, do minimal processing
+            console.log('🔄 [AUTH-CONTEXT] Not in callback, processing normally');
+          }
+          
+          console.log('🔄 [AUTH-CONTEXT] Processing auth state change normally');
           setSession(session);
           setUser(session?.user ?? null);
           
           if (session?.user) {
+            // Only load profile, no validation here - AuthCallback handles validation
             await loadUserProfile(session.user.id);
             setIsNewUserState(isNewUser(session.user.created_at));
           } else {
+            // No session - clear all state
             setProfile(null);
             setIsNewUserState(false);
           }
         } catch (error) {
-          console.warn('Auth state change error:', error);
+          console.warn('❌ [AUTH-CONTEXT] Auth state change error:', error);
+          
+          // Don't clear state for minor errors - only for critical auth failures
+          const isCriticalError = error.message?.includes('unauthorized') || 
+                                 error.message?.includes('forbidden') ||
+                                 error.message?.includes('invalid_grant') ||
+                                 error.status === 401 || 
+                                 error.status === 403;
+          
+          if (isCriticalError) {
+            console.error('🚨 [AUTH-CONTEXT] Critical auth error - clearing state');
+            // On critical error, clear state and redirect to safe page
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            setIsNewUserState(false);
+            
+            // Clear auth mode on critical error
+            AuthService.clearAuthMode();
+          } else {
+            console.warn('⚠️ [AUTH-CONTEXT] Non-critical error - keeping session intact');
+            // For non-critical errors (network, timeout, etc.), keep the session
+            // Just log the error but don't clear user state
+          }
+          
         } finally {
           setLoading(false);
         }
@@ -176,9 +221,10 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Sign in with Google
+   * @param {string} mode - 'signup' atau 'signin'
    */
-  const signInWithGoogle = async () => {
-    return await AuthService.signInWithGoogle();
+  const signInWithGoogle = async (mode = 'signup') => {
+    return await AuthService.signInWithGoogle(mode);
   };
 
   /**
