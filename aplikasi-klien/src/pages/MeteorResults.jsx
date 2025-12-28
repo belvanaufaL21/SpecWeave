@@ -27,6 +27,7 @@ const MeteorResults = () => {
             when: result.originalScenario.when || '',
             then: result.originalScenario.then || ''
           };
+        }
         // Method 2: Parse generatedScenario string if originalScenario not available
         else if (result.generatedScenario) {
           
