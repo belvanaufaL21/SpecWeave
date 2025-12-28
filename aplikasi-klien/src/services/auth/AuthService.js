@@ -89,43 +89,13 @@ class AuthService {
       console.log(`🔍 [AUTH] Fetching profile for user: ${userId}${retryCount > 0 ? ` (attempt ${retryCount + 1})` : ''}`);
       
       const { data, error } = await withTimeout(
-        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
         AUTH_TIMEOUTS.PROFILE_FETCH,
         AUTH_ERRORS.PROFILE_TIMEOUT
       );
 
       if (error) {
         console.warn(`⚠️ [AUTH] Profile fetch error:`, error);
-        
-        if (error.code === AUTH_ERRORS.NO_PROFILE) {
-          console.log(`🔧 [AUTH] No profile found, creating default profile`);
-          
-          // Try to get user metadata for better profile creation
-          let userMetadata = {};
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              userMetadata = {
-                name: user.user_metadata?.name || user.user_metadata?.full_name,
-                email: user.email,
-                avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-                ...user.user_metadata
-              };
-            }
-          } catch (metaError) {
-            console.warn('Failed to get user metadata:', metaError);
-          }
-          
-          const newProfile = await this.createDefaultProfile(userId, userMetadata);
-          
-          // Cache the new profile
-          this.profileCache.set(userId, {
-            profile: newProfile,
-            timestamp: Date.now()
-          });
-          
-          return newProfile;
-        }
         
         // If it's a timeout or network error and we haven't exceeded max retries
         if (retryCount < maxRetries && (error.message.includes('timeout') || error.message.includes('network'))) {
@@ -134,7 +104,7 @@ class AuthService {
           return await this.fetchUserProfile(userId, retryCount + 1);
         }
         
-        console.log(`🔧 [AUTH] Using fallback default profile`);
+        console.log(`🔧 [AUTH] Using fallback default profile due to error`);
         
         // Try to get user metadata for better profile creation
         let userMetadata = {};
@@ -143,7 +113,6 @@ class AuthService {
           if (user) {
             userMetadata = {
               name: user.user_metadata?.name || user.user_metadata?.full_name,
-              email: user.email,
               avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
               ...user.user_metadata
             };
@@ -161,6 +130,36 @@ class AuthService {
         });
         
         return defaultProfile;
+      }
+
+      // Check if profile exists
+      if (!data) {
+        console.log(`🔧 [AUTH] No profile found, creating default profile`);
+        
+        // Try to get user metadata for better profile creation
+        let userMetadata = {};
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            userMetadata = {
+              name: user.user_metadata?.name || user.user_metadata?.full_name,
+              avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+              ...user.user_metadata
+            };
+          }
+        } catch (metaError) {
+          console.warn('Failed to get user metadata:', metaError);
+        }
+        
+        const newProfile = await this.createDefaultProfile(userId, userMetadata);
+        
+        // Cache the new profile
+        this.profileCache.set(userId, {
+          profile: newProfile,
+          timestamp: Date.now()
+        });
+        
+        return newProfile;
       }
 
       console.log(`✅ [AUTH] Profile fetched successfully`);
@@ -189,7 +188,6 @@ class AuthService {
         if (user) {
           userMetadata = {
             name: user.user_metadata?.name || user.user_metadata?.full_name,
-            email: user.email,
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             ...user.user_metadata
           };
@@ -224,11 +222,10 @@ class AuthService {
     let userData = { ...userMetadata };
     
     try {
-      if (!userData.email || !userData.name) {
+      if (!userData.name) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user && user.id === userId) {
           userData = {
-            email: user.email,
             name: user.user_metadata?.name || user.user_metadata?.full_name || user.email,
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             ...userData,
@@ -243,18 +240,50 @@ class AuthService {
     const defaultProfile = createDefaultProfile(userId, userData);
     
     try {
+      // First try to check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (existingProfile) {
+        console.log('✅ [AUTH] Profile already exists, returning existing profile');
+        return existingProfile;
+      }
+      
+      // If no existing profile, try to insert
       const { data: insertedProfile, error } = await withTimeout(
         supabase.from('profiles').insert([defaultProfile]).select().single(),
         AUTH_TIMEOUTS.PROFILE_INSERT,
         'Insert timeout'
       );
       
-      if (error || !insertedProfile) {
+      if (error) {
+        // If duplicate key error, try to fetch the existing profile
+        if (error.code === '23505') {
+          console.log('🔄 [AUTH] Profile already exists (duplicate key), fetching existing profile');
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          if (existingProfile) {
+            return existingProfile;
+          }
+        }
+        
         console.warn('Failed to insert profile, returning default:', error);
         return defaultProfile;
       }
       
-      console.log('✅ [AUTH] Profile created successfully:', insertedProfile.email);
+      if (!insertedProfile) {
+        console.warn('No profile returned from insert, returning default');
+        return defaultProfile;
+      }
+      
+      console.log('✅ [AUTH] Profile created successfully:', insertedProfile.name);
       return insertedProfile;
     } catch (error) {
       console.warn('Failed to create default profile:', error);
@@ -278,7 +307,6 @@ class AuthService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
       return { data: null, error };
     }
   }
@@ -292,23 +320,12 @@ class AuthService {
     try {
       // Simpan mode ke sessionStorage untuk validasi nanti
       sessionStorage.setItem('auth_mode', mode);
-      console.log('🔗 [AUTH] Setting auth mode:', mode);
-      
-      // CRITICAL: For signin mode, show warning about pre-validation
-      if (mode === 'signin') {
-        console.log('🔍 [AUTH] Signin mode - user will be validated after OAuth');
-        console.log('⚠️ [AUTH] Note: Unregistered users will be removed from authentication table after validation fails');
-      }
       
       // Pastikan redirect URL sesuai dengan port yang benar
       const currentPort = window.location.port || '3000';
       const redirectUrl = window.location.hostname === 'localhost' 
         ? `http://localhost:${currentPort}/auth/callback`
         : `${window.location.origin}/auth/callback`;
-      
-      console.log('🔗 [AUTH] Google OAuth redirect URL:', redirectUrl);
-      console.log('🔗 [AUTH] Current location:', window.location.href);
-      console.log('🔗 [AUTH] Auth mode:', mode);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -322,16 +339,13 @@ class AuthService {
       });
 
       if (error) {
-        console.error('❌ [AUTH] Google OAuth error:', error);
         // Clear mode jika error
         sessionStorage.removeItem('auth_mode');
         throw error;
       }
       
-      console.log('✅ [AUTH] Google OAuth initiated successfully');
       return { data, error: null };
     } catch (error) {
-      console.error('Google sign in error:', error);
       // Clear mode jika error
       sessionStorage.removeItem('auth_mode');
       return { data: null, error };
@@ -353,7 +367,6 @@ class AuthService {
       
       return !error && data;
     } catch (error) {
-      console.error('Error checking user existence:', error);
       return false;
     }
   }
@@ -365,17 +378,13 @@ class AuthService {
    */
   static async validateUserExistsById(userId) {
     try {
-      console.log('🔍 [AUTH] Validating user existence for ID:', userId);
-      
       const { data: profile, error } = await withTimeout(
-        supabase.from('profiles').select('id, email, created_at').eq('id', userId).single(),
+        supabase.from('profiles').select('id, name, created_at').eq('id', userId).single(),
         AUTH_TIMEOUTS.PROFILE_FETCH,
         'User validation timeout'
       );
       
       if (error) {
-        console.log('❌ [AUTH] User validation failed:', error.message, 'Code:', error.code);
-        
         // CRITICAL: For signin mode, user MUST exist in profiles
         // Don't create profile automatically for signin attempts
         return { 
@@ -385,58 +394,12 @@ class AuthService {
         };
       }
       
-      console.log('✅ [AUTH] User validation successful:', profile.email);
       return { 
         exists: true, 
         error: null, 
         profile 
       };
     } catch (error) {
-      console.error('❌ [AUTH] User validation error:', error);
-      return { 
-        exists: false, 
-        error: error.message || 'Validation failed',
-        profile: null 
-      };
-    }
-  }
-
-  /**
-   * Validate user exists by email (for additional verification)
-   * @param {string} email - User email
-   * @returns {Promise<Object>} - Validation result with user data or error
-   */
-  static async validateUserExistsByEmail(email) {
-    try {
-      console.log('🔍 [AUTH] Validating user existence for email:', email);
-      
-      // For signin mode, STRICT validation - user must exist in profiles
-      const { data: profile, error: profileError } = await withTimeout(
-        supabase.from('profiles').select('id, email, created_at').eq('email', email).maybeSingle(),
-        AUTH_TIMEOUTS.PROFILE_FETCH,
-        'User validation timeout'
-      );
-      
-      if (profile && !profileError) {
-        console.log('✅ [AUTH] User validation by email successful (profiles):', profile.email);
-        return { 
-          exists: true, 
-          error: null, 
-          profile 
-        };
-      }
-      
-      // CRITICAL: For signin mode, do NOT create profile automatically
-      // User must exist in profiles table to sign in
-      console.log('❌ [AUTH] User not found in profiles table for signin:', email);
-      return { 
-        exists: false, 
-        error: 'User not found in database - please sign up first',
-        profile: null 
-      };
-      
-    } catch (error) {
-      console.error('❌ [AUTH] User validation by email error:', error);
       return { 
         exists: false, 
         error: error.message || 'Validation failed',
@@ -447,44 +410,14 @@ class AuthService {
 
   /**
    * Force logout and redirect to signup with error message
-   * PLUS: Remove user from authentication table to keep it clean
    * @param {string} errorType - Type of error (not_registered, validation_failed, etc.)
    * @param {string} customMessage - Custom error message
    * @returns {Promise<void>}
    */
   static async forceLogoutAndRedirect(errorType = 'not_registered', customMessage = null) {
     try {
-      console.log('🚪 [AUTH] Force logout initiated for error:', errorType);
-      
-      // Get current user before logout to potentially delete them
-      const { data: { user } } = await supabase.auth.getUser();
-      
       // Force logout from Supabase
       await supabase.auth.signOut();
-      
-      // CRITICAL: For signin failures, try to delete the user from auth.users table
-      // This keeps the authentication table clean
-      if (errorType === 'signin_blocked' || errorType === 'not_registered') {
-        if (user && user.id) {
-          console.log('🗑️ [AUTH] Attempting to remove unregistered user from authentication table:', user.email);
-          
-          try {
-            // Note: This requires admin privileges, so it might not work
-            // But we'll try anyway to keep the auth table clean
-            const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-            
-            if (deleteError) {
-              console.warn('⚠️ [AUTH] Could not delete user from auth table (requires admin privileges):', deleteError.message);
-              console.log('ℹ️ [AUTH] User will remain in auth.users table but without profile');
-            } else {
-              console.log('✅ [AUTH] Successfully removed unregistered user from authentication table');
-            }
-          } catch (deleteError) {
-            console.warn('⚠️ [AUTH] Exception while trying to delete user:', deleteError.message);
-            console.log('ℹ️ [AUTH] This is expected - client cannot delete auth users directly');
-          }
-        }
-      }
       
       // Clear auth mode and any cached data
       this.clearAuthMode();
@@ -510,11 +443,9 @@ class AuthService {
       const encodedMessage = encodeURIComponent(errorMessage);
       const redirectUrl = `/?mode=signup&error=${errorType}&message=${encodedMessage}`;
       
-      console.log('🔄 [AUTH] Redirecting to:', redirectUrl);
       window.location.href = redirectUrl;
       
     } catch (error) {
-      console.error('❌ [AUTH] Force logout error:', error);
       // Fallback redirect even if logout fails
       window.location.href = '/?mode=signup&error=logout_failed';
     }
@@ -543,7 +474,6 @@ class AuthService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Sign up error:', error);
       return { data: null, error };
     }
   }
@@ -554,8 +484,6 @@ class AuthService {
    */
   static async signOut() {
     try {
-      console.log('Starting sign out process...');
-      
       const { error } = await withTimeout(
         supabase.auth.signOut(),
         AUTH_TIMEOUTS.SIGN_OUT,
@@ -569,7 +497,6 @@ class AuthService {
       // Clear storage regardless of signOut success/failure
       clearAuthStorage();
       
-      console.log('Sign out completed successfully');
       return { error: null };
     } catch (error) {
       console.warn('Sign out error:', error);
@@ -610,7 +537,6 @@ class AuthService {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Update profile error:', error);
       return { data: null, error };
     }
   }
@@ -629,7 +555,6 @@ class AuthService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Reset password error:', error);
       return { error };
     }
   }
@@ -648,7 +573,6 @@ class AuthService {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Update password error:', error);
       return { error };
     }
   }
@@ -659,7 +583,6 @@ class AuthService {
    */
   static clearAuthMode() {
     sessionStorage.removeItem('auth_mode');
-    console.log('🧹 [AUTH] Auth mode cleared from session storage');
   }
 
   /**
@@ -679,7 +602,6 @@ class AuthService {
       const { data: { session } } = await supabase.auth.getSession();
       return session?.access_token || null;
     } catch (error) {
-      console.error('Error getting access token:', error);
       return null;
     }
   }
