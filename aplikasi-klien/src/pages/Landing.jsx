@@ -222,7 +222,6 @@ const Landing = () => {
           setError('');
           setSuccessMessage('Account created successfully! Please check your email to verify your account.');
           // Note: User will be redirected by useEffect when user state updates
-          console.log('Signup successful:', data.user);
         }
       } else {
         // Enhanced login validation and error handling
@@ -241,11 +240,9 @@ const Landing = () => {
           }
         } else if (data.user) {
           // User will be redirected by useEffect when user state updates
-          console.log('Login successful:', data.user);
         }
       }
     } catch (err) {
-      console.error('Authentication error:', err);
       setError('An unexpected error occurred. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
@@ -258,9 +255,6 @@ const Landing = () => {
     setIsSubmitting(true);
     
     try {
-      console.log(`🚀 [LANDING] Initiating Google ${mode}...`);
-      console.log(`🔍 [LANDING] Current registered users:`, JSON.parse(localStorage.getItem('specweave_registered_users') || '[]'));
-      
       // Untuk mode signin, kita akan melakukan validasi setelah Google OAuth berhasil
       // Karena kita perlu email dari Google terlebih dahulu
       
@@ -276,8 +270,6 @@ const Landing = () => {
       
       const { error } = await signInWithGoogle(mode);
       if (error) {
-        console.error(`❌ [LANDING] Google ${mode} error:`, error);
-        
         // Enhanced error handling for Google OAuth
         if (error.message.includes('popup_closed_by_user')) {
           setError(`Google ${mode} was cancelled. Please try again.`);
@@ -296,12 +288,9 @@ const Landing = () => {
         } else {
           setError(error.message || `Google ${mode} failed. Please try again.`);
         }
-      } else {
-        console.log(`✅ [LANDING] Google ${mode} initiated successfully`);
       }
       // Note: Success will be handled by the auth state change listener or callback page
     } catch (err) {
-      console.error(`❌ [LANDING] Google ${mode} exception:`, err);
       setError(`Google ${mode} failed. Please try again or use email ${mode}.`);
     } finally {
       // Don't set loading to false immediately for successful redirects
@@ -505,42 +494,7 @@ const Landing = () => {
                      </p>
                   </div>
 
-                  {/* Development Info - Show registered users */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-500/50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-blue-400 font-medium text-sm">Development Mode</span>
-                      </div>
-                      <p className="text-blue-300 text-xs mb-2">
-                        Registered users: {JSON.parse(localStorage.getItem('specweave_registered_users') || '[]').length}
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const users = JSON.parse(localStorage.getItem('specweave_registered_users') || '[]');
-                            alert('Registered users:\n' + (users.length > 0 ? users.join('\n') : 'None'));
-                          }}
-                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                          Show Users
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            localStorage.removeItem('specweave_registered_users');
-                            alert('All registered users cleared!');
-                          }}
-                          className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                        >
-                          Clear All
-                        </button>
-                      </div>
-                    </div>
-                  )}
+
                   {!isSignup && (
                     <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">

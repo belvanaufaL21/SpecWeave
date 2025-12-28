@@ -33,7 +33,6 @@ export const useTemplates = (options = {}) => {
       const response = await templateService.searchTemplates(searchFilters);
       setTemplates(response.data || []);
     } catch (err) {
-      console.error('Failed to load templates:', err);
       setError(err.message || 'Failed to load templates');
     } finally {
       setLoading(false);
@@ -46,7 +45,7 @@ export const useTemplates = (options = {}) => {
       const response = await templateService.getTemplateCategories();
       setCategories(response.data || []);
     } catch (err) {
-      console.error('Failed to load categories:', err);
+      // Failed to load categories
     }
   }, []);
 

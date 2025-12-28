@@ -20,10 +20,6 @@ const MeteorResults = () => {
         // Parse scenario data - now properly structured from server
         let parsedScenario = { given: '', when: '', then: '' };
         
-        console.log('🔍 Debug - Test Result Data:', result);
-        console.log('🔍 Debug - Generated Scenario:', result.generatedScenario);
-        console.log('🔍 Debug - Original Scenario:', result.originalScenario);
-        
         // Method 1: Use originalScenario if available (most reliable)
         if (result.originalScenario) {
           parsedScenario = {
@@ -31,11 +27,8 @@ const MeteorResults = () => {
             when: result.originalScenario.when || '',
             then: result.originalScenario.then || ''
           };
-          console.log('🔍 Debug - Using originalScenario:', parsedScenario);
-        }
         // Method 2: Parse generatedScenario string if originalScenario not available
         else if (result.generatedScenario) {
-          console.log('🔍 Debug - Parsing generatedScenario string:', result.generatedScenario);
           
           const lines = result.generatedScenario.split('\n').filter(line => line.trim());
           for (const line of lines) {
@@ -48,7 +41,6 @@ const MeteorResults = () => {
               parsedScenario.then = trimmedLine.substring(5).trim();
             }
           }
-          console.log('🔍 Debug - Parsed from generatedScenario:', parsedScenario);
         }
         // Method 3: Try individual fields as fallback
         else if (result.scenario) {
@@ -57,9 +49,11 @@ const MeteorResults = () => {
             when: result.scenario.when || '',
             then: result.scenario.then || ''
           };
-          console.log('🔍 Debug - Using result.scenario:', parsedScenario);
         }
         
+        console.log('🔍 Debug - Final parsed scenario:', parsedScenario);
+        console.log('🔍 Debug - Final parsed scenario:', parsedScenario);
+        console.log('🔍 Debug - Final parsed scenario:', parsedScenario);
         console.log('🔍 Debug - Final parsed scenario:', parsedScenario);
         setScenario(parsedScenario);
       }
@@ -93,7 +87,7 @@ const MeteorResults = () => {
           }
         }
       } catch (error) {
-        console.error('Error finding closest chat:', error);
+        // Error finding closest chat
       }
       
       navigate(targetUrl);

@@ -57,7 +57,6 @@ const JiraCallback = () => {
           throw new Error(result.error || 'Failed to complete JIRA connection');
         }
       } catch (error) {
-        console.error('OAuth callback error:', error);
         setStatus('error');
         setMessage(error.message || 'Failed to connect to JIRA. Please try again.');
         

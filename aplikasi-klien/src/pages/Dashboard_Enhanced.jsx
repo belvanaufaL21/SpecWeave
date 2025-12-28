@@ -78,11 +78,6 @@ const Dashboard = () => {
       if (activeProjectId && connections) {
         const activeProject = connections.find(conn => conn?.id === activeProjectId);
         if (activeProject) {
-          console.log(`🎯 [EPIC-MODAL-DASHBOARD-ENHANCED] Active project found:`, {
-            connectionId: activeProjectId,
-            projectKey: activeProject?.project_key,
-            projectName: activeProject?.custom_fields?.project_info?.name
-          });
           return activeProject?.project_key || null;
         }
       }
@@ -90,11 +85,6 @@ const Dashboard = () => {
       // Auto-set first connection as active if no active project is set
       if (!activeProjectId && connections && connections.length > 0) {
         const firstConnection = connections[0];
-        console.log(`🔧 [EPIC-MODAL-DASHBOARD-ENHANCED] Auto-setting first connection as active:`, {
-          connectionId: firstConnection.id,
-          projectKey: firstConnection.project_key,
-          projectName: firstConnection.custom_fields?.project_info?.name
-        });
         
         // Set as active project
         jiraService.setActiveProjectForChat(chatId, firstConnection.id);
@@ -102,14 +92,8 @@ const Dashboard = () => {
         return firstConnection.project_key;
       }
       
-      // Only log once when no active project is found and no connections available
-      if (connections && connections.length === 0) {
-        console.log(`⚠️ [EPIC-MODAL-DASHBOARD-ENHANCED] No JIRA connections available for chat: ${chatId}`);
-      }
-      
       return null;
     } catch (error) {
-      console.error('Error getting active project key:', error);
       return null;
     }
   }, [connections]); // Dependencies: only recalculate when connections change
@@ -120,7 +104,6 @@ const Dashboard = () => {
       const result = await signOut();
       navigate('/', { replace: true });
     } catch (error) {
-      console.error('Dashboard: Sign out error:', error);
       navigate('/', { replace: true });
     }
   };
@@ -208,7 +191,7 @@ const Dashboard = () => {
           });
         }
       } catch (error) {
-        console.error('Error loading stats:', error);
+        // Error loading stats
       } finally {
         setLoadingStats(false);
       }

@@ -14,13 +14,11 @@ const Templates = () => {
   };
 
   const handleSaveTemplate = (savedTemplate) => {
-    console.log('Template saved:', savedTemplate);
     setCurrentView('library');
     setSelectedTemplate(null);
   };
 
   const handleDeleteTemplate = (templateId) => {
-    console.log('Template deleted:', templateId);
     setCurrentView('library');
     setSelectedTemplate(null);
   };
@@ -32,7 +30,6 @@ const Templates = () => {
 
   const handleSelectTemplate = (template) => {
     // This would typically be used in the chat interface
-    console.log('Template selected for use:', template);
   };
 
   return (
