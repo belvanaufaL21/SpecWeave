@@ -1,8 +1,7 @@
 import { supabase } from '../../config/supabase.js';
 import { 
   AUTH_TIMEOUTS, 
-  AUTH_ERRORS, 
-  AUTH_STORAGE_KEYS 
+  AUTH_ERRORS
 } from '../../utils/constants/authConstants';
 import {
   createDefaultProfile,
@@ -110,7 +109,6 @@ class AuthService {
                 name: user.user_metadata?.name || user.user_metadata?.full_name,
                 email: user.email,
                 avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-                email_verified: user.email_confirmed_at ? true : false,
                 ...user.user_metadata
               };
             }
@@ -147,7 +145,6 @@ class AuthService {
               name: user.user_metadata?.name || user.user_metadata?.full_name,
               email: user.email,
               avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-              email_verified: user.email_confirmed_at ? true : false,
               ...user.user_metadata
             };
           }
@@ -194,7 +191,6 @@ class AuthService {
             name: user.user_metadata?.name || user.user_metadata?.full_name,
             email: user.email,
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-            email_verified: user.email_confirmed_at ? true : false,
             ...user.user_metadata
           };
         }
@@ -235,7 +231,6 @@ class AuthService {
             email: user.email,
             name: user.user_metadata?.name || user.user_metadata?.full_name || user.email,
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-            email_verified: user.email_confirmed_at ? true : false,
             ...userData,
             ...user.user_metadata
           };

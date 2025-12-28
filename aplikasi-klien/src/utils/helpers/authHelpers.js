@@ -35,10 +35,9 @@ export const createDefaultProfile = (userId, userMetadata = {}) => {
   return {
     id: userId,
     name: name,
-    email: userMetadata.email || null, // CRITICAL: Add email field
     avatar_url: userMetadata.avatar_url || userMetadata.picture || null,
     role: 'user',
-    email_verified: userMetadata.email_verified || false,
+    preferences: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
