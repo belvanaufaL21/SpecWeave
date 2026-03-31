@@ -33,8 +33,13 @@ export const LANDING_CONSTANTS = {
 export const LANDING_CONTENT = {
   HERO: {
     BADGE_TEXT: 'Versi 2.0 Kini Tersedia',
-    TITLE: 'Transformasi User Story ke Gherkin Backlog',
-    SUBTITLE: 'Otomatisasi pembuatan skenario testing (Given-When-Then) dengan AI canggih. Hemat waktu QA tim Anda hingga 80% dengan dokumentasi yang terstandarisasi.',
+    TITLE: 'Ubah User Story Menjadi Skenario Testing dalam Hitungan Detik',
+    SUBTITLE: 'Platform AI terdepan untuk mengotomatisasi pembuatan skenario Gherkin (Given-When-Then). Hemat 80% waktu QA tim Anda dengan dokumentasi yang terstandarisasi dan akurat.',
+    VALUE_PROPS: [
+      'Hemat 80% Waktu QA',
+      '99% Akurasi AI', 
+      'Gratis untuk Semua'
+    ],
     STATS: {
       ACCURACY: 99,
       SPEED: '<10s',

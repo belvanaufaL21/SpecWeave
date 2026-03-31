@@ -197,7 +197,7 @@ const JiraConnectionStatus = ({ className = '', showDetails = true }) => {
                 <div className="text-xs">
                   <span className="opacity-60">Project: </span>
                   <span className="font-medium">
-                    {connectionStatus.connections[0]?.custom_fields?.project_info?.name || connectionStatus.connections[0]?.project_key}
+                    {connectionStatus.connections[0]?.project_name || connectionStatus.connections[0]?.project_key}
                   </span>
                 </div>
               )}

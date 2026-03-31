@@ -23,18 +23,37 @@ class JiraEpicService {
    */
   static async getProjectEpics(connectionId, projectKey) {
     try {
+      // Clear any cached data for this specific project to ensure fresh data
+      const cacheKey = `epics_${connectionId}_${projectKey}`;
+      if (window.jiraCache) {
+        delete window.jiraCache[cacheKey];
+      }
+      
       const response = await withJiraTimeout(
         api.get(JIRA_ENDPOINTS.EPICS(connectionId, projectKey), {
           headers: {
-            ...JIRA_HEADERS.CACHE_MEDIUM,
-            ...JIRA_HEADERS.FAST_REQUEST
+            ...JIRA_HEADERS.FAST_REQUEST,
+            'Cache-Control': 'no-cache', // Force fresh data
+            'X-Force-Refresh': 'true'
           }
         }),
         JIRA_TIMEOUTS.EPICS,
         'Get project epics'
       );
       
-      return handleJiraSuccess(response, []);
+      const result = handleJiraSuccess(response, []);
+      
+      // Cache the result for this specific project
+      if (result.success && window.jiraCache) {
+        window.jiraCache[cacheKey] = {
+          data: result.data,
+          timestamp: Date.now(),
+          connectionId,
+          projectKey
+        };
+      }
+      
+      return result;
     } catch (error) {
       // For epic fetch, return success with empty data to allow fallback
       if (error.message.includes('timeout')) {

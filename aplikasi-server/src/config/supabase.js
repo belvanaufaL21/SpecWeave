@@ -12,15 +12,38 @@ if (!supabaseServiceKey) {
   throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
 }
 
+// Performance: Connection pooling configuration for production
+const connectionPoolConfig = {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  db: {
+    // Enable connection pooling for better performance
+    // Supabase client uses fetch under the hood, which reuses connections
+    schema: 'public'
+  },
+  global: {
+    // Performance: Configure fetch options for connection reuse
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        // Enable HTTP keep-alive for connection pooling
+        keepalive: true
+      });
+    }
+  }
+};
+
 // Service role client for server-side operations (bypasses RLS)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, connectionPoolConfig);
+
+// Anonymous client for user operations (respects RLS)
+export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
 });
-
-// Anonymous client for user operations (respects RLS)
-export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 export default supabaseClient;

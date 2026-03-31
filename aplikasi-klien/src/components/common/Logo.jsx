@@ -3,7 +3,7 @@ const Logo = ({
   showText = true, 
   className = '', 
   textClassName = '',
-  subtitle = 'AI-Powered Gherkin Generator',
+  subtitle = null,
   onClick = null 
 }) => {
   const textSizeClasses = {
@@ -22,18 +22,12 @@ const Logo = ({
   
   const LogoImage = () => (
     <div className={`${logoSizeMap[size].container} ${className} relative flex items-center justify-center`}>
-      {/* Outer glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 rounded-2xl blur-md opacity-60 animate-pulse"></div>
-      
       {/* Logo PNG ONLY */}
       <img 
         src="/logo.png"
         alt="SpecWeave Logo"
-        className={`${logoSizeMap[size].img} relative z-10 drop-shadow-2xl rounded-2xl`}
+        className={`${logoSizeMap[size].img} rounded-2xl`}
       />
-      
-      {/* Subtle animation overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-2xl transform rotate-12 animate-pulse"></div>
     </div>
   );
 

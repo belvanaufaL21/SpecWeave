@@ -1,713 +1,666 @@
 import jiraService from '../services/jiraService.js';
 import { validationResult } from 'express-validator';
+import cleanLogger from '../config/cleanLogging.js';
 
 /**
- * JIRA Controller
- * Handles JIRA integration endpoints including OAuth, Epic management, and issue creation
+ * JIRA Controller - handles JIRA-related HTTP requests
  */
-class JiraController {
-  
-  // =====================================================
-  // JIRA Connection Management
-  // =====================================================
 
-  /**
-   * Create new JIRA connection
-   * POST /api/jira/connections
-   */
-  async createConnection(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const userId = req.user.id;
-      const connectionData = req.body;
-
-      const connection = await jiraService.createJiraConnection(userId, connectionData);
-
-      res.status(201).json({
-        success: true,
-        data: connection,
-        message: 'JIRA connection created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating JIRA connection:', error);
-      res.status(500).json({
+/**
+ * Test new JIRA connection
+ * POST /api/jira/test-connection
+ */
+export const testNewConnection = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
         success: false,
-        error: error.message || 'Failed to create JIRA connection'
+        error: 'Validation failed',
+        details: errors.array()
       });
     }
-  }
 
-  /**
-   * Get user's JIRA connections
-   * GET /api/jira/connections
-   */
-  async getConnections(req, res) {
-    try {
-      // If user is not authenticated, return empty connections without error
-      if (!req.user || !req.user.id) {
-        return res.json({
-          success: true,
-          data: [],
-          message: 'No authentication - returning empty connections'
-        });
-      }
+    const { jiraUrl, email, apiToken, projectKey } = req.body;
 
-      const userId = req.user.id;
-      
-      // Add timeout to prevent hanging requests
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection fetch timeout')), 5000)
-      );
-      
-      const connectionsPromise = jiraService.getUserJiraConnections(userId);
-      
-      const connections = await Promise.race([
-        connectionsPromise,
-        timeoutPromise
-      ]);
+    const result = await jiraService.testJiraConnection({
+      jiraUrl,
+      email,
+      apiToken,
+      projectKey
+    });
 
-      res.json({
+    if (result.success) {
+      return res.json({
         success: true,
-        data: connections || []
-      });
-    } catch (error) {
-      // Don't log errors for timeout or common issues
-      if (error.message !== 'Connection fetch timeout') {
-        console.error('Error fetching JIRA connections:', error);
-      }
-      
-      // Always return success with empty array to prevent UI errors
-      res.json({
-        success: true,
-        data: [],
-        warning: 'Could not fetch connections',
-        fallback: true
-      });
-    }
-  }
-
-  /**
-   * Delete JIRA connection
-   * DELETE /api/jira/connections/:connectionId
-   */
-  async deleteConnection(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const userId = req.user.id;
-      const { connectionId } = req.params;
-
-      console.log(`🗑️ [JIRA-CONTROLLER] Deleting connection ${connectionId} for user ${userId}`);
-
-      const result = await jiraService.deleteJiraConnection(userId, connectionId);
-
-      if (result.success) {
-        res.json({
-          success: true,
-          message: 'JIRA connection deleted successfully'
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: result.error || 'Failed to delete JIRA connection'
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting JIRA connection:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to delete JIRA connection'
-      });
-    }
-  }
-
-  /**
-   * Test new JIRA connection before creating
-   * POST /api/jira/test-connection
-   */
-  async testNewConnection(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const { jiraUrl, email, apiToken, projectKey } = req.body;
-
-      // Test the connection using JIRA service
-      const testResult = await jiraService.testJiraConnection({
-        jiraUrl,
-        email,
-        apiToken,
-        projectKey
-      });
-
-      if (testResult.success) {
-        res.json({
-          success: true,
-          data: testResult.data,
-          message: 'JIRA connection test successful'
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: testResult.error || 'JIRA connection test failed'
-        });
-      }
-    } catch (error) {
-      console.error('Error testing new JIRA connection:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'JIRA connection test failed'
-      });
-    }
-  }
-
-  /**
-   * Test existing JIRA connection
-   * POST /api/jira/connections/:connectionId/test
-   */
-  async testConnection(req, res) {
-    try {
-      const { connectionId } = req.params;
-      const userId = req.user.id;
-
-      // This would test the connection by making a simple API call
-      // For now, we'll return a success response
-      res.json({
-        success: true,
+        data: result.data,
         message: 'JIRA connection test successful'
       });
-    } catch (error) {
-      console.error('Error testing JIRA connection:', error);
-      res.status(500).json({
+    } else {
+      return res.status(400).json({
         success: false,
-        error: error.message || 'JIRA connection test failed'
+        error: result.error
       });
     }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Test connection error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to test JIRA connection'
+    });
   }
+};
 
-  // =====================================================
-  // Epic Management
-  // =====================================================
-
-  /**
-   * Get available Epics from JIRA project
-   * GET /api/jira/connections/:connectionId/projects/:projectKey/epics
-   */
-  async getProjectEpics(req, res) {
-    try {
-      const { connectionId, projectKey } = req.params;
-      
-      // Handle both authenticated and unauthenticated requests
-      if (!req.user || !req.user.id) {
-        console.log('⚠️ No authenticated user, returning empty Epic list');
-        return res.json({
-          success: true,
-          data: [],
-          warning: 'Authentication required for JIRA integration',
-          fallback: true
-        });
-      }
-
-      const userId = req.user.id;
-      
-      console.log(`🔍 Fetching Epics for user ${userId}, connection ${connectionId}, project ${projectKey}`);
-
-      // Add timeout to prevent hanging requests
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Epic fetch timeout')), 10000)
-      );
-      
-      const epicsPromise = jiraService.getProjectEpics(connectionId, projectKey, userId);
-      
-      const epics = await Promise.race([
-        epicsPromise,
-        timeoutPromise
-      ]);
-
-      console.log(`✅ Successfully fetched ${epics ? epics.length : 0} Epics`);
-
-      res.json({
-        success: true,
-        data: epics || []
-      });
-    } catch (error) {
-      console.error('Error fetching project Epics:', error);
-      
-      // Always return empty array to prevent UI breaking
-      res.json({
-        success: true,
-        data: [],
-        warning: error.message || 'Could not fetch Epics from JIRA',
-        fallback: true
-      });
-    }
-  }
-
-  /**
-   * Validate Epic access and permissions
-   * GET /api/jira/connections/:connectionId/epics/:epicId/validate
-   */
-  async validateEpicAccess(req, res) {
-    try {
-      const { connectionId, epicId } = req.params;
-      const userId = req.user.id;
-
-      const validation = await jiraService.validateEpicAccess(connectionId, epicId, userId);
-
-      res.json({
-        success: true,
-        data: validation
-      });
-    } catch (error) {
-      console.error('Error validating Epic access:', error);
-      res.status(400).json({
+/**
+ * Test existing JIRA connection
+ * POST /api/jira/connections/:connectionId/test
+ */
+export const testConnection = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
         success: false,
-        error: error.message || 'Epic validation failed'
+        error: 'Validation failed',
+        details: errors.array()
       });
     }
-  }
 
-  /**
-   * Search Epics by query
-   * GET /api/jira/connections/:connectionId/projects/:projectKey/epics/search
-   */
-  async searchEpics(req, res) {
-    try {
-      const { connectionId, projectKey } = req.params;
-      const { q: searchQuery } = req.query;
-      const userId = req.user.id;
-
-      if (!searchQuery) {
-        return res.status(400).json({
-          success: false,
-          error: 'Search query is required'
-        });
-      }
-
-      // Get all epics first, then filter
-      const allEpics = await jiraService.getProjectEpics(connectionId, projectKey, userId);
-      
-      const filteredEpics = allEpics.filter(epic => 
-        epic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        epic.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        epic.summary.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-      res.json({
-        success: true,
-        data: filteredEpics
-      });
-    } catch (error) {
-      console.error('Error searching Epics:', error);
-      res.status(500).json({
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: error.message || 'Failed to search Epics'
+        error: 'User not authenticated'
       });
     }
-  }
 
-  // =====================================================
-  // User Story and Subtask Creation
-  // =====================================================
-
-  /**
-   * Create user story from Gherkin scenario
-   * POST /api/jira/connections/:connectionId/epics/:epicId/user-stories
-   */
-  async createUserStory(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const { connectionId, epicId } = req.params;
-      const userId = req.user.id;
-      const storyData = req.body;
-
-      const userStory = await jiraService.createUserStory(connectionId, epicId, storyData, userId);
-
-      res.status(201).json({
-        success: true,
-        data: userStory,
-        message: 'User story created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating user story:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to create user story'
-      });
-    }
-  }
-
-  /**
-   * Create subtasks from Gherkin scenarios
-   * POST /api/jira/connections/:connectionId/user-stories/:userStoryId/subtasks
-   */
-  async createSubtasks(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const { connectionId, userStoryId } = req.params;
-      const userId = req.user.id;
-      const { scenarios } = req.body;
-
-      if (!scenarios || !Array.isArray(scenarios)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Scenarios array is required'
-        });
-      }
-
-      const subtasks = await jiraService.createSubtasks(connectionId, userStoryId, scenarios, userId);
-
-      res.status(201).json({
-        success: true,
-        data: subtasks,
-        message: `Created ${subtasks.length} subtasks successfully`
-      });
-    } catch (error) {
-      console.error('Error creating subtasks:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to create subtasks'
-      });
-    }
-  }
-
-  /**
-   * Create complete JIRA structure (user story + subtasks) with enhanced error handling
-   * POST /api/jira/connections/:connectionId/epics/:epicId/complete-story
-   */
-  async createCompleteStory(req, res) {
-    let userStory = null;
-    let subtasks = [];
+    const { connectionId } = req.params;
     
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const { connectionId, epicId } = req.params;
-      const userId = req.user.id;
-      const { storyData, scenarios } = req.body;
-
-      console.log('🔍 Debug createCompleteStory data:');
-      console.log('connectionId:', connectionId);
-      console.log('epicId:', epicId);
-      console.log('userId:', userId);
-      console.log('storyData:', JSON.stringify(storyData, null, 2));
-      console.log('scenarios (separate):', JSON.stringify(scenarios, null, 2));
-      console.log('storyData.scenarios:', JSON.stringify(storyData.scenarios, null, 2));
-
-      // Validate required data
-      if (!storyData || !storyData.title) {
-        return res.status(400).json({
-          success: false,
-          error: 'Story data with title is required'
-        });
-      }
-
-      // Step 1: Create user story with retry mechanism
-      console.log('🔍 Creating user story...');
-      try {
-        userStory = await jiraService.createUserStory(connectionId, epicId, storyData, userId);
-        console.log('✅ User story created:', userStory);
-      } catch (userStoryError) {
-        console.error('❌ Failed to create user story:', userStoryError);
-        
-        // Try with simplified data if original fails
-        console.log('🔄 Retrying user story creation with simplified data...');
-        const simplifiedStoryData = {
-          title: storyData.title,
-          userStory: storyData.userStory || storyData.title,
-          description: 'Generated from SpecWeave',
-          scenarios: [] // Empty scenarios for fallback
-        };
-        
-        try {
-          userStory = await jiraService.createUserStory(connectionId, epicId, simplifiedStoryData, userId);
-          console.log('✅ User story created with simplified data:', userStory);
-        } catch (fallbackError) {
-          console.error('❌ Failed to create user story even with simplified data:', fallbackError);
-          throw userStoryError; // Throw original error
-        }
-      }
-
-      // Note: Scenarios are already included in the user story's acceptance criteria table
-      // No need to create separate subtasks
-      console.log('ℹ️ Scenarios included in user story acceptance criteria, no subtasks needed');
-
-      // Return success with user story containing acceptance criteria table
-      const scenarioCount = scenarios && Array.isArray(scenarios) ? scenarios.length : 0;
-      const successMessage = scenarioCount > 0 
-        ? `Created user story with ${scenarioCount} scenarios in acceptance criteria table`
-        : 'Created user story successfully';
-
-      res.status(201).json({
-        success: true,
-        data: {
-          userStory,
-          subtasks: [], // No subtasks created - scenarios are in acceptance criteria
-          scenarioCount
-        },
-        message: successMessage
-      });
-      
-    } catch (error) {
-      console.error('Error creating complete story:', error);
-      
-      // If we have a user story, that's all we need (scenarios are in acceptance criteria)
-      if (userStory) {
-        console.log('✅ User story created successfully with acceptance criteria');
-        return res.status(201).json({
-          success: true,
-          data: {
-            userStory,
-            subtasks: [], // No subtasks needed
-            scenarioCount: scenarios && Array.isArray(scenarios) ? scenarios.length : 0
-          },
-          message: 'Created user story successfully with acceptance criteria table'
-        });
-      }
-      
-      // Complete failure
-      res.status(500).json({
+    // Get connection details
+    const connections = await jiraService.getUserJiraConnections(userId);
+    const connection = connections.find(conn => conn.id === connectionId);
+    
+    if (!connection) {
+      return res.status(404).json({
         success: false,
-        error: error.message || 'Failed to create complete story'
+        error: 'Connection not found'
       });
     }
-  }
 
-  // =====================================================
-  // OAuth Methods
-  // =====================================================
+    // Test the connection
+    const result = await jiraService.checkConnectionHealth(connectionId, userId);
 
-  /**
-   * Check if OAuth is available/configured
-   * GET /api/jira/oauth/available
-   */
-  async checkOAuthAvailable(req, res) {
-    try {
-      // For now, return false since OAuth is not implemented yet
-      // In production, this would check if OAuth credentials are configured
-      res.json({
-        success: true,
-        data: {
-          available: false,
-          reason: 'OAuth integration is not yet configured. Please use manual setup.'
-        }
-      });
-    } catch (error) {
-      console.error('Error checking OAuth availability:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to check OAuth availability'
-      });
-    }
-  }
-
-  /**
-   * Start JIRA OAuth flow
-   * POST /api/jira/oauth/start
-   */
-  async startOAuthFlow(req, res) {
-    try {
-      // For now, return an error since OAuth is not implemented
-      // In production, this would initiate the OAuth flow
-      res.status(501).json({
-        success: false,
-        error: 'OAuth integration is not yet implemented. Please use manual setup with your JIRA URL and project key.'
-      });
-    } catch (error) {
-      console.error('Error starting OAuth flow:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to start OAuth flow'
-      });
-    }
-  }
-
-  /**
-   * Complete JIRA OAuth flow
-   * POST /api/jira/oauth/callback
-   */
-  async completeOAuthFlow(req, res) {
-    try {
-      // For now, return an error since OAuth is not implemented
-      res.status(501).json({
-        success: false,
-        error: 'OAuth callback is not yet implemented'
-      });
-    } catch (error) {
-      console.error('Error completing OAuth flow:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to complete OAuth flow'
-      });
-    }
-  }
-
-  // =====================================================
-  // Error Handling and Fallbacks
-  // =====================================================
-
-  /**
-   * Handle JIRA integration errors with fallback options
-   * POST /api/jira/handle-error
-   */
-  async handleIntegrationError(req, res) {
-    try {
-      const { error, context, scenarioData } = req.body;
-      const userId = req.user.id;
-
-      // Log the error for monitoring
-      console.error('JIRA Integration Error:', {
-        userId,
-        error,
-        context,
-        timestamp: new Date().toISOString()
-      });
-
-      // Provide fallback options
-      const fallbackOptions = {
-        saveLocally: {
-          available: true,
-          description: 'Save scenario locally and retry JIRA integration later'
-        },
-        exportToFile: {
-          available: true,
-          description: 'Export scenario data to file for manual JIRA import'
-        },
-        retryConnection: {
-          available: true,
-          description: 'Retry with different JIRA connection or credentials'
-        },
-        contactSupport: {
-          available: true,
-          description: 'Contact support for assistance with JIRA integration'
-        }
-      };
-
-      res.json({
-        success: true,
-        data: {
-          error: error,
-          fallbackOptions,
-          recoveryInstructions: [
-            'Check your JIRA connection settings',
-            'Verify Epic permissions and access',
-            'Ensure JIRA instance is accessible',
-            'Try again with a different Epic or project'
-          ]
-        },
-        message: 'Error handled with fallback options provided'
-      });
-    } catch (error) {
-      console.error('Error handling JIRA integration error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to handle integration error'
-      });
-    }
-  }
-
-
-
-  /**
-   * Retry failed JIRA operations
-   * POST /api/jira/retry
-   */
-  async retryOperation(req, res) {
-    try {
-      const { operationType, operationData } = req.body;
-      const userId = req.user.id;
-
-      let result;
-
-      switch (operationType) {
-        case 'createUserStory':
-          result = await jiraService.createUserStory(
-            operationData.connectionId,
-            operationData.epicId,
-            operationData.storyData,
-            userId
-          );
-          break;
-
-        case 'createSubtasks':
-          result = await jiraService.createSubtasks(
-            operationData.connectionId,
-            operationData.userStoryId,
-            operationData.scenarios,
-            userId
-          );
-          break;
-
-        default:
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid operation type for retry'
-          });
-      }
-
-      res.json({
+    if (result.healthy) {
+      return res.json({
         success: true,
         data: result,
-        message: 'Operation retried successfully'
+        message: 'Connection is healthy'
       });
-    } catch (error) {
-      console.error('Error retrying JIRA operation:', error);
-      res.status(500).json({
+    } else {
+      return res.status(400).json({
         success: false,
-        error: error.message || 'Failed to retry operation'
+        error: result.message,
+        data: result
       });
     }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Test connection error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to test connection'
+    });
   }
-}
+};
 
-export default new JiraController();
+/**
+ * Create new JIRA connection
+ * POST /api/jira/connections
+ */
+export const createConnection = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Transform camelCase to snake_case for database
+    const connectionData = {
+      jira_url: req.body.jiraUrl,
+      jira_email: req.body.email,
+      jira_api_token: req.body.apiToken,
+      project_key: req.body.projectKey,
+      project_name: req.body.projectName || req.body.projectKey
+    };
+    
+    const result = await jiraService.createJiraConnection(userId, connectionData);
+
+    return res.status(201).json({
+      success: true,
+      data: result,
+      message: 'JIRA connection created successfully'
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Create connection error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to create JIRA connection'
+    });
+  }
+};
+
+/**
+ * Get user's JIRA connections
+ * GET /api/jira/connections
+ */
+export const getConnections = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    // If no user, return empty array (for optionalAuth compatibility)
+    if (!userId) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const connections = await jiraService.getUserJiraConnections(userId);
+
+    return res.json({
+      success: true,
+      data: connections
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Get connections error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get JIRA connections'
+    });
+  }
+};
+
+/**
+ * Delete JIRA connection
+ * DELETE /api/jira/connections/:connectionId
+ */
+export const deleteConnection = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId } = req.params;
+    const result = await jiraService.deleteJiraConnection(userId, connectionId);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Delete connection error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete JIRA connection'
+    });
+  }
+};
+
+/**
+ * Get available Epics from JIRA project
+ * GET /api/jira/connections/:connectionId/projects/:projectKey/epics
+ */
+export const getProjectEpics = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    
+    // For optionalAuth compatibility - if no user, still try to get epics
+    // This allows testing without authentication
+    if (!userId) {
+      cleanLogger.warn('JIRA-CONTROLLER', 'Getting epics without authentication');
+    }
+
+    const { connectionId, projectKey } = req.params;
+
+    cleanLogger.debug('JIRA-CONTROLLER', 'Getting project epics', {
+      connectionId,
+      projectKey,
+      userId: userId || 'anonymous'
+    });
+
+    const epics = await jiraService.getProjectEpics(connectionId, projectKey, userId);
+
+    return res.json({
+      success: true,
+      data: epics
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Get project epics error', { 
+      error: error.message,
+      stack: error.stack
+    });
+    
+    // Return more specific error message
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    const errorMessage = error.message || 'Failed to get project epics';
+    
+    return res.status(statusCode).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+};
+
+/**
+ * Validate Epic access
+ * GET /api/jira/connections/:connectionId/epics/:epicId/validate
+ */
+export const validateEpicAccess = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId, epicId } = req.params;
+    
+    cleanLogger.debug('JIRA-CONTROLLER', 'Validating epic access', {
+      connectionId,
+      epicId,
+      userId
+    });
+
+    const result = await jiraService.validateEpicAccess(connectionId, epicId, userId);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Validate epic access error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to validate epic access'
+    });
+  }
+};
+
+/**
+ * Search Epics by query
+ * GET /api/jira/connections/:connectionId/projects/:projectKey/epics/search
+ */
+export const searchEpics = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId, projectKey } = req.params;
+    const { q: searchQuery } = req.query;
+
+    if (!searchQuery) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    const epics = await jiraService.getProjectEpics(connectionId, projectKey, userId);
+    
+    // Filter epics based on search query
+    const filteredEpics = epics.filter(epic =>
+      epic.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      epic.key?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      epic.summary?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return res.json({
+      success: true,
+      data: filteredEpics
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Search epics error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to search epics'
+    });
+  }
+};
+
+/**
+ * Check connection health
+ * GET /api/jira/connections/:connectionId/health
+ */
+export const checkConnectionHealth = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId } = req.params;
+    const health = await jiraService.checkConnectionHealth(connectionId, userId);
+
+    return res.json({
+      success: true,
+      data: health
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Check connection health error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check connection health'
+    });
+  }
+};
+
+/**
+ * Check all connections health
+ * GET /api/jira/connections/health/all
+ */
+export const checkAllConnectionsHealth = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    // If user not authenticated, return empty result (not an error)
+    if (!userId) {
+      return res.json({
+        success: true,
+        data: {
+          connections: [],
+          summary: {
+            total: 0,
+            healthy: 0,
+            unhealthy: 0,
+            unknown: 0
+          }
+        }
+      });
+    }
+
+    const healthResults = await jiraService.checkAllConnectionsHealth(userId);
+
+    return res.json({
+      success: true,
+      data: healthResults
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Check all connections health error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check connections health'
+    });
+  }
+};
+
+/**
+ * Create user story from Gherkin scenario
+ * POST /api/jira/connections/:connectionId/epics/:epicId/user-stories
+ */
+export const createUserStory = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId, epicId } = req.params;
+    const storyData = req.body;
+
+    // Implementation would call jiraService to create user story
+    // For now, return not implemented
+    return res.status(501).json({
+      success: false,
+      error: 'User story creation not yet implemented'
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Create user story error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to create user story'
+    });
+  }
+};
+
+/**
+ * Create subtasks from Gherkin scenarios
+ * POST /api/jira/connections/:connectionId/user-stories/:userStoryId/subtasks
+ */
+export const createSubtasks = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId, userStoryId } = req.params;
+    const { scenarios } = req.body;
+
+    // Implementation would call jiraService to create subtasks
+    // For now, return not implemented
+    return res.status(501).json({
+      success: false,
+      error: 'Subtask creation not yet implemented'
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Create subtasks error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to create subtasks'
+    });
+  }
+};
+
+/**
+ * Create complete JIRA structure (user story + subtasks)
+ * POST /api/jira/connections/:connectionId/epics/:epicId/complete-story
+ */
+export const createCompleteStory = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId, epicId } = req.params;
+    const { storyData, scenarios, developmentTasks } = req.body;
+
+    cleanLogger.info('JIRA-CONTROLLER', 'Creating complete story', {
+      connectionId,
+      epicId,
+      scenarioCount: scenarios?.length || 0,
+      taskCount: developmentTasks?.length || 0
+    });
+
+    // Create the complete story with scenarios and development tasks
+    const result = await jiraService.createCompleteStory(
+      connectionId,
+      userId,
+      epicId,
+      storyData,
+      scenarios,
+      developmentTasks
+    );
+
+    if (result.success) {
+      return res.status(201).json({
+        success: true,
+        data: result.data,
+        message: `User story created successfully with ${scenarios?.length || 0} scenarios and ${developmentTasks?.length || 0} development tasks`
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Create complete story error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to create complete story'
+    });
+  }
+};
+
+/**
+ * Handle JIRA integration errors with fallback options
+ * POST /api/jira/handle-error
+ */
+export const handleIntegrationError = async (req, res) => {
+  try {
+    const { error, context, scenarioData } = req.body;
+
+    cleanLogger.error('JIRA-INTEGRATION', 'Integration error reported', {
+      error,
+      context
+    });
+
+    // Return error handling suggestions
+    return res.json({
+      success: true,
+      data: {
+        suggestions: [
+          'Check your JIRA connection settings',
+          'Verify your API token is still valid',
+          'Ensure you have proper permissions in JIRA'
+        ],
+        canRetry: true
+      }
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Handle integration error failed', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to handle integration error'
+    });
+  }
+};
+
+/**
+ * Retry failed JIRA operations
+ * POST /api/jira/retry
+ */
+export const retryOperation = async (req, res) => {
+  try {
+    const { operationType, operationData } = req.body;
+
+    cleanLogger.info('JIRA-CONTROLLER', 'Retrying operation', { operationType });
+
+    // Implementation would retry the failed operation
+    // For now, return not implemented
+    return res.status(501).json({
+      success: false,
+      error: 'Operation retry not yet implemented'
+    });
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Retry operation error', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retry operation'
+    });
+  }
+};
+
+// Export as default object for compatibility
+export default {
+  testNewConnection,
+  testConnection,
+  createConnection,
+  getConnections,
+  deleteConnection,
+  getProjectEpics,
+  validateEpicAccess,
+  searchEpics,
+  checkConnectionHealth,
+  checkAllConnectionsHealth,
+  createUserStory,
+  createSubtasks,
+  createCompleteStory,
+  handleIntegrationError,
+  retryOperation
+};

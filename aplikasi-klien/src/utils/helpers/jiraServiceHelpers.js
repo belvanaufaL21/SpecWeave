@@ -92,11 +92,10 @@ export const retryJiraOperation = async (operation, operationName, maxRetries = 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`🔄 ${operationName} attempt ${attempt}/${maxRetries}`);
-      
       const result = await operation(attempt);
       
       if (result.success) {
-        console.log(`✅ ${operationName} successful on attempt ${attempt}`);
+        console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
         return result;
       } else {
         lastError = new Error(result.error || 'Operation failed');
@@ -117,6 +116,7 @@ export const retryJiraOperation = async (operation, operationName, maxRetries = 
       // Wait before retry (exponential backoff)
       if (attempt < maxRetries) {
         const delay = JIRA_RETRY.DELAY_BASE * Math.pow(JIRA_RETRY.TIMEOUT_MULTIPLIER, attempt - 1);
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -131,7 +131,7 @@ export const retryJiraOperation = async (operation, operationName, maxRetries = 
 };
 
 /**
- * Get current chat ID dari URL atau localStorage
+ * Get current chat ID dari URL atau fallback
  * @returns {string} - Chat ID
  */
 export const getCurrentChatId = () => {
@@ -144,8 +144,8 @@ export const getCurrentChatId = () => {
       return pathParts[pathParts.length - 1];
     }
     
-    // Fallback to localStorage
-    return localStorage.getItem('specweave_active_chat_id') || 'default-chat';
+    // Fallback to default
+    return 'default-chat';
   } catch (error) {
     console.warn('Error getting current chat ID:', error);
     return 'default-chat';
@@ -153,26 +153,18 @@ export const getCurrentChatId = () => {
 };
 
 /**
- * Clear Epic context dari localStorage
- * @param {string} chatId - Chat ID
+ * Clear Epic context (global - no chatId needed)
  */
-export const clearEpicContextStorage = (chatId) => {
-  const keysToRemove = [
-    JIRA_STORAGE.EPIC_CONTEXT,
-    `${JIRA_STORAGE.EPIC_CONTEXT}_${chatId}`,
-    JIRA_STORAGE.ACTIVE_PROJECT,
-    `${JIRA_STORAGE.ACTIVE_PROJECT}_${chatId}`,
-    'specweave_epic_data',
-    'specweave_epic_selection'
-  ];
+export const clearEpicContextStorage = () => {
+  console.log(`🧹 Clearing Epic context (global)`);
   
-  keysToRemove.forEach(key => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn(`Failed to remove ${key}:`, error);
-    }
-  });
+  // Clear from localStorage
+  localStorage.removeItem(JIRA_STORAGE.EPIC_CONTEXT);
+  
+  // Dispatch event to notify components
+  window.dispatchEvent(new CustomEvent('forceEpicContextClear', {
+    detail: { timestamp: Date.now() }
+  }));
 };
 
 /**

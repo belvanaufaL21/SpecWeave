@@ -1,4 +1,5 @@
 import supabaseService from './supabaseService.js';
+import cleanLogger from '../config/cleanLogging.js';
 
 /**
  * JIRA Error Handling Service
@@ -170,7 +171,7 @@ class JiraErrorHandlingService {
    * @returns {Object|null} Fallback data
    */
   async handleAuthenticationError(error, context) {
-    console.warn('JIRA Authentication Error:', error.message);
+    cleanLogger.warn('JIRA', 'Authentication Error', error.message);
     
     // Log authentication failure for monitoring
     await this.logError('authentication_failure', {
@@ -190,7 +191,7 @@ class JiraErrorHandlingService {
    * @returns {Object|null} Fallback data
    */
   async handleAuthorizationError(error, context) {
-    console.warn('JIRA Authorization Error:', error.message);
+    cleanLogger.warn('JIRA', 'Authorization Error', error.message);
     
     // Log authorization failure
     await this.logError('authorization_failure', {
@@ -219,7 +220,7 @@ class JiraErrorHandlingService {
    * @returns {number} Retry delay
    */
   handleRateLimitError(error, context) {
-    console.warn('JIRA Rate Limit Error:', error.message);
+    cleanLogger.warn('JIRA', 'Rate Limit Error', error.message);
     
     // Extract retry-after header if available
     const retryAfter = error.headers?.['retry-after'] || error.retryAfter;
@@ -238,7 +239,7 @@ class JiraErrorHandlingService {
    * @returns {Object|null} Fallback data
    */
   async handleNotFoundError(error, context) {
-    console.warn('JIRA Resource Not Found:', error.message);
+    cleanLogger.warn('JIRA', 'Resource Not Found', error.message);
     
     // Return appropriate empty data based on operation
     if (context.operation === 'getEpics') {
@@ -263,7 +264,7 @@ class JiraErrorHandlingService {
    * @returns {Object|null} Fallback data
    */
   async handleNetworkError(error, context) {
-    console.warn('JIRA Network Error:', error.message);
+    cleanLogger.warn('JIRA', 'Network Error', error.message);
     
     // Try to provide cached data if available
     const cachedData = await this.getCachedData(context.operation, context.params);
@@ -285,7 +286,9 @@ class JiraErrorHandlingService {
    * @returns {Object|null} Fallback data
    */
   async handleGenericError(error, context) {
-    console.error('JIRA Generic Error:', error.message);
+    // Only log if it's a new type of error (throttled)
+    const errorKey = `${context.operation}-${error.message}`;
+    cleanLogger.error('JIRA', 'Generic JIRA error', { error: error.message, context });
     
     await this.logError('generic_error', {
       operation: context.operation,
@@ -391,7 +394,7 @@ class JiraErrorHandlingService {
       // For now, return null (no cache implementation)
       return null;
     } catch (error) {
-      console.error('Error retrieving cached data:', error);
+      cleanLogger.debug('CACHE', 'Error retrieving cached data', error);
       return null;
     }
   }
@@ -410,7 +413,7 @@ class JiraErrorHandlingService {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Failed to log JIRA error:', error);
+      cleanLogger.debug('ERROR_LOG', 'Failed to log JIRA error', error);
     }
   }
 

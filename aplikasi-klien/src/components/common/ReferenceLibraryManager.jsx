@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { referenceService } from '../../services/referenceService';
+import AutoExpandingTextarea from './AutoExpandingTextarea';
 
 const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentReference = '' }) => {
   const [references, setReferences] = useState([]);
@@ -113,30 +114,39 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
     setServerError(false);
     
     try {
+      
       // Try server first
       const result = await referenceService.getReferences();
-      
+
       if (result.success) {
+        
         setReferences(result.data || []);
         setServerError(false);
         setOfflineMode(false);
+        
         // Save to offline storage as backup
         localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(result.data || []));
+
+      } else if (result.offlineMode) {
+        // Server explicitly returned offline mode
+        throw new Error('Server returned offline mode');
       } else {
-        throw new Error('Server error');
+        // Other server error
+        throw new Error(result.error || 'Server error');
       }
     } catch (error) {
-      console.warn('Server unavailable, switching to offline mode:', error.message);
+      console.warn('⚠️ [REFERENCE-MANAGER] Server unavailable, switching to offline mode:', error.message);
       
       // Fallback to offline storage
       try {
         const offlineData = localStorage.getItem(OFFLINE_STORAGE_KEY);
         const offlineReferences = offlineData ? JSON.parse(offlineData) : [];
+
         setReferences(offlineReferences);
         setOfflineMode(true);
         setServerError(true);
       } catch (offlineError) {
-        console.error('Failed to load offline data:', offlineError);
+        console.error('❌ [REFERENCE-MANAGER] Failed to load offline data:', offlineError);
         setReferences([]);
         setOfflineMode(true);
         setServerError(true);
@@ -288,7 +298,7 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
     // Track usage for analytics and few-shot prompting optimization
     try {
       await referenceService.trackUsage(reference.id);
-      console.log(`📊 Tracked usage for reference: ${reference.title}`);
+      
     } catch (error) {
       console.warn('Failed to track reference usage:', error);
     }
@@ -475,12 +485,13 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
                         <div className="p-4 border-r border-white/10 space-y-3">
                           {newReference.given.map((step, index) => (
                             <div key={index} className="group relative">
-                              <textarea
+                              <AutoExpandingTextarea
                                 value={step}
                                 onChange={(e) => updateStep('given', index, e.target.value)}
                                 placeholder="pengguna berada di halaman login"
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 resize-none text-sm"
-                                rows={2}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 text-sm"
+                                minRows={2}
+                                maxRows={8}
                               />
                               {newReference.given.length > 1 && (
                                 <button
@@ -501,12 +512,13 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
                         <div className="p-4 border-r border-white/10 space-y-3">
                           {newReference.when.map((step, index) => (
                             <div key={index} className="group relative">
-                              <textarea
+                              <AutoExpandingTextarea
                                 value={step}
                                 onChange={(e) => updateStep('when', index, e.target.value)}
                                 placeholder="pengguna mengklik tombol login"
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 resize-none text-sm"
-                                rows={2}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 text-sm"
+                                minRows={2}
+                                maxRows={8}
                               />
                               {newReference.when.length > 1 && (
                                 <button
@@ -527,12 +539,13 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
                         <div className="p-4 space-y-3">
                           {newReference.then.map((step, index) => (
                             <div key={index} className="group relative">
-                              <textarea
+                              <AutoExpandingTextarea
                                 value={step}
                                 onChange={(e) => updateStep('then', index, e.target.value)}
                                 placeholder="sistem menampilkan dashboard"
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 resize-none text-sm"
-                                rows={2}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 text-sm"
+                                minRows={2}
+                                maxRows={8}
                               />
                               {newReference.then.length > 1 && (
                                 <button

@@ -1,4 +1,5 @@
 import supabaseService from './supabaseService.js';
+import cleanLogger from '../config/cleanLogging.js';
 
 /**
  * Epic Service for managing Epic context and session state
@@ -28,7 +29,7 @@ class EpicService {
         // If Epic doesn't have name, use summary or key as fallback
         if (!epicData.epic.name) {
           epicData.epic.name = epicData.epic.summary || epicData.epic.key || 'Unknown Epic';
-          console.log(`🔧 [EPIC-SERVICE] Added missing name field: "${epicData.epic.name}"`);
+          cleanLogger.debug('EPIC-SERVICE', 'Added missing name field', { name: epicData.epic.name });
         }
         
         // Also ensure summary exists
@@ -36,7 +37,7 @@ class EpicService {
           epicData.epic.summary = epicData.epic.name || epicData.epic.key || 'No summary';
         }
         
-        console.log(`✅ [EPIC-SERVICE] Epic data validated:`, {
+        cleanLogger.debug('EPIC-SERVICE', 'Epic data validated', {
           id: epicData.epic.id,
           key: epicData.epic.key,
           name: epicData.epic.name,
@@ -154,7 +155,46 @@ class EpicService {
    */
   async storeEpicContextInDB(userId, context) {
     try {
-      // Use user preferences table to store Epic context
+      cleanLogger.debug('EPIC-SERVICE', 'Storing Epic context in database', {
+        userId,
+        epicId: context.epicId,
+        hasEpicData: !!context.epicData
+      });
+
+      // Store in user_epic_context table (NEW - proper integration)
+      if (context.epicData && context.epicId) {
+        try {
+          const epicContextData = {
+            user_id: userId,
+            chat_id: context.epicData.chatId || 'default-chat',
+            epic_id: context.epicId,
+            epic_data: context.epicData,
+            connection_id: context.epicData.connection?.id || null,
+            project_key: context.epicData.connection?.project_key || '',
+            validated_at: new Date().toISOString(),
+            is_active: true
+          };
+
+          // Direct database insert using supabaseService
+          const { data, error } = await supabaseService.admin
+            .from('user_epic_context')
+            .upsert(epicContextData, {
+              onConflict: 'user_id,chat_id'
+            })
+            .select()
+            .single();
+
+          if (error) {
+            cleanLogger.warn('EPIC-SERVICE', 'Failed to save to user_epic_context', { error: error.message });
+          } else {
+            cleanLogger.debug('EPIC-SERVICE', 'Epic context saved to user_epic_context table', { id: data.id });
+          }
+        } catch (epicTableError) {
+          cleanLogger.warn('EPIC-SERVICE', 'Could not save to user_epic_context table', { error: epicTableError.message });
+        }
+      }
+
+      // Also store in user preferences table (EXISTING - for backward compatibility)
       const preferences = {
         epic_context: {
           epicId: context.epicId,
@@ -177,14 +217,18 @@ class EpicService {
         await supabaseService.updateUserProfile(userId, {
           preferences: updatedPreferences
         });
+        
+        cleanLogger.debug('EPIC-SERVICE', 'Epic context also saved to user preferences');
       } else {
         // Create new profile with preferences
         await supabaseService.createUserProfile(userId, {
           preferences
         });
+        
+        console.log('✅ [EPIC-SERVICE] New user profile created with Epic context');
       }
     } catch (error) {
-      console.error('Error storing Epic context in DB:', error);
+      console.error('❌ [EPIC-SERVICE] Error storing Epic context in DB:', error);
       // Don't throw error here as it's not critical
     }
   }
@@ -263,6 +307,7 @@ class EpicService {
    */
   validateEpicData(epicData) {
     if (!epicData || typeof epicData !== 'object') {
+      console.error('❌ [EPIC-VALIDATION] Invalid epicData: not an object');
       return false;
     }
 
@@ -272,21 +317,53 @@ class EpicService {
     if (workWithoutEpic === true) {
       // Validate connection data
       if (!connection || !connection.id || !connection.project_key) {
+        console.error('❌ [EPIC-VALIDATION] Invalid connection for workWithoutEpic mode:', { 
+          hasConnection: !!connection, 
+          hasId: !!connection?.id, 
+          hasProjectKey: !!connection?.project_key 
+        });
         return false;
       }
+      console.log('✅ [EPIC-VALIDATION] Valid workWithoutEpic data');
       return true;
     }
 
     // Validate Epic data (when Epic is required)
-    if (!epic || !epic.id || !epic.key || !epic.name) {
+    // Epic must have id and key, but name can be derived from summary or key
+    if (!epic || !epic.id || !epic.key) {
+      console.error('❌ [EPIC-VALIDATION] Invalid epic data:', { 
+        hasEpic: !!epic, 
+        hasId: !!epic?.id, 
+        hasKey: !!epic?.key,
+        hasName: !!epic?.name,
+        hasSummary: !!epic?.summary
+      });
       return false;
+    }
+
+    // Name is optional - can be derived from summary or key
+    // Just log if it's missing
+    if (!epic.name && !epic.summary) {
+      console.warn('⚠️ [EPIC-VALIDATION] Epic has no name or summary, will use key as fallback');
     }
 
     // Validate connection data
     if (!connection || !connection.id || !connection.project_key) {
+      console.error('❌ [EPIC-VALIDATION] Invalid connection:', { 
+        hasConnection: !!connection, 
+        hasId: !!connection?.id, 
+        hasProjectKey: !!connection?.project_key 
+      });
       return false;
     }
 
+    console.log('✅ [EPIC-VALIDATION] Valid epic data:', {
+      epicId: epic.id,
+      epicKey: epic.key,
+      epicName: epic.name || epic.summary || epic.key,
+      connectionId: connection.id,
+      projectKey: connection.project_key
+    });
     return true;
   }
 

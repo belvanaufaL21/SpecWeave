@@ -1,12 +1,13 @@
 /**
  * Performance Monitoring Service
- * Tracks generation times, METEOR evaluation performance, and system metrics
+ * Tracks generation times and system metrics
  */
+import cleanLogger from '../config/cleanLogging.js';
+
 class PerformanceService {
   constructor() {
     this.activeTimers = new Map();
     this.performanceThreshold = parseInt(process.env.PERFORMANCE_ALERT_THRESHOLD_MS) || 2000;
-    this.meteorThreshold = 500; // 500ms threshold for METEOR evaluation
   }
 
   /**
@@ -24,7 +25,7 @@ class PerformanceService {
     };
     
     this.activeTimers.set(requestId, timer);
-    console.log(`⏱️ Performance timer started for ${operationType} (${requestId})`);
+    cleanLogger.debug('PERFORMANCE-SERVICE', `Timer started for ${operationType}`, { requestId });
     
     return timer;
   }
@@ -38,7 +39,7 @@ class PerformanceService {
     const timer = this.activeTimers.get(requestId);
     
     if (!timer) {
-      console.warn(`⚠️ No timer found for request ${requestId}`);
+      cleanLogger.warn('PERFORMANCE-SERVICE', `No timer found for request ${requestId}`);
       return null;
     }
 
@@ -60,14 +61,16 @@ class PerformanceService {
 
     // Check if performance exceeds threshold
     if (durationMs > this.performanceThreshold) {
-      console.warn(`🚨 Performance alert: ${timer.operationType} took ${durationMs}ms (threshold: ${this.performanceThreshold}ms)`);
+      cleanLogger.warn('PERFORMANCE-SERVICE', `Performance alert: ${timer.operationType} took ${durationMs}ms`, { 
+        threshold: this.performanceThreshold 
+      });
       metrics.performanceAlert = true;
     }
 
     // Clean up timer
     this.activeTimers.delete(requestId);
     
-    console.log(`✅ Performance timer ended for ${timer.operationType}: ${durationMs}ms`);
+    cleanLogger.debug('PERFORMANCE-SERVICE', `Timer ended for ${timer.operationType}`, { durationMs });
     return metrics;
   }
 
@@ -111,47 +114,16 @@ class PerformanceService {
     try {
       // TODO: Implement Supabase logging
       // This would insert into performance_logs table
-      console.log('📊 Performance metrics logged:', {
-        ...metrics,
+      cleanLogger.debug('PERFORMANCE-SERVICE', 'Performance metrics logged', {
+        requestId: metrics.requestId,
+        operationType: metrics.operationType,
+        durationMs: metrics.durationMs,
         userId
       });
       
       return true;
     } catch (error) {
       console.error('Failed to log performance metrics:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Log METEOR evaluation metrics to database
-   * @param {string} scenarioId - Scenario ID
-   * @param {Object} meteorMetrics - METEOR evaluation results
-   * @param {string} userId - User ID
-   * @returns {Promise<boolean>} Success status
-   */
-  async logMeteorMetrics(scenarioId, meteorMetrics, userId) {
-    try {
-      // TODO: Implement Supabase logging
-      // This would insert into evaluation_metrics table
-      const evaluationRecord = {
-        scenario_id: scenarioId,
-        user_id: userId,
-        meteor_score: meteorMetrics.meteor_score,
-        precision_score: meteorMetrics.precision,
-        recall_score: meteorMetrics.recall,
-        fmean_score: meteorMetrics.fmean,
-        fragmentation_penalty: meteorMetrics.fragmentation_penalty,
-        generation_time_ms: meteorMetrics.evaluation_time_ms,
-        quality_level: meteorMetrics.quality_level,
-        reference_type: 'template', // or 'previous_scenario', 'manual'
-        created_at: new Date().toISOString()
-      };
-
-      console.log('📈 METEOR metrics logged:', evaluationRecord);
-      return true;
-    } catch (error) {
-      console.error('Failed to log METEOR metrics:', error);
       return false;
     }
   }
@@ -171,7 +143,6 @@ class PerformanceService {
       return {
         totalRequests: 0,
         averageGenerationTime: 0,
-        averageMeteorScore: 0,
         successRate: 0,
         performanceAlerts: 0,
         qualityDistribution: {
@@ -198,7 +169,6 @@ class PerformanceService {
       
       // TODO: Implement performance analysis
       // - Check for increasing generation times
-      // - Check for declining METEOR scores
       // - Check for increased error rates
       
       return issues;
@@ -276,15 +246,6 @@ class PerformanceService {
       });
     }
     
-    if (stats.averageMeteorScore < 0.7) {
-      recommendations.push({
-        type: 'quality',
-        priority: 'medium',
-        message: 'Skor METEOR rata-rata di bawah threshold kualitas. Review template referensi dan prompt engineering.',
-        action: 'improve_quality'
-      });
-    }
-    
     if (stats.successRate < 0.95) {
       recommendations.push({
         type: 'reliability',
@@ -298,6 +259,34 @@ class PerformanceService {
   }
 
   /**
+   * Record a general metric for monitoring
+   * @param {string} metricName - Name of the metric
+   * @param {Object} metricData - Data associated with the metric
+   * @returns {boolean} Success status
+   */
+  recordMetric(metricName, metricData = {}) {
+    try {
+      cleanLogger.debug('PERFORMANCE-SERVICE', `Recording metric: ${metricName}`, metricData);
+      
+      // Log the metric for monitoring
+      const metricEntry = {
+        name: metricName,
+        data: metricData,
+        timestamp: new Date().toISOString()
+      };
+      
+      // In a production environment, this would be sent to a monitoring service
+      // For now, we'll just log it
+      cleanLogger.info('PERFORMANCE-METRIC', metricName, metricEntry);
+      
+      return true;
+    } catch (error) {
+      cleanLogger.error('PERFORMANCE-SERVICE', `Failed to record metric ${metricName}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Get current system performance metrics
    * @returns {Object} Current performance metrics
    */
@@ -305,7 +294,6 @@ class PerformanceService {
     return {
       activeTimers: this.activeTimers.size,
       performanceThreshold: this.performanceThreshold,
-      meteorThreshold: this.meteorThreshold,
       memoryUsage: process.memoryUsage(),
       uptime: process.uptime(),
       timestamp: new Date().toISOString()

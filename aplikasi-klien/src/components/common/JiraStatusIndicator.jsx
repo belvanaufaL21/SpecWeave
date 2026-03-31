@@ -154,7 +154,7 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
         return {
           color: 'red',
           text: 'Setup JIRA',
-          subtitle: connectionError ? 'Connection Error' : 'Not connected',
+          subtitle: connectionError ? 'Koneksi Error' : 'Belum terhubung',
           icon: (
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -163,8 +163,8 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
         };
       }
       
-      const projectName = (activeConnection?.custom_fields?.project_info?.name) 
-        ? activeConnection.custom_fields.project_info.name
+      const projectName = (activeConnection?.project_name) 
+        ? activeConnection.project_name
         : (activeConnection.project_key && typeof activeConnection.project_key === 'string') 
           ? activeConnection.project_key 
           : 'Unknown';
@@ -180,8 +180,8 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
       // Check if we have multiple connections to show count
       const totalConnections = connections?.length || 0;
       const subtitle = totalConnections > 1 
-        ? `Active (${totalConnections} total)` 
-        : (domain !== 'Unknown' ? domain : 'Connected');
+        ? `Aktif (${totalConnections} total)` 
+        : (domain !== 'Unknown' ? domain : 'Terhubung');
       
       return {
         color: 'green',
@@ -198,7 +198,7 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
       return {
         color: 'red',
         text: 'Setup JIRA',
-        subtitle: 'Setup Required',
+        subtitle: 'Setup Diperlukan',
         icon: (
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -224,8 +224,8 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
         `}
         title={
           !hasConnection || connectionError
-            ? 'Setup JIRA integration' 
-            : `Connected to ${statusConfig.text} (${statusConfig.subtitle}). Click to manage connection.`
+            ? 'Setup integrasi JIRA' 
+            : `Terhubung ke ${statusConfig.text} (${statusConfig.subtitle}). Klik untuk kelola koneksi.`
         }
       >
         {statusConfig.icon}

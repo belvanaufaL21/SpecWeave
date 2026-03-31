@@ -36,14 +36,11 @@ export function getInitialState() {
 }
 
 /**
- * Handle force Epic clear dengan optimized storage operations
+ * Handle force Epic clear (legacy function - now uses database)
  */
 export function handleForceEpicClear(setState) {
-  // Set force clear timestamp
-  const timestamp = Date.now().toString();
-  localStorage.setItem(JIRA_CONTEXT_CONSTANTS.STORAGE_KEYS.EPIC_FORCE_CLEAR_TIME, timestamp);
   
-  // Single state update
+  // Update state to clear Epic context
   setState(prev => ({
     ...prev,
     epicContext: null,
@@ -53,25 +50,13 @@ export function handleForceEpicClear(setState) {
     lastUpdated: new Date()
   }));
   
-  // Optimized storage clearing
+  // Dispatch event to notify components
   const currentPath = window.location.pathname;
   const chatId = currentPath.split('/').pop() || 'default-chat';
   
-  // Clear essential keys dengan error handling
-  const essentialKeys = [
-    ...JIRA_CONTEXT_CONSTANTS.ESSENTIAL_STORAGE_KEYS,
-    `${JIRA_CONTEXT_CONSTANTS.STORAGE_KEYS.EPIC_CONTEXT}_${chatId}`,
-    `epic_context_${chatId}`
-  ];
-  
-  essentialKeys.forEach(key => {
-    try {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    } catch (storageError) {
-      console.warn('Storage clear warning (non-critical):', storageError.message);
-    }
-  });
+  window.dispatchEvent(new CustomEvent('forceEpicContextClear', {
+    detail: { chatId, timestamp: Date.now() }
+  }));
 }
 
 /**
@@ -130,26 +115,11 @@ export function isCacheValid(lastRefreshTime, cacheDuration = JIRA_CONTEXT_CONST
 }
 
 /**
- * Safe storage operation dengan error handling
+ * Safe storage operation (legacy function - now uses database)
  */
 export function safeStorageOperation(operation, key, value = null) {
-  try {
-    switch (operation) {
-      case 'get':
-        return localStorage.getItem(key);
-      case 'set':
-        localStorage.setItem(key, value);
-        break;
-      case 'remove':
-        localStorage.removeItem(key);
-        break;
-      default:
-        console.warn('Unknown storage operation:', operation);
-    }
-  } catch (error) {
-    console.warn(`Storage ${operation} operation failed for key ${key}:`, error.message);
-    return null;
-  }
+
+  return null;
 }
 
 /**

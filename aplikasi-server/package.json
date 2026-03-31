@@ -5,8 +5,24 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js",
-    "start": "node index.js"
+    "dev": "nodemon --no-warnings index.js",
+    "dev:clean": "nodemon --no-warnings index.js",
+    "dev:full": "nodemon --no-warnings index.js",
+    "dev:ultra-clean": "nodemon start-ultra-clean.js",
+    "dev:minimal": "nodemon start-clean-minimal.js",
+    "start": "node --no-warnings index.js",
+    "start:clean": "node --no-warnings index.js",
+    "start:full": "node --no-warnings index.js",
+    "start:ultra-clean": "node start-ultra-clean.js",
+    "start:minimal": "node start-clean-minimal.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "check:server": "node check-server-status.cjs",
+    "check:python": "node check-python-deps.cjs",
+    "install:sbert": "node install-sentence-bert.cjs",
+    "setup:sbert": "npm run check:python || npm run install:sbert",
+    "migrate:scenario-titles": "node scripts/run-scenario-title-migration.js"
   },
   "keywords": [
     "gherkin",
@@ -18,16 +34,25 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
+    "axios": "^1.13.6",
     "better-sqlite3": "^12.5.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
     "express-validator": "^7.3.1",
     "groq-sdk": "^0.7.0",
+    "ioredis": "^5.9.2",
     "node-fetch": "^3.3.2",
+    "redis": "^5.10.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@babel/preset-env": "^7.28.5",
+    "fast-check": "^4.5.3",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.1.4"
   }
 }

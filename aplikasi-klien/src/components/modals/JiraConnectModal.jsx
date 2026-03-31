@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { jiraService } from '../../services/specWeaveService'; // Import service mock kita
+import { jiraService } from '../../services/EnhancedSpecWeaveService'; // Updated to use Enhanced service
 
 const JiraConnectModal = ({ isOpen, onClose, onConnect }) => {
   const [step, setStep] = useState(1); // 1: Auth, 2: Select Project

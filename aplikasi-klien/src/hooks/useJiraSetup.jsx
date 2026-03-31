@@ -140,9 +140,9 @@ export const useJiraSetup = () => {
     setIsFirstLogin(false);
   };
 
-  // Check for OAuth success on component mount
+  // Check for connection success on component mount
   useEffect(() => {
-    const checkOAuthSuccess = () => {
+    const checkConnectionSuccess = () => {
       const successData = localStorage.getItem('jira_connection_success');
       if (successData) {
         try {
@@ -153,19 +153,19 @@ export const useJiraSetup = () => {
             handleSetupComplete(connection);
             
             // Show success notification
-            console.log('JIRA OAuth connection successful:', connection);
+            console.log('JIRA connection successful:', connection);
           }
           
           // Clean up localStorage
           localStorage.removeItem('jira_connection_success');
         } catch (error) {
-          console.error('Error processing OAuth success:', error);
+          console.error('Error processing connection success:', error);
           localStorage.removeItem('jira_connection_success');
         }
       }
     };
 
-    checkOAuthSuccess();
+    checkConnectionSuccess();
   }, []);
 
   const handleSetupSkip = () => {

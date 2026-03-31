@@ -26,6 +26,10 @@ router.post('/connections', authenticate, [
   body('projectKey')
     .notEmpty()
     .withMessage('Project key is required'),
+  body('projectName')
+    .optional()
+    .isString()
+    .withMessage('Project name must be a string'),
   body('issueType')
     .optional()
     .isString()
@@ -80,6 +84,22 @@ router.post('/connections/:connectionId/test', [
     .notEmpty()
     .withMessage('Valid connection ID is required')
 ], jiraController.testConnection);
+
+/**
+ * Check JIRA connection health
+ * GET /api/jira/connections/:connectionId/health
+ */
+router.get('/connections/:connectionId/health', authenticate, [
+  param('connectionId')
+    .notEmpty()
+    .withMessage('Valid connection ID is required')
+], jiraController.checkConnectionHealth);
+
+/**
+ * Check health for all user connections
+ * GET /api/jira/connections/health-check
+ */
+router.get('/connections/health-check', optionalAuth, jiraController.checkAllConnectionsHealth);
 
 // =====================================================
 // Epic Management Routes
@@ -218,44 +238,6 @@ router.post('/connections/:connectionId/epics/:epicId/complete-story', authentic
     .isArray()
     .withMessage('Scenarios must be an array')
 ], jiraController.createCompleteStory);
-
-// =====================================================
-// OAuth Routes
-// =====================================================
-
-/**
- * Check if OAuth is available/configured
- * GET /api/jira/oauth/available
- */
-router.get('/oauth/available', jiraController.checkOAuthAvailable);
-
-/**
- * Start JIRA OAuth flow
- * POST /api/jira/oauth/start
- */
-router.post('/oauth/start', [
-  body('jiraUrl')
-    .optional()
-    .isURL()
-    .withMessage('Valid JIRA URL is required'),
-  body('projectKey')
-    .optional()
-    .notEmpty()
-    .withMessage('Project key is required')
-], jiraController.startOAuthFlow);
-
-/**
- * Handle JIRA OAuth callback
- * POST /api/jira/oauth/callback
- */
-router.post('/oauth/callback', [
-  body('oauth_token')
-    .notEmpty()
-    .withMessage('OAuth token is required'),
-  body('oauth_verifier')
-    .notEmpty()
-    .withMessage('OAuth verifier is required')
-], jiraController.completeOAuthFlow);
 
 // =====================================================
 // Error Handling and Fallback Routes

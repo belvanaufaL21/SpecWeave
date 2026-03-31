@@ -18,45 +18,35 @@ export const isCacheValid = (lastRefresh, duration = JIRA_CACHE_DURATION) => {
 };
 
 /**
- * Check if epic was recently force cleared
- * @returns {boolean} - True if recently cleared
+ * Check if epic was recently force cleared (legacy function)
+ * @returns {boolean} - Always returns false since Epic context is now in database
  */
 export const wasRecentlyForceCleared = () => {
-  const lastClearTime = localStorage.getItem(JIRA_STORAGE_KEYS.EPIC_FORCE_CLEAR_TIME);
-  if (!lastClearTime) return false;
   
-  return Date.now() - parseInt(lastClearTime) < EPIC_FORCE_CLEAR_THRESHOLD;
+  return false;
 };
 
 /**
- * Set force clear timestamp
+ * Set force clear timestamp (legacy function)
  */
 export const setForceClearTimestamp = () => {
-  const timestamp = Date.now().toString();
-  localStorage.setItem(JIRA_STORAGE_KEYS.EPIC_FORCE_CLEAR_TIME, timestamp);
+  
+  // Dispatch event to notify components
+  window.dispatchEvent(new CustomEvent('forceEpicContextClear', {
+    detail: { timestamp: Date.now() }
+  }));
 };
 
 /**
- * Clear epic-related storage keys
+ * Clear epic-related storage keys (legacy function)
  * @param {string} chatId - Current chat ID
  */
 export const clearEpicStorage = (chatId = 'default-chat') => {
-  const essentialKeys = [
-    JIRA_STORAGE_KEYS.EPIC_CONTEXT,
-    `${JIRA_STORAGE_KEYS.EPIC_CONTEXT}_${chatId}`,
-    JIRA_STORAGE_KEYS.ACTIVE_PROJECT,
-    'specweave_epic_data',
-    'specweave_epic_selection',
-    'specweave_jira_epic_context'
-  ];
 
-  essentialKeys.forEach(key => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn(`Failed to remove ${key}:`, error);
-    }
-  });
+  // Dispatch event to notify components
+  window.dispatchEvent(new CustomEvent('forceEpicContextClear', {
+    detail: { chatId, timestamp: Date.now() }
+  }));
 };
 
 /**

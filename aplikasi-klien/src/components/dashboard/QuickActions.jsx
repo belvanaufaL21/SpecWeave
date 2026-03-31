@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-const QuickActions = ({ onStartChat, onOpenTemplates, onOpenKnowledgeBase }) => {
+const QuickActions = ({ onStartChat, onOpenTemplates, onOpenReferenceLibrary }) => {
   const quickActions = [
     {
       id: 'new-scenario',
@@ -24,7 +24,7 @@ const QuickActions = ({ onStartChat, onOpenTemplates, onOpenKnowledgeBase }) => 
       description: 'Browse library',
       icon: '📚',
       color: 'from-blue-500 to-cyan-500',
-      action: onOpenKnowledgeBase
+      action: onOpenReferenceLibrary
     }
   ];
 

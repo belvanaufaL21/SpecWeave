@@ -1,51 +1,63 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { jiraService } from '../../services/jiraService';
 import { useJira } from '../../contexts/JiraContext';
-import { getProjectDisplayText, getEpicContextDisplayText } from '../../utils/helpers/activeProjectHelpers';
+import { getCurrentChatId } from '../../utils/helpers/jiraServiceHelpers';
+import UserDataService from '../../services/UserDataService';
+import cleanLogger from '../../config/cleanLogging.js';
 
 const JiraExportCTA = ({ scenarioData }) => {
-  const { epicContext, hasEpic, openEpicModal, connections } = useJira();
+  const { epicContext, hasEpic, openEpicModal } = useJira();
   const [isExporting, setIsExporting] = useState(false);
-  const [exportStatus, setExportStatus] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [exportProgress, setExportProgress] = useState('');
 
   // Handle export to JIRA
   const handleExportToJira = async () => {
-    console.log('🔍 Starting JIRA export...');
-    console.log('🔍 Epic context:', epicContext);
-    console.log('🔍 Scenario data:', scenarioData);
 
     if (!hasEpic || !epicContext) {
-      setExportStatus({
-        type: 'error',
-        message: 'No Epic selected. Please select an Epic first.'
+      toast.error('No Epic selected. Please select an Epic first.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: 'rgba(10, 10, 15, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
+          padding: '12px'
+        }
       });
       openEpicModal();
       return;
     }
 
     if (!epicContext.epicData) {
-      setExportStatus({
-        type: 'error',
-        message: 'Invalid Epic context. Please select an Epic again.'
+      toast.error('Invalid Epic context. Please select an Epic again.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: 'rgba(10, 10, 15, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
+          padding: '12px'
+        }
       });
       openEpicModal();
       return;
     }
 
+    let exportId = null;
+    const chatId = getCurrentChatId();
+
     try {
       setIsExporting(true);
-      setExportProgress('Preparing export data...');
-      setExportStatus({
-        type: 'info',
-        message: 'Creating user story with acceptance criteria table in JIRA...'
-      });
 
       const { epic, connection } = epicContext.epicData;
-      
-      console.log('🔍 Epic data:', epic);
-      console.log('🔍 Connection data:', connection);
 
       // Validate required data
       if (!epic || !epic.id) {
@@ -56,11 +68,13 @@ const JiraExportCTA = ({ scenarioData }) => {
         throw new Error('Invalid connection data: Connection ID is missing');
       }
       
-      console.log('🔍 Original scenario data:', scenarioData);
+      // Validate scenario data
+      if (!scenarioData.feature && !scenarioData.userStory) {
+        throw new Error('Story title is required (feature or userStory)');
+      }
 
       // Prepare scenarios for acceptance criteria table
       const scenarios = scenarioData.scenarios ? scenarioData.scenarios.map((scenario, index) => {
-        console.log(`🔍 Processing scenario ${index + 1}:`, scenario);
         
         // Ensure each step is an array and filter out empty steps
         const given = scenario.given ? 
@@ -78,45 +92,111 @@ const JiraExportCTA = ({ scenarioData }) => {
         };
       }) : [];
 
-      // Prepare story data for JIRA (include scenarios in storyData)
-      const storyData = {
-        title: scenarioData.feature || 'Generated User Story',
-        userStory: scenarioData.userStory || scenarioData.feature || 'User Story',
-        description: scenarioData.description || 'Generated from scenario data',
-        featureName: scenarioData.feature || 'Feature',
-        scenarios: scenarios // Include scenarios in storyData for the table
-      };
-
-      console.log('🔍 Prepared story data for JIRA:', JSON.stringify(storyData, null, 2));
-
-      setExportProgress('Sending to JIRA...');
+      // Prepare development tasks
+      const developmentTasks = scenarioData.developmentTasks || [];
       
-      // Create user story with scenarios in acceptance criteria table
+      // Prepare story data for JIRA (include scenarios for acceptance criteria table)
+      const storyData = {
+        title: scenarioData.feature || scenarioData.userStory || 'Generated User Story',
+        userStory: scenarioData.userStory || scenarioData.feature || 'User Story',
+        description: scenarioData.description || scenarioData.feature || 'Generated from scenario data',
+        featureName: scenarioData.feature || 'Feature',
+        scenarios: scenarios, // Include scenarios in storyData for the acceptance criteria table
+        epic: epic,
+        connection: connection
+      };
+      
+      // Debug: Log export data
+      console.log('📋 [JIRA-EXPORT] Exporting to JIRA:', {
+        scenarioCount: scenarios.length,
+        taskCount: developmentTasks.length,
+        storyTitle: storyData.title
+      });
+      
+      // Create user story with scenarios and development tasks
       const result = await jiraService.createCompleteStory(
         connection.id,
         epic.id,
         storyData,
-        [] // No separate scenarios needed - they're in storyData.scenarios
+        scenarios,
+        developmentTasks
       );
 
       if (result.success) {
-        const scenarioCount = result.data.scenarioCount || 0;
-        const message = scenarioCount > 0 
-          ? `Successfully exported to JIRA! User story created with ${scenarioCount} scenarios in acceptance criteria.`
-          : 'Successfully exported to JIRA!';
-          
-        setExportStatus({
-          type: 'success',
-          message: message,
-          data: result.data
-        });
+        const issueKey = result.data.userStory?.key || result.data.issueKey || 'Story';
+        const issueUrl = result.data.userStory?.url || result.data.issueUrl;
+        const epicName = epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Epic';
+        
+        // Show simple, clean success notification
+        toast.success(
+          (t) => (
+            <div className="flex items-center gap-3">
+              {/* JIRA Logo */}
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
+                </svg>
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white text-base mb-1">Export Berhasil!</div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400">{epicName}:</span>
+                  <span className="font-mono font-semibold text-purple-400">{issueKey}</span>
+                </div>
+              </div>
+              
+              {/* Arrow Link to JIRA */}
+              {issueUrl && (
+                <a
+                  href={issueUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 flex items-center justify-center transition-colors group"
+                  onClick={() => toast.dismiss(t.id)}
+                  title="Buka di JIRA"
+                >
+                  <svg className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          ),
+          {
+            duration: 5000,
+            position: 'top-right',
+            style: {
+              background: 'rgba(10, 10, 15, 0.95)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              color: '#fff',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '12px',
+              boxShadow: '0 10px 40px rgba(139, 92, 246, 0.2)',
+              padding: '18px 24px',
+              minWidth: '340px'
+            },
+            icon: null
+          }
+        );
       } else {
         // Handle timeout specifically
         if (result.isTimeout) {
-          setExportStatus({
-            type: 'warning',
-            message: result.error,
-            data: null
+          toast.error(result.error, {
+            duration: 5000,
+            position: 'top-right',
+            style: {
+              background: 'rgba(10, 10, 15, 0.95)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              color: '#fff',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+              borderRadius: '12px',
+              boxShadow: '0 10px 40px rgba(234, 179, 8, 0.2)',
+              padding: '18px 24px'
+            }
           });
         } else {
           throw new Error(result.error || 'Failed to export to JIRA');
@@ -130,28 +210,56 @@ const JiraExportCTA = ({ scenarioData }) => {
       // Extract more specific error messages
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
+        
+        // Log validation details if available
+        if (error.response.data.details) {
+          console.error('Validation errors:', error.response.data.details);
+          const validationErrors = error.response.data.details
+            .map(err => err.msg)
+            .join(', ');
+          errorMessage = `Validation failed: ${validationErrors}`;
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       // Add helpful context for common errors
-      if (errorMessage.includes('401')) {
+      if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
         errorMessage = 'Authentication failed. Please check your JIRA credentials.';
-      } else if (errorMessage.includes('403')) {
+      } else if (errorMessage.includes('403') || errorMessage.includes('Permission denied')) {
         errorMessage = 'Permission denied. Please check your JIRA permissions.';
-      } else if (errorMessage.includes('404')) {
+      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
         errorMessage = 'JIRA resource not found. Please check your Epic and project settings.';
       } else if (errorMessage.includes('Field errors')) {
         errorMessage = 'JIRA field validation failed. ' + errorMessage;
       }
       
-      setExportStatus({
-        type: 'error',
-        message: errorMessage
-      });
+      toast.error(
+        (t) => (
+          <div className="flex flex-col gap-2">
+            <div className="font-semibold text-white text-base">Export Gagal</div>
+            <div className="text-sm text-gray-300 leading-relaxed">{errorMessage}</div>
+          </div>
+        ),
+        {
+          duration: 5000,
+          position: 'top-right',
+          style: {
+            background: 'rgba(10, 10, 15, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            color: '#fff',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
+            padding: '18px 24px',
+            minWidth: '300px'
+          },
+          icon: null
+        }
+      );
     } finally {
       setIsExporting(false);
-      setExportProgress('');
     }
   };
 
@@ -161,149 +269,32 @@ const JiraExportCTA = ({ scenarioData }) => {
   }
 
   return (
-    <div className="border-t border-white/10 pt-4">
-      {/* Epic Context Info */}
-      {hasEpic && epicContext && (
-        <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <div className="flex items-center gap-2 mb-1">
-            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    <div className="mt-6 flex justify-end">
+      {/* Export Button - Animated Loading State */}
+      <button
+        onClick={handleExportToJira}
+        disabled={isExporting || !hasEpic || !epicContext}
+        className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+          isExporting || !hasEpic || !epicContext
+            ? 'bg-gray-600/20 border border-gray-600/30 text-gray-500 cursor-not-allowed'
+            : 'bg-[#120C18] hover:bg-[#1A1020] text-[#C27AFF] border border-[#2C1A43]'
+        }`}
+        title="Export to JIRA"
+      >
+        {isExporting ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>Exporting...</span>
+          </>
+        ) : (
+          <>
+            <span>Export ke</span>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
             </svg>
-            <span className="text-blue-400 text-xs font-medium">Ready to Export</span>
-          </div>
-          <p className="text-xs text-blue-300">
-            {(() => {
-              const { text, isConsistent, warning } = getEpicContextDisplayText(hasEpic, epicContext, connections);
-              return (
-                <span className={isConsistent ? '' : 'text-yellow-300'} title={warning || undefined}>
-                  {text}
-                </span>
-              );
-            })()}
-          </p>
-          <p className="text-xs text-blue-300/80">
-            {getProjectDisplayText(connections)}
-          </p>
-        </div>
-      )}
-
-      {/* Export Status */}
-      {exportStatus && (
-        <div className={`mb-3 p-3 rounded-lg border ${
-          exportStatus.type === 'success' 
-            ? 'bg-green-500/10 border-green-500/20 text-green-300' 
-            : exportStatus.type === 'warning'
-            ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300'
-            : exportStatus.type === 'info'
-            ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-            : 'bg-red-500/10 border-red-500/20 text-red-300'
-        }`}>
-          <div className="flex items-center gap-2 mb-1">
-            {exportStatus.type === 'success' ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : exportStatus.type === 'warning' ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            ) : exportStatus.type === 'info' ? (
-              <div className="w-3 h-3 border border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
-            <span className="text-xs font-medium">{exportStatus.message}</span>
-          </div>
-          
-          {exportStatus.type === 'success' && exportStatus.data && (
-            <div className="mt-2">
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="text-xs text-green-400 hover:text-green-300 underline"
-              >
-                {showDetails ? 'Hide Details' : 'Show Details'}
-              </button>
-              
-              {showDetails && (
-                <div className="mt-2 p-2 bg-green-500/5 rounded border border-green-500/10">
-                  <p className="text-xs text-green-300 mb-1">
-                    <strong>User Story:</strong> 
-                    <a 
-                      href={exportStatus.data.userStory?.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="ml-1 text-green-400 hover:text-green-300 underline"
-                    >
-                      {exportStatus.data.userStory?.key}
-                    </a>
-                  </p>
-                  
-                  {exportStatus.data.scenarioCount > 0 && (
-                    <p className="text-xs text-green-300/80">
-                      Contains {exportStatus.data.scenarioCount} scenarios in acceptance criteria table
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Export Button */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-          </svg>
-          <span className="text-xs text-gray-400">Export to JIRA</span>
-        </div>
-
-        <div className="flex flex-col items-end gap-1">
-          {isExporting && exportProgress && (
-            <div className="text-xs text-gray-400 animate-pulse">
-              {exportProgress}
-            </div>
-          )}
-          
-          <button
-            onClick={handleExportToJira}
-            disabled={isExporting || !hasEpic}
-            className={`
-              px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200
-              ${hasEpic 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30' 
-                : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-              }
-              ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}
-              flex items-center gap-2
-            `}
-          >
-            {isExporting ? (
-              <>
-                <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Export to JIRA
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Help Text */}
-      {!hasEpic && (
-        <p className="text-xs text-gray-500 mt-2">
-          Select an Epic first to enable JIRA export
-        </p>
-      )}
+          </>
+        )}
+      </button>
     </div>
   );
 };

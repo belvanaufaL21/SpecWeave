@@ -14,24 +14,16 @@ const router = express.Router();
  * POST /api/epics/context
  */
 router.post('/context', authenticate, [
+  // epicId can be null for workWithoutEpic mode
   body('epicId')
-    .notEmpty()
-    .withMessage('Epic ID is required'),
+    .optional({ nullable: true }),
+  
+  // epicData is always required
   body('epicData')
     .isObject()
     .withMessage('Epic data is required'),
-  body('epicData.epic')
-    .isObject()
-    .withMessage('Epic information is required'),
-  body('epicData.epic.id')
-    .notEmpty()
-    .withMessage('Epic ID is required'),
-  body('epicData.epic.key')
-    .notEmpty()
-    .withMessage('Epic key is required'),
-  body('epicData.epic.name')
-    .notEmpty()
-    .withMessage('Epic name is required'),
+  
+  // Connection is always required
   body('epicData.connection')
     .isObject()
     .withMessage('Connection information is required'),
@@ -40,7 +32,22 @@ router.post('/context', authenticate, [
     .withMessage('Connection ID is required'),
   body('epicData.connection.project_key')
     .notEmpty()
-    .withMessage('Project key is required')
+    .withMessage('Project key is required'),
+  
+  // Epic fields are only required if NOT working without epic
+  body('epicData.epic')
+    .if(body('epicData.workWithoutEpic').not().equals(true))
+    .isObject()
+    .withMessage('Epic information is required when not working without epic'),
+  body('epicData.epic.id')
+    .if(body('epicData.workWithoutEpic').not().equals(true))
+    .notEmpty()
+    .withMessage('Epic ID is required when not working without epic'),
+  body('epicData.epic.key')
+    .if(body('epicData.workWithoutEpic').not().equals(true))
+    .notEmpty()
+    .withMessage('Epic key is required when not working without epic'),
+  // Note: epic.name is optional - can be derived from summary or key
 ], epicController.setEpicContext);
 
 /**

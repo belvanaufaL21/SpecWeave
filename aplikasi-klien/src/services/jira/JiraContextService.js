@@ -89,7 +89,6 @@ class JiraContextService {
    * @returns {Promise<Object>} - Clear result
    */
   static async clearEpicContext() {
-    console.log('🧹 [JIRA-SERVICE] Clearing Epic context...');
     
     return await safeAsyncOperation(
       () => jiraService.clearEpicContext(),
@@ -101,7 +100,6 @@ class JiraContextService {
    * Force clear epic context immediately
    */
   static forceEpicContextClear() {
-    console.log('🧹 [JIRA-SERVICE] FORCE EPIC CLEAR - OPTIMIZED');
     
     try {
       // Set force clear timestamp
@@ -110,9 +108,7 @@ class JiraContextService {
       // Clear storage
       const chatId = getCurrentChatId();
       clearEpicStorage(chatId);
-      
-      console.log('✅ [JIRA-SERVICE] Force Epic clear completed successfully');
-      
+
       return { success: true };
     } catch (error) {
       console.error('❌ [JIRA-SERVICE] Force Epic clear failed:', error);
@@ -141,12 +137,12 @@ class JiraContextService {
    */
   static setupEventListeners(onEpicClear, onEpicRefresh) {
     const handleForceEpicClear = () => {
-      console.log('🔄 [JIRA-SERVICE] Force Epic clear event received');
+      
       onEpicClear();
     };
     
     const handleForceEpicRefresh = () => {
-      console.log('🔄 [JIRA-SERVICE] Force Epic refresh event received');
+      
       onEpicRefresh();
     };
     

@@ -5,6 +5,7 @@ import {
   formatReferenceForPrompt,
   sortReferencesByQuality 
 } from '../../utils/helpers/referenceHelpers';
+import api from '../api';
 
 /**
  * Service untuk mengelola reference library (knowledge base)
@@ -20,13 +21,39 @@ class ReferenceService {
    */
   async getReferences() {
     try {
-      const response = await fetch(this.baseURL);
-      return await handleApiResponse(response);
+      const response = await api.get('/references');
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to fetch references',
+          data: []
+        };
+      }
+      
     } catch (error) {
       console.error('Error fetching references:', error);
+      
+      // Check if it's a server/network error
+      if (error.code === 'NETWORK_ERROR' || 
+          error.message.includes('Network Error') ||
+          error.message.includes('Failed to fetch')) {
+
+        // Return offline mode response to trigger fallback
+        return {
+          success: false,
+          error: 'Server unavailable, switching to offline mode: ' + error.message,
+          data: [],
+          offlineMode: true
+        };
+      }
+      
+      // For other errors, return standard error response
       return {
         success: false,
-        error: error.message,
+        error: error.response?.data?.message || error.message,
         data: []
       };
     }
@@ -37,18 +64,31 @@ class ReferenceService {
    */
   async createReference(referenceData) {
     try {
-      const response = await fetch(this.baseURL, {
-        method: 'POST',
-        headers: REFERENCE_CONSTANTS.DEFAULT_HEADERS,
-        body: JSON.stringify(referenceData),
-      });
-
-      return await handleApiResponse(response);
+      const response = await api.post('/references', referenceData);
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to create reference'
+        };
+      }
     } catch (error) {
       console.error('Error creating reference:', error);
+      
+      // Handle network errors or server unavailable
+      if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+        return {
+          success: false,
+          error: 'Server unavailable, switching to offline mode',
+          offlineMode: true
+        };
+      }
+      
       return {
         success: false,
-        error: error.message
+        error: error.response?.data?.message || error.message
       };
     }
   }
@@ -58,19 +98,21 @@ class ReferenceService {
    */
   async updateReference(referenceId, referenceData) {
     try {
-      const url = buildApiUrl(this.baseURL, referenceId);
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: REFERENCE_CONSTANTS.DEFAULT_HEADERS,
-        body: JSON.stringify(referenceData),
-      });
-
-      return await handleApiResponse(response);
+      const response = await api.put(`/references/${referenceId}`, referenceData);
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to update reference'
+        };
+      }
     } catch (error) {
       console.error('Error updating reference:', error);
       return {
         success: false,
-        error: error.message
+        error: error.response?.data?.message || error.message
       };
     }
   }
@@ -80,17 +122,21 @@ class ReferenceService {
    */
   async deleteReference(referenceId) {
     try {
-      const url = buildApiUrl(this.baseURL, referenceId);
-      const response = await fetch(url, {
-        method: 'DELETE',
-      });
-
-      return await handleApiResponse(response);
+      const response = await api.delete(`/references/${referenceId}`);
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to delete reference'
+        };
+      }
     } catch (error) {
       console.error('Error deleting reference:', error);
       return {
         success: false,
-        error: error.message
+        error: error.response?.data?.message || error.message
       };
     }
   }
@@ -100,21 +146,23 @@ class ReferenceService {
    */
   async trackUsage(referenceId, meteorScore = null) {
     try {
-      const url = buildApiUrl(this.baseURL, referenceId, 'usage');
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: REFERENCE_CONSTANTS.DEFAULT_HEADERS,
-        body: JSON.stringify({
-          score: meteorScore
-        }),
+      const response = await api.post(`/references/${referenceId}/usage`, {
+        score: meteorScore
       });
-
-      return await handleApiResponse(response);
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to track usage'
+        };
+      }
     } catch (error) {
       console.error('Error tracking usage:', error);
       return {
         success: false,
-        error: error.message
+        error: error.response?.data?.message || error.message
       };
     }
   }
@@ -124,14 +172,22 @@ class ReferenceService {
    */
   async getStatistics() {
     try {
-      const url = buildApiUrl(this.baseURL, 'statistics');
-      const response = await fetch(url);
-      return await handleApiResponse(response);
+      const response = await api.get('/references/statistics');
+      
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to fetch statistics',
+          data: REFERENCE_CONSTANTS.DEFAULT_STATISTICS
+        };
+      }
     } catch (error) {
       console.error('Error fetching statistics:', error);
       return {
         success: false,
-        error: error.message,
+        error: error.response?.data?.message || error.message,
         data: REFERENCE_CONSTANTS.DEFAULT_STATISTICS
       };
     }

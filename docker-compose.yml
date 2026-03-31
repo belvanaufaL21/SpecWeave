@@ -1,0 +1,119 @@
+# ============================================================================
+# SpecWeave Docker Compose - Base Configuration
+# ============================================================================
+# This is the base configuration for SpecWeave multi-container deployment.
+# Use with environment-specific overrides:
+#   Development: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   Production:  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # Frontend Service - React Application
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./aplikasi-klien
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5003}
+    container_name: specweave-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - specweave-network
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+    labels:
+      - "com.specweave.service=frontend"
+      - "com.specweave.environment=${NODE_ENV:-production}"
+      - "com.specweave.log-aggregation=enabled"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "com.specweave.service,com.specweave.environment"
+        tag: "{{.Name}}/{{.ID}}"
+
+  # ==========================================================================
+  # Backend Service - Node.js + Python
+  # ==========================================================================
+  backend:
+    build:
+      context: ./aplikasi-server
+      dockerfile: Dockerfile
+    container_name: specweave-backend
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    networks:
+      - specweave-network
+    environment:
+      - PORT=${PORT:-5003}
+      - NODE_ENV=${NODE_ENV:-production}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - JIRA_ENCRYPTION_KEY=${JIRA_ENCRYPTION_KEY}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - PYTHON_PATH=${PYTHON_PATH:-python3}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENABLE_CONSOLE_LOGS=${ENABLE_CONSOLE_LOGS:-true}
+      - HEALTH_CHECK_VERBOSE=${HEALTH_CHECK_VERBOSE:-false}
+      - CLEAN_LOGS=${CLEAN_LOGS:-false}
+      - SKIP_ERROR_LOGS_TABLE=${SKIP_ERROR_LOGS_TABLE:-false}
+      - SKIP_PERFORMANCE_LOGS_TABLE=${SKIP_PERFORMANCE_LOGS_TABLE:-false}
+      - SKIP_MONITORING_ALERTS_TABLE=${SKIP_MONITORING_ALERTS_TABLE:-false}
+      - PERFORMANCE_ALERT_THRESHOLD_MS=${PERFORMANCE_ALERT_THRESHOLD_MS:-2000}
+      # Performance: Node.js heap size optimization (default 2GB for base config)
+      - NODE_OPTIONS=${NODE_OPTIONS:---max-old-space-size=2048}
+    volumes:
+      - backend-logs:/app/logs
+      - nltk-data:/root/nltk_data
+      - torch-models:/root/.cache/torch
+    env_file:
+      - .env
+    labels:
+      - "com.specweave.service=backend"
+      - "com.specweave.environment=${NODE_ENV:-production}"
+      - "com.specweave.log-aggregation=enabled"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "com.specweave.service,com.specweave.environment"
+        tag: "{{.Name}}/{{.ID}}"
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  specweave-network:
+    driver: bridge
+    name: specweave-network
+
+# ==========================================================================
+# Named Volumes for Data Persistence
+# ==========================================================================
+volumes:
+  # Backend application logs
+  backend-logs:
+    name: specweave-backend-logs
+    driver: local
+
+  # NLTK data cache (punkt, wordnet, omw-1.4)
+  nltk-data:
+    name: specweave-nltk-data
+    driver: local
+
+  # PyTorch/Sentence-BERT model cache
+  torch-models:
+    name: specweave-torch-models
+    driver: local

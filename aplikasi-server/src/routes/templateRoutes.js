@@ -3,32 +3,33 @@ import { authenticate } from '../middlewares/auth.js';
 import { validateTemplate, validateTemplateUpdate } from '../middlewares/validation.js';
 import {
   getTemplates,
+  getSystemTemplates,
   getTemplateById,
   createTemplate,
   updateTemplate,
   deleteTemplate,
   applyTemplate,
   getTemplateCategories,
-  getTemplateStats
+  getTemplateStats,
+  setupDefaultTemplates
 } from '../controllers/templateController.js';
 
 const router = Router();
 
-// Public routes (no authentication required for system templates)
+// Public routes (no authentication required)
 router.get('/categories', getTemplateCategories);
+router.get('/system', getSystemTemplates); // New public endpoint for system templates
+router.post('/setup-defaults', setupDefaultTemplates); // Setup endpoint
 
 // Protected routes (authentication required)
-router.use(authenticate);
-
-// Template CRUD operations
-router.get('/', getTemplates);
-router.get('/stats', getTemplateStats);
-router.get('/:templateId', getTemplateById);
-router.post('/', validateTemplate, createTemplate);
-router.put('/:templateId', validateTemplateUpdate, updateTemplate);
-router.delete('/:templateId', deleteTemplate);
+router.get('/', authenticate, getTemplates);
+router.get('/stats', authenticate, getTemplateStats);
+router.get('/:templateId', authenticate, getTemplateById);
+router.post('/', authenticate, validateTemplate, createTemplate);
+router.put('/:templateId', authenticate, validateTemplateUpdate, updateTemplate);
+router.delete('/:templateId', authenticate, deleteTemplate);
 
 // Template application
-router.post('/:templateId/apply', applyTemplate);
+router.post('/:templateId/apply', authenticate, applyTemplate);
 
 export default router;

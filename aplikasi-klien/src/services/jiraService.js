@@ -1,8 +1,12 @@
 import { supabase } from '../config/supabase';
 import api from './api.js';
+import cleanLogger from '../config/cleanLogging.js';
+import ErrorRecovery from '../utils/errors/ErrorRecovery.js';
+import UserDataService from './UserDataService.js';
 import JiraConnectionService from './jira/JiraConnectionService.js';
 import JiraEpicService from './jira/JiraEpicService.js';
 import JiraStoryService from './jira/JiraStoryService.js';
+import JiraTokenHealthService from './jira/JiraTokenHealthService.js';
 import { 
   JIRA_TIMEOUTS, 
   JIRA_ENDPOINTS, 
@@ -39,12 +43,8 @@ class JiraService {
     return await JiraConnectionService.createConnection(connectionData);
   }
 
-  async startOAuthFlow(connectionData = {}) {
-    return await JiraConnectionService.startOAuthFlow(connectionData);
-  }
-
-  async completeOAuthFlow(oauthToken, oauthVerifier) {
-    return await JiraConnectionService.completeOAuthFlow(oauthToken, oauthVerifier);
+  async deleteConnection(connectionId) {
+    return await JiraConnectionService.deleteConnection(connectionId);
   }
 
   // Epic Management
@@ -60,46 +60,89 @@ class JiraService {
     return await JiraEpicService.searchEpics(connectionId, projectKey, searchQuery);
   }
 
+  // Token Health Management
+  async checkTokenHealth(connectionId) {
+    return await JiraTokenHealthService.checkTokenHealth(connectionId);
+  }
+
+  async checkAllTokensHealth() {
+    return await JiraTokenHealthService.checkAllTokensHealth();
+  }
+
+  startHealthMonitoring(intervalMinutes = 30) {
+    return JiraTokenHealthService.startHealthMonitoring(intervalMinutes);
+  }
+
+  stopHealthMonitoring() {
+    return JiraTokenHealthService.stopHealthMonitoring();
+  }
+
+  isTokenExpired(connectionId) {
+    return JiraTokenHealthService.isTokenExpired(connectionId);
+  }
+
+  getTokenHealthSummary(connectionId) {
+    return JiraTokenHealthService.getTokenHealthSummary(connectionId);
+  }
+
   // Story Management
-  async createCompleteStory(connectionId, epicId, storyData, scenarios) {
-    return await JiraStoryService.createCompleteStory(connectionId, epicId, storyData, scenarios);
+  async createCompleteStory(connectionId, epicId, storyData, scenarios, developmentTasks = []) {
+    // Check token health before creating story
+    const tokenHealth = await this.checkTokenHealth(connectionId);
+    if (!tokenHealth.success && tokenHealth.tokenStatus === 'expired') {
+      throw new Error('API token has expired. Please update your JIRA connection.');
+    }
+    
+    return await JiraStoryService.createCompleteStory(connectionId, epicId, storyData, scenarios, developmentTasks);
   }
 
   // Epic Context Management
   async setEpicContext(epicId, epicData) {
     try {
-      console.log(`🔍 [JIRA-SERVICE] Setting Epic context:`, {
+      console.log(`🔍 [JIRA-SERVICE] Setting Epic context (global):`, {
         epicId,
         connectionId: epicData?.connection?.id,
         projectKey: epicData?.connection?.project_key,
-        workWithoutEpic: epicData?.workWithoutEpic,
-        chatId: epicData?.chatId
+        workWithoutEpic: epicData?.workWithoutEpic
       });
       
-      // Validate Epic data consistency if chatId provided
-      if (epicData?.chatId && epicData?.connection) {
-        const chatId = epicData.chatId;
+      // Validate Epic data consistency with global active project
+      if (epicData?.connection) {
         const connectionId = epicData.connection.id;
         
-        // Check if connection matches active project
-        const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
-        const activeProjectId = activeProjects[chatId];
+        // Check if connection matches global active project
+        const activeProjectResult = await UserDataService.getActiveProject();
+        const activeProjectId = activeProjectResult.success ? activeProjectResult.data?.id : null;
         
         if (activeProjectId && activeProjectId !== connectionId) {
-          console.error(`❌ [JIRA-SERVICE] Epic context validation failed:`, {
+          console.warn(`⚠️ [JIRA-SERVICE] Epic context validation mismatch detected:`, {
             activeProjectId,
-            epicConnectionId: connectionId,
-            chatId
+            epicConnectionId: connectionId
           });
           
           return {
             success: false,
-            error: `Epic context validation failed: Connection mismatch (active: ${activeProjectId}, epic: ${connectionId})`
+            error: `Epic context validation failed: Connection mismatch (active: ${activeProjectId}, epic: ${connectionId}). Please select the correct project first.`
           };
         }
-        
-        console.log(`✅ [JIRA-SERVICE] Epic context validation passed for chat ${chatId}`);
       }
+      
+      console.log('📤 [JIRA-SERVICE] Sending setEpicContext request:', {
+        epicId,
+        hasEpicData: !!epicData,
+        epicDataKeys: epicData ? Object.keys(epicData) : [],
+        epic: epicData?.epic ? {
+          id: epicData.epic.id,
+          key: epicData.epic.key,
+          name: epicData.epic.name,
+          hasSummary: !!epicData.epic.summary
+        } : null,
+        connection: epicData?.connection ? {
+          id: epicData.connection.id,
+          project_key: epicData.connection.project_key
+        } : null,
+        workWithoutEpic: epicData?.workWithoutEpic
+      });
       
       const response = await withJiraTimeout(
         api.post(JIRA_ENDPOINTS.EPIC_CONTEXT, {
@@ -125,7 +168,11 @@ class JiraService {
         
         try {
           localStorage.setItem(JIRA_STORAGE.EPIC_CONTEXT, JSON.stringify(contextData));
-          console.log(`✅ [JIRA-SERVICE] Epic context stored in localStorage with validation`);
+          
+          // Log: Epic selected
+          const epicName = epicData?.name || epicData?.key || epicId;
+          cleanLogger.jiraEpicSelected(epicName);
+          
         } catch (storageError) {
           console.warn('Failed to store epic context in localStorage:', storageError);
         }
@@ -135,7 +182,19 @@ class JiraService {
         throw new Error(response.data.error || 'Failed to set Epic context');
       }
     } catch (error) {
-      return handleJiraError(error, 'Set epic context');
+      console.error('❌ [JIRA-SERVICE] setEpicContext error:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data ? JSON.parse(error.config.data) : null
+        }
+      });
+      const recovery = ErrorRecovery.handleJiraError(error, 'Set epic context');
+      return { success: false, error: recovery.userMessage };
     }
   }
 
@@ -162,10 +221,11 @@ class JiraService {
           return { success: true, data: contextData };
         }
       } catch (storageError) {
-        console.warn('Failed to get epic context from localStorage:', storageError);
+        cleanLogger.warn('JIRA', 'Failed to get epic context from localStorage');
       }
       
-      return handleJiraError(error, 'Get epic context');
+      const recovery = ErrorRecovery.handleJiraError(error, 'Get epic context');
+      return { success: false, error: recovery.userMessage };
     }
   }
 
@@ -177,41 +237,35 @@ class JiraService {
         'Clear epic context'
       );
       
-      // Clear from localStorage
-      const chatId = getCurrentChatId();
-      clearEpicContextStorage(chatId);
+      // Clear from localStorage (global)
+      clearEpicContextStorage();
       
       return handleJiraSuccess(response);
     } catch (error) {
       // Even if API call fails, clear localStorage
-      const chatId = getCurrentChatId();
-      clearEpicContextStorage(chatId);
+      clearEpicContextStorage();
       
-      return handleJiraError(error, 'Clear epic context');
+      const recovery = ErrorRecovery.handleJiraError(error, 'Clear epic context');
+      return { success: false, error: recovery.userMessage };
     }
   }
 
-  // Force clear operations
-  async forceEpicContextClear(chatId = null) {
+  // Force clear operations (global)
+  async forceEpicContextClear() {
     try {
-      const currentChatId = chatId || getCurrentChatId();
-      
-      console.log('🧹 [JIRA-SERVICE] Force clearing Epic context for chat:', currentChatId);
-      
       // Clear from localStorage immediately
-      clearEpicContextStorage(currentChatId);
+      clearEpicContextStorage();
       
       // Try to clear from server (don't wait for response)
       api.delete(JIRA_ENDPOINTS.EPIC_CONTEXT).catch(error => {
         console.warn('Server epic context clear failed (non-blocking):', error);
       });
-      
-      console.log('✅ [JIRA-SERVICE] Force Epic context clear completed');
-      
+
       return { success: true };
     } catch (error) {
-      console.error('❌ [JIRA-SERVICE] Force Epic context clear failed:', error);
-      return { success: false, error: error.message };
+      const recovery = ErrorRecovery.handleUnexpectedError(error, 'JIRA_SERVICE');
+      cleanLogger.error('JIRA-SERVICE', recovery.userMessage);
+      return { success: false, error: recovery.userMessage };
     }
   }
 
@@ -223,7 +277,7 @@ class JiraService {
       
       if (stored) {
         const data = JSON.parse(stored);
-        console.log(`✅ [JIRA-SERVICE] Found active project for chat ${chatId}: ${data.projectId}`);
+        
         return { success: true, data };
       }
       
@@ -232,7 +286,7 @@ class JiraService {
       const legacyProjectId = legacyActiveProjects[chatId];
       
       if (legacyProjectId) {
-        console.log(`✅ [JIRA-SERVICE] Found legacy active project for chat ${chatId}: ${legacyProjectId}`);
+        
         // Migrate to new format
         const projectData = {
           projectId: legacyProjectId,
@@ -242,12 +296,12 @@ class JiraService {
         localStorage.setItem(key, JSON.stringify(projectData));
         return { success: true, data: projectData };
       }
-      
-      console.log(`ℹ️ [JIRA-SERVICE] No active project found for chat ${chatId}`);
+
       return { success: true, data: null };
     } catch (error) {
-      console.error('Error getting active project for chat:', error);
-      return { success: false, error: error.message };
+      const recovery = ErrorRecovery.handleUnexpectedError(error, 'JIRA_SERVICE');
+      cleanLogger.error('JIRA-SERVICE', recovery.userMessage);
+      return { success: false, error: recovery.userMessage };
     }
   }
 
@@ -267,10 +321,7 @@ class JiraService {
       const legacyActiveProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
       legacyActiveProjects[chatId] = projectId;
       localStorage.setItem('activeProjectsPerChat', JSON.stringify(legacyActiveProjects));
-      
-      console.log(`✅ [JIRA-SERVICE] Active project set for chat ${chatId}: ${projectId}`);
-      console.log(`✅ [JIRA-SERVICE] Stored in both formats for compatibility`);
-      
+
       return { 
         success: true, 
         data: { 
@@ -279,22 +330,16 @@ class JiraService {
         } 
       };
     } catch (error) {
-      console.error('Error setting active project for chat:', error);
-      return { success: false, error: error.message };
+      const recovery = ErrorRecovery.handleUnexpectedError(error, 'JIRA_SERVICE');
+      cleanLogger.error('JIRA-SERVICE', recovery.userMessage);
+      return { success: false, error: recovery.userMessage };
     }
   }
 
-  async clearEpicContextForChat(chatId) {
-    try {
-      clearEpicContextStorage(chatId);
-      
-      console.log(`✅ Epic context cleared for chat: ${chatId}`);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error clearing Epic context for chat:', error);
-      return { success: false, error: error.message };
-    }
+  // Deprecated: Epic context is now global, not per-chat
+  async clearEpicContextForChat() {
+    console.warn('⚠️ clearEpicContextForChat is deprecated - use clearEpicContext() instead (Epic is now global)');
+    return this.clearEpicContext();
   }
 
   async getActiveConnectionForCurrentChat() {
@@ -308,8 +353,9 @@ class JiraService {
       
       return { success: true, data: null };
     } catch (error) {
-      console.error('Error getting active connection for current chat:', error);
-      return { success: false, error: error.message };
+      const recovery = ErrorRecovery.handleUnexpectedError(error, 'JIRA_SERVICE');
+      cleanLogger.error('JIRA-SERVICE', recovery.userMessage);
+      return { success: false, error: recovery.userMessage };
     }
   }
 
@@ -318,15 +364,14 @@ class JiraService {
       console.log(`🗑️ [JIRA-SERVICE-CLIENT] Deleting connection: ${connectionId}`);
       
       const response = await api.delete(`/jira/connections/${connectionId}`);
-      
-      console.log(`✅ [JIRA-SERVICE-CLIENT] Delete response:`, response.data);
-      
+
       return response.data;
     } catch (error) {
-      console.error('❌ [JIRA-SERVICE-CLIENT] Delete error:', error);
+      const recovery = ErrorRecovery.handleJiraError(error, 'Delete connection');
+      cleanLogger.error('JIRA-SERVICE-CLIENT', recovery.userMessage);
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to delete connection'
+        error: recovery.userMessage
       };
     }
   }
@@ -347,7 +392,8 @@ class JiraService {
       
       return await this.createConnection(connectionWithUser);
     } catch (error) {
-      return handleJiraError(error, 'Create JIRA connection');
+      const recovery = ErrorRecovery.handleJiraError(error, 'Create JIRA connection');
+      return { success: false, error: recovery.userMessage };
     }
   }
 

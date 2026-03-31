@@ -1,52 +1,386 @@
+import { useState } from 'react';
 import QualityBadge from '../common/QualityBadge';
 import JiraExportCTA from '../common/JiraExportCTA';
-import MeteorAnalysisReport from '../common/MeteorAnalysisReport';
+import GeneralResponseFormatter from './GeneralResponseFormatter';
+import PatternUsedModal from '../modals/PatternUsedModal';
 import { useTestResults } from '../../contexts/TestResultsContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { formatTime } from '../../utils/localization';
+import cleanLogger from '../../config/cleanLogging.js';
 
-const ChatBubble = ({ message, activeChatId }) => {
+const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
   const { isScenarioTested, getTestResult, getAllTestResults } = useTestResults();
+  const { user, profile } = useAuth();
+  
+  // Get user initials from profile or user data (consistent with ProfileModal)
+  const getUserInitial = () => {
+    try {
+      if (profile?.name && typeof profile.name === 'string' && profile.name.trim()) {
+        return profile.name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      }
+      if (user?.email && typeof user.email === 'string' && user.email.trim()) {
+        return user.email.trim().slice(0, 2).toUpperCase();
+      }
+      return 'U';
+    } catch (error) {
+      return 'U';
+    }
+  };
+  
+  // State untuk menyimpan semua scenario (asli + tambahan) - hanya untuk UI sementara
+  const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+  const [patternInfo, setPatternInfo] = useState({
+    references: [],
+    metadata: {},
+    method: 'few-shot'
+  });
+  
+  // State untuk collapse scenarios - track which scenarios are expanded
+  const [expandedScenarios, setExpandedScenarios] = useState({});
+  
+  // State untuk track hover pada scenarios
+  const [hoveredScenario, setHoveredScenario] = useState(null);
+  
+  // State untuk edit user message
+  const [isEditingUserMessage, setIsEditingUserMessage] = useState(false);
+  const [editedUserMessage, setEditedUserMessage] = useState(message.content);
+  
+  // State untuk version navigation (for messages with multiple input/output pairs)
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(() => {
+    // Initialize with the latest version
+    return message.versions ? message.versions.length - 1 : 0;
+  });
+  
+  // Get versions array from message (array of {input, output, timestamp})
+  // Each version contains both the user input and AI response
+  const versions = message.versions || [{ 
+    input: message.content, 
+    output: null, // Will be filled by next AI message
+    timestamp: message.createdAt 
+  }];
+  
+  const hasMultipleVersions = versions.length > 1;
+  const currentVersion = versions[currentVersionIndex] || versions[0];
+  
+  // Use current version's input for display
+  const displayContent = isUser ? currentVersion.input : message.content;
+  // Handler untuk save edited user message
+  const handleSaveUserMessage = () => {
+    if (onUpdateMessage && message.id) {
+      // Get existing versions or create initial version
+      const existingVersions = message.versions || [{ 
+        input: message.content,
+        outputMessageId: null, // Will be linked after AI responds
+        timestamp: message.createdAt 
+      }];
+      
+      // Add new version with edited input
+      const newVersion = { 
+        input: editedUserMessage, 
+        outputMessageId: null, // Will be filled after AI responds
+        timestamp: new Date(),
+        isGenerating: true // Flag to show this version is generating
+      };
+      
+      existingVersions.push(newVersion);
+      
+      const updatedMessage = {
+        ...message,
+        content: editedUserMessage,
+        versions: existingVersions,
+        currentVersionIndex: existingVersions.length - 1, // Point to new version
+        isRegenerating: true // Flag to trigger regeneration in parent
+      };
+      
+      console.log('💾 [CHAT-BUBBLE] Updating user message with new version:', {
+        messageId: message.id,
+        oldContent: message.content,
+        newContent: editedUserMessage,
+        versionsCount: existingVersions.length,
+        newVersionIndex: existingVersions.length - 1
+      });
+      
+      onUpdateMessage(updatedMessage);
+      setIsEditingUserMessage(false);
+      setCurrentVersionIndex(existingVersions.length - 1); // Set to latest version
+    }
+  };
+  
+  // Handler untuk navigate previous version (just display, no regeneration)
+  const handlePreviousVersion = () => {
+    if (currentVersionIndex > 0) {
+      const newIndex = currentVersionIndex - 1;
+      setCurrentVersionIndex(newIndex);
+      
+      // Notify parent to update displayed version
+      if (onUpdateMessage && message.id) {
+        const updatedMessage = {
+          ...message,
+          currentVersionIndex: newIndex
+        };
+        onUpdateMessage(updatedMessage);
+      }
+    }
+  };
+  
+  // Handler untuk navigate next version (just display, no regeneration)
+  const handleNextVersion = () => {
+    if (currentVersionIndex < versions.length - 1) {
+      const newIndex = currentVersionIndex + 1;
+      setCurrentVersionIndex(newIndex);
+      
+      // Notify parent to update displayed version
+      if (onUpdateMessage && message.id) {
+        const updatedMessage = {
+          ...message,
+          currentVersionIndex: newIndex
+        };
+        onUpdateMessage(updatedMessage);
+      }
+    }
+  };
+
+  const handleCancelEditUserMessage = () => {
+    setEditedUserMessage(message.content);
+    setIsEditingUserMessage(false);
+  };
+
+  // Fungsi untuk membuat data gabungan (scenario asli + tambahan) untuk JIRA export
+  const createCombinedScenarioData = (originalData) => {
+    if (!originalData || !originalData.scenarios) return originalData;
+    
+    // Generate development tasks based on scenarios
+    const generateDevelopmentTasks = (scenarios, feature, userStory) => {
+      const tasks = [];
+      
+      // Clean feature name (remove "Feature" word)
+      const cleanFeature = feature.replace(/feature|fitur/gi, '').trim();
+      
+      // Extract main subject/entity from user story
+      const extractMainSubject = (story) => {
+        const match = story.match(/ingin\s+(.+?)\s+agar|want\s+to\s+(.+?)\s+so/i);
+        if (match) {
+          return (match[1] || match[2]).trim();
+        }
+        return cleanFeature.toLowerCase();
+      };
+      
+      const mainSubject = extractMainSubject(userStory);
+      
+      // Extract key actions from scenarios
+      const extractKeyActions = (scenarios) => {
+        const actions = [];
+        scenarios.forEach(s => {
+          const whenText = Array.isArray(s.when) ? s.when.join(' ') : s.when || '';
+          const thenText = Array.isArray(s.then) ? s.then.join(' ') : s.then || '';
+          const words = (whenText + ' ' + thenText).toLowerCase().split(/\s+/);
+          words.forEach(word => {
+            if (word.length > 5 && !['system', 'pengguna', 'aplikasi'].includes(word)) {
+              actions.push(word);
+            }
+          });
+        });
+        return [...new Set(actions)].slice(0, 3);
+      };
+      
+      const keyActions = extractKeyActions(scenarios);
+      
+      // Backend tasks
+      tasks.push({
+        role: 'BE',
+        description: `Create function untuk ${mainSubject}`,
+        priority: 'High',
+        status: 'To Do'
+      });
+      
+      if (keyActions.length > 0) {
+        tasks.push({
+          role: 'BE',
+          description: `Implement logic ${keyActions[0]} untuk ${cleanFeature}`,
+          priority: 'High',
+          status: 'To Do'
+        });
+      }
+      
+      tasks.push({
+        role: 'BE',
+        description: `Add validation dan error handling untuk ${mainSubject}`,
+        priority: 'Medium',
+        status: 'To Do'
+      });
+      
+      // Frontend tasks
+      tasks.push({
+        role: 'FE',
+        description: `Development UI untuk ${cleanFeature}`,
+        priority: 'High',
+        status: 'To Do'
+      });
+      
+      tasks.push({
+        role: 'FE',
+        description: `Integrasi ${cleanFeature} dengan backend`,
+        priority: 'Medium',
+        status: 'To Do'
+      });
+      
+      // UI/UX task
+      tasks.push({
+        role: 'UI/UX',
+        description: `Desain UI dan UX untuk ${mainSubject}`,
+        priority: 'Medium',
+        status: 'To Do'
+      });
+      
+      // QA tasks
+      tasks.push({
+        role: 'QA',
+        description: `Testing ${mainSubject} di environment development`,
+        priority: 'Low',
+        status: 'To Do'
+      });
+      
+      tasks.push({
+        role: 'QA',
+        description: `Testing integrasi ${cleanFeature} di staging`,
+        priority: 'Low',
+        status: 'To Do'
+      });
+      
+      return tasks;
+    };
+    
+    // Add development tasks to the data
+    const developmentTasks = generateDevelopmentTasks(
+      originalData.scenarios, 
+      originalData.feature, 
+      originalData.userStory
+    );
+    
+    return {
+      ...originalData,
+      developmentTasks
+    };
+  };
 
   // Fungsi render konten AI
   const renderAIContent = (content) => {
+    // Handle different response types
+    if (message.responseType === 'general') {
+      // General LLM response (non-Connextra) - Ultra compact
+      return (
+        <div className="space-y-3 w-full">
+          {/* Header at top */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-1.5">Ingin Membuat Skenario Pengujian?</h4>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+              Gunakan format <strong>User Story Connextra</strong> untuk mendapatkan skenario pengujian yang terstruktur.
+            </p>
+          </div>
+
+          {/* Response AI - In the middle */}
+          <div className="border rounded-lg p-2.5" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+              {content}
+            </p>
+          </div>
+
+          {/* Format and Example - At bottom */}
+          <div>
+            <div className="border rounded-lg p-2 mb-2" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43' }}>
+              <div className="text-sm mb-1 uppercase tracking-wide" style={{ color: '#FFFFFF' }}>Format</div>
+              <div className="font-mono text-sm">
+                <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Sebagai </span><span style={{ color: '#C27AFF', backgroundColor: '#120C18' }} className="px-1 rounded">[peran]</span><span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>, saya ingin </span><span style={{ color: '#C27AFF', backgroundColor: '#120C18' }} className="px-1 rounded">[fitur]</span><span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>, agar </span><span style={{ color: '#C27AFF', backgroundColor: '#120C18' }} className="px-1 rounded">[manfaat]</span>
+              </div>
+            </div>
+
+            <div className="text-sm font-medium mb-1" style={{ color: '#C27AFF' }}>Contoh:</div>
+            <div className="text-sm font-mono leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+              "Sebagai customer, saya ingin login menggunakan email agar dapat mengakses dashboard pribadi saya"
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Gherkin response (Connextra format) - existing logic
     try {
       // Coba parse JSON
       const data = JSON.parse(content);
 
       if (data.feature && data.scenarios) {
         return (
-          <div className="space-y-4 w-full">
-            {/* Feature Header - Clean */}
-            <div className="pb-3 border-b border-white/10">
-              <h3 className="text-lg font-semibold text-white mb-1">{data.feature}</h3>
+          <div className="space-y-6 w-full">
+            {/* Feature Header with Pattern Info Icon */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-3">
+                <h3 className="text-lg font-semibold text-white flex-1">
+                  {data.feature}
+                </h3>
+                
+                {/* References Info Icon */}
+                <button
+                  onClick={() => {
+                    // Extract references data from message object (not from parsed content)
+                    const refs = message.usedReferences || [];
+                    const metadata = message.metadata || {};
+                    
+                    setPatternInfo({
+                      references: refs,
+                      metadata: metadata,
+                      method: metadata.promptingMethod || 'few-shot'
+                    });
+                    setIsPatternModalOpen(true);
+                  }}
+                  className="w-8 h-8 rounded-lg border flex items-center justify-center transition-all group"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#120C18';
+                    e.currentTarget.style.borderColor = '#2C1A43';
+                    const svg = e.currentTarget.querySelector('svg');
+                    if (svg) svg.style.color = '#C27AFF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                    const svg = e.currentTarget.querySelector('svg');
+                    if (svg) svg.style.color = '#9CA3AF';
+                  }}
+                  title="View References Used"
+                >
+                  <svg className="w-4 h-4 text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </button>
+              </div>
               {data.description && (
-                <p className="text-gray-400 text-sm">{data.description}</p>
+                <p className="text-gray-400 text-sm leading-relaxed">{data.description}</p>
               )}
             </div>
 
-            {/* User Story - Modern Card */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* User Story Card - Read Only */}
+            <div className="border rounded-2xl p-4" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43' }}>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-purple-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-3 h-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <span className="text-sm font-medium text-blue-400">User Story</span>
+                <div className="flex-1">
+                  <div className="text-xs font-medium mb-2" style={{ color: '#C27AFF' }}>User Story</div>
+                  <p className="text-sm text-gray-200 leading-relaxed italic">
+                    "{data.userStory}"
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-gray-200 leading-relaxed">"{data.userStory}"</p>
             </div>
 
-            {/* Scenarios - Clean Layout */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-green-400">Acceptance Criteria</span>
+            {/* Gherkin Scenario Section - Figma Design */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-semibold text-white">Gherkin Scenario</span>
               </div>
               
               {data.scenarios.map((scenario, index) => {
@@ -55,174 +389,282 @@ const ChatBubble = ({ message, activeChatId }) => {
                 const isTested = isScenarioTested(messageId, index);
                 const testResult = getTestResult(messageId, index);
                 
+                // Debug logging for test results (throttled)
+                cleanLogger.debugThrottled('CHAT_BUBBLE', 'Scenario test check', {
+                  messageId,
+                  scenarioIndex: index,
+                  isTested,
+                  hasTestResult: !!testResult,
+                  testResult: testResult ? { timestamp: testResult.timestamp, meteor_score: testResult.meteor_score } : null,
+                  scenarioTitle: scenario.title || `Scenario ${index + 1}`
+                }, `scenario-check-${messageId}-${index}`, 10000); // 10 second throttle
+                
+                // Additional debug: Check if the scenario ID exists in test results
+                const scenarioId = `${messageId}-${index}`;
+                const allTestResults = getAllTestResults();
+                const hasResultInContext = !!allTestResults[scenarioId];
+                
+                if (hasResultInContext !== isTested) {
+                  console.warn('🚨 [CHAT-BUBBLE] Mismatch between context and hook:', {
+                    scenarioId,
+                    hasResultInContext,
+                    isTested,
+                    contextResult: allTestResults[scenarioId]
+                  });
+                }
+                
                 // Get test count for this scenario
-                const allResults = getAllTestResults();
-                const scenarioTestCount = Object.values(allResults).filter(result => 
+                const scenarioTestCount = Object.values(allTestResults).filter(result => 
                   result.messageId === messageId && result.scenarioIndex === index
                 ).length;
                 
+                // Check if this scenario is expanded
+                const isExpanded = expandedScenarios[index] || false;
+                
                 return (
-                  <div key={index} className="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
-                    {/* Scenario Header with Test/Review Button */}
-                    <div className="bg-white/5 px-4 py-3 border-b border-white/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs font-semibold flex items-center justify-center">
-                            {index + 1}
-                          </div>
-                          <h5 className="text-sm font-medium text-white">
-                            {scenario.title || `Scenario ${index + 1}`}
-                          </h5>
-                          {isTested && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
-                              <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              <span className="text-xs text-green-400 font-medium">
-                                Tested {scenarioTestCount > 1 ? `(${scenarioTestCount}x)` : ''}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Test/Review Button */}
-                        <button
-                          onClick={() => {
-                            if (isTested) {
-                              // Show review modal or expand results
-                              if (window.openMeteorReviewModal) {
-                                window.openMeteorReviewModal(scenario, index, testResult);
-                              }
-                            } else {
-                              // Open test modal
-                              if (window.openMeteorTestModal) {
-                                window.openMeteorTestModal(scenario, index, messageId);
-                              }
-                            }
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 ${
-                            isTested
-                              ? 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 hover:border-blue-500/50 text-blue-300 hover:text-blue-200'
-                              : 'bg-purple-600/20 hover:bg-purple-600/30 border-purple-500/30 hover:border-purple-500/50 text-purple-300 hover:text-purple-200'
-                          }`}
-                          title={isTested ? "Review METEOR Results" : "Test with METEOR"}
-                        >
-                          {isTested ? (
-                            <>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              Review
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
-                              </svg>
-                              Test
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
+                  <div 
+                    key={index} 
+                    className="bg-gradient-to-br from-[#020203]/80 to-black/90 border rounded-2xl overflow-hidden transition-all" 
+                    style={{ borderColor: hoveredScenario === index ? '#2C1A43' : 'rgba(255, 255, 255, 0.05)' }}
+                    onMouseEnter={() => setHoveredScenario(index)}
+                    onMouseLeave={() => setHoveredScenario(null)}
+                  >
                     
-                    {/* Scenario Steps - Table Format */}
-                    <div className="p-4">
-                      <div className="bg-gray-900/30 border border-gray-700/30 rounded-lg overflow-hidden">
-                        <table className="w-full">
-                          <tbody>
-                            <tr className="border-b border-gray-700/30">
-                              <td className="px-4 py-3 bg-green-500/10 border-r border-gray-700/30 w-20">
-                                <span className="text-green-400 font-mono text-xs font-semibold">GIVEN</span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-200 text-sm leading-relaxed">
-                                {scenario.given}
-                              </td>
-                            </tr>
-                            <tr className="border-b border-gray-700/30">
-                              <td className="px-4 py-3 bg-blue-500/10 border-r border-gray-700/30 w-20">
-                                <span className="text-blue-400 font-mono text-xs font-semibold">WHEN</span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-200 text-sm leading-relaxed">
-                                {scenario.when}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="px-4 py-3 bg-purple-500/10 border-r border-gray-700/30 w-20">
-                                <span className="text-purple-400 font-mono text-xs font-semibold">THEN</span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-200 text-sm leading-relaxed">
-                                {scenario.then}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                    {/* Scenario Header - Collapsible - Figma Design */}
+                    <button
+                      onClick={() => setExpandedScenarios(prev => ({ ...prev, [index]: !prev[index] }))}
+                      className="w-full px-5 py-4 flex items-center gap-3 transition-colors"
+                    >
+                      {/* Number Badge */}
+                      <div className="w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center border flex-shrink-0" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#C27AFF' }}>
+                        {index + 1}
                       </div>
                       
-                      {/* Show test results if tested */}
-                      {isTested && testResult && (
-                        <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span className="text-sm font-medium text-green-400">
-                                Latest METEOR Test Results
-                                {scenarioTestCount > 1 && (
-                                  <span className="text-xs text-gray-400 ml-1">({scenarioTestCount} tests total)</span>
-                                )}
-                              </span>
+                      {/* Scenario Title */}
+                      <div className="flex-1 text-left">
+                        <h5 className="text-sm font-semibold text-white">
+                          {scenario.title || `Scenario ${index + 1}`}
+                        </h5>
+                      </div>
+                      
+                      {/* Expand/Collapse Icon */}
+                      <svg 
+                        className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Divider */}
+                    {isExpanded && <div className="h-px transition-colors" style={{ backgroundColor: hoveredScenario === index ? '#2C1A43' : 'rgba(255, 255, 255, 0.05)' }} />}
+                    
+                    {/* Scenario Steps - Collapsible Content - Figma Design */}
+                    {isExpanded && (
+                      <div className="p-5">
+                        {/* Gherkin Scenario Table */}
+                        <div className="rounded-xl overflow-hidden">
+                          {/* Given */}
+                          <div className="flex">
+                            <div className="flex-shrink-0 w-20 bg-green-500/10 px-3 py-3 flex items-center justify-center">
+                              <span className="text-green-400 font-semibold text-xs">Given</span>
                             </div>
-                            <span className="text-xs text-gray-400">
-                              {new Date(testResult.timestamp).toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-4 gap-3">
-                            <div className="text-center">
-                              <div className={`text-lg font-bold ${
-                                testResult.meteor_score >= 0.7 ? 'text-green-400' :
-                                testResult.meteor_score >= 0.5 ? 'text-yellow-400' : 'text-red-400'
-                              }`}>
-                                {(testResult.meteor_score * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-xs text-gray-400">METEOR</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-blue-400">
-                                {(testResult.precision * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-xs text-gray-400">Precision</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-purple-400">
-                                {(testResult.recall * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-xs text-gray-400">Recall</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-yellow-400">
-                                {(testResult.f_score * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-xs text-gray-400">F-Score</div>
+                            <div className="flex-1 px-4 py-3">
+                              <p className="text-gray-300 text-sm leading-relaxed">
+                                {scenario.given}
+                              </p>
                             </div>
                           </div>
-                          {scenarioTestCount > 1 && (
-                            <div className="mt-2 text-xs text-gray-500 text-center">
-                              Click "Review" to see all {scenarioTestCount} test results and run new tests
+                          
+                          {/* When */}
+                          <div className="flex">
+                            <div className="flex-shrink-0 w-20 bg-blue-500/10 px-3 py-3 flex items-center justify-center">
+                              <span className="text-blue-400 font-semibold text-xs">When</span>
                             </div>
-                          )}
+                            <div className="flex-1 px-4 py-3">
+                              <p className="text-gray-300 text-sm leading-relaxed">
+                                {scenario.when}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Then */}
+                          <div className="flex">
+                            <div className="flex-shrink-0 w-20 bg-purple-500/10 px-3 py-3 flex items-center justify-center">
+                              <span className="text-purple-400 font-semibold text-xs">Then</span>
+                            </div>
+                            <div className="flex-1 px-4 py-3">
+                              <p className="text-gray-300 text-sm leading-relaxed">
+                                {scenario.then}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {/* JIRA Export CTA */}
-            <JiraExportCTA scenarioData={data} message={message} />
+            {/* Development Tasklist - Figma Design */}
+            {data.scenarios && data.scenarios.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-white">Development Tasklist</h4>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  {(() => {
+                    // Generate highly specific development tasks based on feature context
+                    const generateSpecificTasks = (scenarios, feature, userStory) => {
+                      const tasks = [];
+                      
+                      // Clean feature name (remove "Feature" word)
+                      const cleanFeature = feature.replace(/feature|fitur/gi, '').trim();
+                      
+                      // Extract main subject/entity from user story
+                      // Example: "Sebagai admin, saya ingin reset password" -> "reset password"
+                      const extractMainSubject = (story) => {
+                        const match = story.match(/ingin\s+(.+?)\s+agar|want\s+to\s+(.+?)\s+so/i);
+                        if (match) {
+                          return (match[1] || match[2]).trim();
+                        }
+                        // Fallback: use feature name
+                        return cleanFeature.toLowerCase();
+                      };
+                      
+                      const mainSubject = extractMainSubject(userStory);
+                      
+                      // Extract key actions from scenarios for more specific tasks
+                      const extractKeyActions = (scenarios) => {
+                        const actions = [];
+                        scenarios.forEach(s => {
+                          const whenText = Array.isArray(s.when) ? s.when.join(' ') : s.when || '';
+                          const thenText = Array.isArray(s.then) ? s.then.join(' ') : s.then || '';
+                          
+                          // Extract verbs and objects
+                          const words = (whenText + ' ' + thenText).toLowerCase().split(/\s+/);
+                          words.forEach(word => {
+                            if (word.length > 5 && !['system', 'pengguna', 'aplikasi'].includes(word)) {
+                              actions.push(word);
+                            }
+                          });
+                        });
+                        return [...new Set(actions)].slice(0, 3); // Get unique top 3
+                      };
+                      
+                      const keyActions = extractKeyActions(scenarios);
+                      
+                      // Backend tasks - SPECIFIC to the feature
+                      tasks.push({
+                        role: 'BE',
+                        description: `Create function untuk ${mainSubject}`,
+                        priority: 'High',
+                        status: 'To Do'
+                      });
+                      
+                      if (keyActions.length > 0) {
+                        tasks.push({
+                          role: 'BE',
+                          description: `Implement logic ${keyActions[0]} untuk ${cleanFeature}`,
+                          priority: 'High',
+                          status: 'To Do'
+                        });
+                      }
+                      
+                      tasks.push({
+                        role: 'BE',
+                        description: `Add validation dan error handling untuk ${mainSubject}`,
+                        priority: 'Medium',
+                        status: 'To Do'
+                      });
+                      
+                      // Frontend tasks - SPECIFIC to the feature
+                      tasks.push({
+                        role: 'FE',
+                        description: `Development UI untuk ${cleanFeature}`,
+                        priority: 'High',
+                        status: 'To Do'
+                      });
+                      
+                      tasks.push({
+                        role: 'FE',
+                        description: `Integrasi ${cleanFeature} dengan backend`,
+                        priority: 'Medium',
+                        status: 'To Do'
+                      });
+                      
+                      // UI/UX task - SPECIFIC to the feature
+                      tasks.push({
+                        role: 'UI/UX',
+                        description: `Desain UI dan UX untuk ${mainSubject}`,
+                        priority: 'Medium',
+                        status: 'To Do'
+                      });
+                      
+                      // QA tasks - SPECIFIC to the feature
+                      tasks.push({
+                        role: 'QA',
+                        description: `Testing ${mainSubject} di environment development`,
+                        priority: 'Low',
+                        status: 'To Do'
+                      });
+                      
+                      tasks.push({
+                        role: 'QA',
+                        description: `Testing integrasi ${cleanFeature} di staging`,
+                        priority: 'Low',
+                        status: 'To Do'
+                      });
+                      
+                      return tasks;
+                    };
+                    
+                    const tasks = generateSpecificTasks(data.scenarios, data.feature, data.userStory);
+                    
+                    return tasks.map((task, taskIndex) => (
+                      <div
+                        key={taskIndex}
+                        className="bg-gradient-to-br from-[#020203]/80 to-black/90 border rounded-xl p-4 transition-all"
+                        style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2C1A43'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
+                      >
+                        {/* Task Header */}
+                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                          {/* Priority Badge */}
+                          <div className={`px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r ${
+                            task.priority === 'High' 
+                              ? 'from-red-500/20 to-red-600/20 border-red-500/30 text-red-400'
+                              : task.priority === 'Medium'
+                                ? 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30 text-yellow-400'
+                                : 'from-green-500/20 to-green-600/20 border-green-500/30 text-green-400'
+                          }`}>
+                            {task.priority}
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-500/30 text-gray-400">
+                            {task.status}
+                          </div>
+                        </div>
+
+                        {/* Task Description with Role */}
+                        <p className="text-sm text-gray-300 leading-relaxed">
+                          <span className="font-semibold text-purple-400">[{task.role}]</span> {task.description}
+                        </p>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* JIRA Export CTA - Pass combined scenario data */}
+            <JiraExportCTA scenarioData={createCombinedScenarioData(data)} message={message} />
 
             {/* Quality Metrics */}
             {message.qualityMetrics && (
@@ -231,25 +673,6 @@ const ChatBubble = ({ message, activeChatId }) => {
                   qualityMetrics={message.qualityMetrics}
                   performanceMetrics={message.performanceMetrics}
                 />
-
-                {message.qualityMetrics?.groundTruthReference && (
-                  <div className="mt-3">
-                    <MeteorAnalysisReport
-                      groundTruthText={message.qualityMetrics.groundTruthReference.gherkin_scenario}
-                      generatedText={data.scenarios.map(s => 
-                        `Given ${s.given}\nWhen ${s.when}\nThen ${s.then}`
-                      ).join('\n\n')}
-                      meteorMetrics={message.qualityMetrics}
-                      onAnalysisRequest={async () => {
-                        return `Analisis sedang dalam pengembangan. Skor METEOR ${(message.qualityMetrics.meteorScore * 100).toFixed(1)}% menunjukkan ${
-                          message.qualityMetrics.meteorScore >= 0.8 ? 'kualitas sangat baik' :
-                          message.qualityMetrics.meteorScore >= 0.6 ? 'kualitas cukup baik namun masih ada ruang perbaikan' :
-                          'kualitas yang perlu ditingkatkan secara signifikan'
-                        }.`;
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -264,48 +687,163 @@ const ChatBubble = ({ message, activeChatId }) => {
 
   return (
     <>
+      {/* References Used Modal */}
+      <PatternUsedModal
+        isOpen={isPatternModalOpen}
+        onClose={() => setIsPatternModalOpen(false)}
+        patternInfo={patternInfo}
+      />
+
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
         <div className={`${isUser ? 'max-w-[70%]' : 'max-w-full'} w-full`}>
-          <div className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-            {/* Avatar - Clean & Modern */}
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+          <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+            {/* Avatar - Figma Design */}
+            <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               isUser 
-                ? 'bg-white/10' 
+                ? 'border' 
                 : isError 
-                  ? 'bg-red-500/20 border border-red-500/30' 
-                  : 'bg-white/10'
-            }`}>
+                  ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                  : 'border'
+            }`}
+            style={isUser ? { backgroundColor: '#160D14', borderColor: '#44273D' } : (!isError ? { backgroundColor: '#120C18', borderColor: '#2C1A43' } : {})}
+            >
               {isUser ? (
-                <span className="text-white text-sm font-medium">U</span>
+                <span className="text-sm font-semibold" style={{ color: '#FF7AD0' }}>{getUserInitial()}</span>
               ) : isError ? (
-                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               ) : (
-                <span className="text-white text-sm font-medium">AI</span>
+                <img 
+                  src="/logo.png"
+                  alt="SpecWeave"
+                  className="w-8 h-8 rounded-lg"
+                  style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
+                />
               )}
             </div>
 
-            {/* Message Content - Clean Design */}
-            <div className={`rounded-2xl overflow-hidden ${
-              isUser 
-                ? 'bg-white/10 text-white px-4 py-3' 
-                : isError 
-                  ? 'bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3' 
-                  : 'bg-white/5 border border-white/10 text-gray-100 p-6'
-            } ${isUser ? 'max-w-md' : 'flex-1'}`}>
-              {isUser ? (
-                <p className="text-sm leading-relaxed">{message.content}</p>
-              ) : (
-                renderAIContent(message.content)
+            {/* Message Content - Figma Design */}
+            <div className="flex-1 flex flex-col gap-2">
+              <div className={`rounded-2xl group ${
+                isUser 
+                  ? 'border' 
+                  : isError 
+                    ? 'bg-gradient-to-br from-red-600/20 to-red-600/20 border border-red-500/30 px-4 py-3' 
+                    : 'bg-[#020203]/60 border p-6'
+              }`}
+              style={isUser ? (isEditingUserMessage ? { backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' } : { backgroundColor: '#160D14', borderColor: '#44273D' }) : (!isError ? { borderColor: 'rgba(255, 255, 255, 0.05)' } : {})}
+              >
+                {isUser ? (
+                  isEditingUserMessage ? (
+                    <div className="px-4 py-3">
+                      <textarea
+                        value={editedUserMessage}
+                        onChange={(e) => setEditedUserMessage(e.target.value)}
+                        className="w-full bg-transparent border-none rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none leading-relaxed"
+                        rows={3}
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2 mt-3">
+                        <button
+                          onClick={handleCancelEditUserMessage}
+                          className="px-3 py-1.5 bg-[#09090A] border border-white/5 rounded-lg text-xs font-semibold text-white/70 transition-all hover:bg-[#0a0a0b]"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveUserMessage}
+                          className="px-3 py-1.5 bg-[#160D14] border border-[#44273D] rounded-lg text-xs font-semibold text-[#FF7AD0] transition-all hover:bg-[#1a1018]"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3">
+                      <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{displayContent}</p>
+                    </div>
+                  )
+                ) : (
+                  renderAIContent(message.content)
+                )}
+              </div>
+              
+              {/* Previous/Next Navigation for User Messages with Multiple Versions */}
+              {isUser && hasMultipleVersions && !isEditingUserMessage && (
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    onClick={handlePreviousVersion}
+                    disabled={currentVersionIndex === 0}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed border"
+                    style={{ 
+                      backgroundColor: currentVersionIndex === 0 ? 'transparent' : '#160D14', 
+                      borderColor: '#44273D',
+                      color: currentVersionIndex === 0 ? 'rgba(255, 122, 208, 0.3)' : '#FF7AD0'
+                    }}
+                    title="Previous version"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Previous</span>
+                  </button>
+                  
+                  <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                    {currentVersionIndex + 1} / {versions.length}
+                  </span>
+                  
+                  <button
+                    onClick={handleNextVersion}
+                    disabled={currentVersionIndex === versions.length - 1}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed border"
+                    style={{ 
+                      backgroundColor: currentVersionIndex === versions.length - 1 ? 'transparent' : '#160D14', 
+                      borderColor: '#44273D',
+                      color: currentVersionIndex === versions.length - 1 ? 'rgba(255, 122, 208, 0.3)' : '#FF7AD0'
+                    }}
+                    title="Next version"
+                  >
+                    <span>Next</span>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               )}
+              
+              {/* Timestamp - Figma Design */}
+              <div className={`text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
+                {formatTime(message.timestamp || message.createdAt)}
+              </div>
             </div>
+            
+            {/* Edit Button - Outside container on the left for user messages */}
+            {isUser && !isEditingUserMessage && (
+              <button
+                onClick={() => setIsEditingUserMessage(true)}
+                className="w-8 h-8 rounded-lg border flex items-center justify-center transition-all flex-shrink-0"
+                style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#160D14';
+                  e.currentTarget.style.borderColor = '#44273D';
+                  const svg = e.currentTarget.querySelector('svg');
+                  if (svg) svg.style.color = '#FF7AD0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                  const svg = e.currentTarget.querySelector('svg');
+                  if (svg) svg.style.color = '#9CA3AF';
+                }}
+                title="Edit message"
+              >
+                <svg className="w-4 h-4 text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            )}
           </div>
-          
-          {/* Timestamp - Subtle */}
-          <p className={`text-xs text-gray-500 mt-2 ${isUser ? 'text-right pr-14' : 'pl-14'}`}>
-            {new Date(message.timestamp || message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-          </p>
         </div>
       </div>
     </>

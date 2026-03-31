@@ -1,0 +1,13 @@
+{
+  "name": "specweave-ui-refresh-test",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Test script untuk memverifikasi perbaikan UI refresh bug",
+  "main": "test_ui_refresh_fix.js",
+  "scripts": {
+    "test:ui-refresh": "node test_ui_refresh_fix.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

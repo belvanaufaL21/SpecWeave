@@ -6,6 +6,7 @@ import jiraService from '../services/jiraService.js';
 import epicService from '../services/epicService.js';
 import { AppError } from '../middlewares/errorHandler.js'; 
 import { v4 as uuidv4 } from 'uuid';
+import cleanLogger from '../config/cleanLogging.js';
 
 const meteorService = new MeteorService();
 const performanceService = new PerformanceService();
@@ -13,15 +14,11 @@ const performanceService = new PerformanceService();
 export const generateGherkin = async (req, res, next) => {
   const requestId = uuidv4();
   
-  console.log("🚀🚀🚀 GHERKIN CONTROLLER CALLED 🚀🚀🚀");
-  console.log("📥 Request method:", req.method);
-  console.log("📥 Request URL:", req.url);
-  console.log("📥 Request body:", req.body);
-  
   try {
-    const { userStory, evaluateQuality = false } = req.body;
+    const { userStory, originalUserStory, evaluateQuality = false, options = {} } = req.body;
 
-    console.log("🔍 Gherkin Controller - Request body:", { userStory: userStory?.substring(0, 100) + "...", evaluateQuality });
+    // Use originalUserStory for format detection if available, otherwise use userStory
+    const inputForDetection = originalUserStory || userStory;
 
     // 1. Validasi
     if (!userStory || typeof userStory !== 'string') {
@@ -34,18 +31,59 @@ export const generateGherkin = async (req, res, next) => {
     // 2. Start performance monitoring
     performanceService.startTimer(requestId, 'gherkin_generation');
 
-    // 3. Panggil AI Service
-    const gherkinCode = await convertToGherkin(userStory.trim());
-    console.log("✅ Controller: Received gherkin from AI service:", gherkinCode);
+    // 3. Panggil AI Service dengan references jika ada
+    const patterns = options.referenceData?.patterns || [];
+    
+    console.log('📊 [GHERKIN-CONTROLLER] Reference data received:', {
+      hasReferenceData: !!options.referenceData,
+      patternsCount: patterns.length,
+      patternTypes: patterns.map(p => p.type)
+    });
+    
+    // Extract references from patterns for display
+    let usedReferences = [];
+    if (patterns.length > 0) {
+      patterns.forEach(pattern => {
+        if (pattern.examples && Array.isArray(pattern.examples)) {
+          usedReferences = usedReferences.concat(pattern.examples.slice(0, 3));
+        }
+      });
+    }
+    
+    console.log('📚 [GHERKIN-CONTROLLER] Extracted references:', {
+      usedReferencesCount: usedReferences.length,
+      titles: usedReferences.map(r => r.title)
+    });
+    
+    // IMPORTANT: Use originalUserStory for format detection, not the enhanced prompt
+    const aiResponse = await convertToGherkin(userStory.trim(), {
+      references: patterns,
+      originalInput: inputForDetection.trim() // Pass original for format detection
+    });
+
+    // Handle different response types
+    if (aiResponse.type === 'general') {
+      // Non-Connextra input - return general LLM response
+      return res.status(200).json({
+        success: true,
+        data: {
+          type: 'general',
+          content: aiResponse.content,
+          formatDetection: aiResponse.formatDetection,
+          isConnextra: false,
+          message: null // Remove template message, let AI response be natural
+        }
+      });
+    }
+
+    // Connextra format - continue with Gherkin processing
+    const gherkinCode = aiResponse.content;
 
     // 4. METEOR Quality Evaluation (if requested)
     let meteorMetrics = null;
     let qualityAssessment = null;
     
-    console.log("🎯 METEOR Evaluation requested:", evaluateQuality);
-    
     if (evaluateQuality) {
-      console.log("🚀 Starting METEOR evaluation...");
       try {
         // Parse the generated Gherkin to extract scenario text
         const parsedGherkin = JSON.parse(gherkinCode);
@@ -54,16 +92,9 @@ export const generateGherkin = async (req, res, next) => {
         // Generate intelligent reference text based on AI output analysis
         const referenceText = meteorService.generateReferenceText(parsedGherkin);
         
-        console.log(`🔍 Detected scenario type and generated reference for METEOR evaluation`);
-        console.log(`📝 Candidate length: ${candidateText.length} chars`);
-        console.log(`📋 Reference length: ${referenceText.length} chars`);
-        
         // Perform METEOR evaluation
         meteorMetrics = await meteorService.evaluateScenario(candidateText, referenceText);
         qualityAssessment = meteorService.getQualityAssessment(meteorMetrics.meteor_score);
-        
-        console.log(`📊 METEOR Score: ${meteorMetrics.meteor_score} (${qualityAssessment.level})`);
-        console.log(`🎯 Quality: ${qualityAssessment.description}`);
         
         // Log METEOR metrics if user is authenticated
         if (req.user?.id) {
@@ -103,7 +134,10 @@ export const generateGherkin = async (req, res, next) => {
         if (epicContext.success && epicContext.data) {
           jiraEpicId = epicContext.data.epicData.epic.id;
           jiraConnectionId = epicContext.data.epicData.connection.id;
-          console.log(`🎯 Epic context found: ${epicContext.data.epicData.epic.name} (${epicContext.data.epicData.epic.key})`);
+          cleanLogger.debug('GHERKIN-CONTROLLER', 'Epic context found', { 
+            name: epicContext.data.epicData.epic.name, 
+            key: epicContext.data.epicData.epic.key 
+          });
         }
         
         const scenarioData = {
@@ -121,13 +155,11 @@ export const generateGherkin = async (req, res, next) => {
         };
 
         savedScenario = await supabaseService.createScenario(scenarioData);
-        console.log('💾 Scenario saved to database:', savedScenario.id);
+        cleanLogger.debug('GHERKIN-CONTROLLER', 'Scenario saved to database', { id: savedScenario.id });
 
         // Create JIRA user story if Epic context exists
         if (jiraEpicId && jiraConnectionId) {
           try {
-            console.log('🎫 Creating JIRA user story...');
-            
             const storyData = {
               title: parsedGherkin.feature || 'Generated User Story',
               userStory: userStory.trim(),
@@ -135,6 +167,13 @@ export const generateGherkin = async (req, res, next) => {
               featureName: parsedGherkin.feature,
               scenarios: parsedGherkin.scenarios || []
             };
+
+            // Log generation summary
+            cleanLogger.info('GHERKIN-GENERATION', 'Generating Gherkin scenarios', {
+              feature: parsedGherkin.feature,
+              userStory: userStory.trim().substring(0, 100) + '...',
+              scenariosCount: parsedGherkin.scenarios?.length || 0
+            });
 
             // Create user story in JIRA
             jiraUserStory = await jiraService.createUserStory(
@@ -144,12 +183,13 @@ export const generateGherkin = async (req, res, next) => {
               req.user.id
             );
 
-            console.log(`✅ JIRA user story created: ${jiraUserStory.key}`);
+            cleanLogger.info('JIRA-INTEGRATION', 'User story created', {
+              key: jiraUserStory.key,
+              url: jiraUserStory.url
+            });
 
             // Create subtasks from scenarios
             if (parsedGherkin.scenarios && parsedGherkin.scenarios.length > 0) {
-              console.log('📋 Creating JIRA subtasks...');
-              
               jiraSubtasks = await jiraService.createSubtasks(
                 jiraConnectionId,
                 jiraUserStory.id,
@@ -157,7 +197,13 @@ export const generateGherkin = async (req, res, next) => {
                 req.user.id
               );
 
-              console.log(`✅ Created ${jiraSubtasks.length} JIRA subtasks`);
+              // Log each scenario creation
+              jiraSubtasks.forEach((subtask, index) => {
+                cleanLogger.info('GHERKIN-SCENARIO', `Scenario ${index + 1} created`, {
+                  key: subtask.key,
+                  title: subtask.title
+                });
+              });
             }
 
             // Update scenario with JIRA information
@@ -167,7 +213,9 @@ export const generateGherkin = async (req, res, next) => {
             });
 
           } catch (jiraError) {
-            console.warn('⚠️ JIRA integration failed:', jiraError.message);
+            cleanLogger.warn('JIRA-INTEGRATION', 'Failed to create JIRA items', {
+              error: jiraError.message
+            });
             // Continue without failing the request - JIRA integration is optional
           }
         }
@@ -190,18 +238,28 @@ export const generateGherkin = async (req, res, next) => {
         }
 
       } catch (dbError) {
-        console.warn('⚠️ Failed to save scenario to database:', dbError.message);
+        cleanLogger.warn('DATABASE', 'Failed to save scenario', {
+          error: dbError.message
+        });
         // Continue without failing the request
       }
     }
 
-    // 7. Response with quality metrics and JIRA integration results
+    // 7. Response with quality metrics, JIRA integration results, and references used
     const response = {
       success: true,
       data: {
+        type: 'gherkin',
         id: savedScenario?.id || Date.now(),
         gherkin: gherkinCode,
         scenario_id: savedScenario?.id || null,
+        formatDetection: aiResponse.formatDetection,
+        isConnextra: true,
+        usedReferences: usedReferences, // Add actual references used
+        metadata: {
+          promptingMethod: usedReferences.length > 0 ? 'few-shot' : 'zero-shot',
+          referenceCount: usedReferences.length
+        },
         quality_metrics: meteorMetrics ? {
           meteor_score: meteorMetrics.meteor_score,
           quality_level: qualityAssessment.level,
@@ -219,19 +277,19 @@ export const generateGherkin = async (req, res, next) => {
             key: jiraUserStory.key,
             url: jiraUserStory.url
           },
-          subtasks: jiraSubtasks.map(task => ({
+          scenarios: jiraSubtasks.map(task => ({
             id: task.id,
             key: task.key,
             title: task.title,
             url: task.url
           })),
-          total_subtasks: jiraSubtasks.length,
-          message: `Created user story ${jiraUserStory.key} with ${jiraSubtasks.length} subtasks`
+          total_scenarios: jiraSubtasks.length,
+          message: `Created user story ${jiraUserStory.key} with ${jiraSubtasks.length} Gherkin scenarios`
         } : null
       }
     };
     
-    console.log("📤 Controller: Sending response with quality metrics");
+    cleanLogger.debug('GHERKIN-CONTROLLER', 'Sending response with quality metrics');
     res.status(200).json(response);
   } catch (error) {
     // Record error in performance monitoring
@@ -333,7 +391,10 @@ export const createJiraUserStory = async (req, res, next) => {
         userId
       );
 
-      console.log(`✅ JIRA user story created: ${jiraUserStory.key}`);
+      cleanLogger.info('JIRA-INTEGRATION', 'User story created', {
+        key: jiraUserStory.key,
+        url: jiraUserStory.url
+      });
 
       // Create subtasks from scenarios
       let jiraSubtasks = [];
@@ -345,7 +406,12 @@ export const createJiraUserStory = async (req, res, next) => {
           userId
         );
 
-        console.log(`✅ Created ${jiraSubtasks.length} JIRA subtasks`);
+        jiraSubtasks.forEach((subtask, index) => {
+          cleanLogger.info('GHERKIN-SCENARIO', `Scenario ${index + 1} created`, {
+            key: subtask.key,
+            title: subtask.title
+          });
+        });
       }
 
       // Update scenario with JIRA information
@@ -363,7 +429,7 @@ export const createJiraUserStory = async (req, res, next) => {
             key: jiraUserStory.key,
             url: jiraUserStory.url
           },
-          subtasks: jiraSubtasks.map(task => ({
+          scenarios: jiraSubtasks.map(task => ({
             id: task.id,
             key: task.key,
             title: task.title,
@@ -374,13 +440,15 @@ export const createJiraUserStory = async (req, res, next) => {
             key: epic.key,
             name: epic.name
           },
-          total_subtasks: jiraSubtasks.length
+          total_scenarios: jiraSubtasks.length
         },
-        message: `Created user story ${jiraUserStory.key} with ${jiraSubtasks.length} subtasks under Epic ${epic.key}`
+        message: `Created user story ${jiraUserStory.key} with ${jiraSubtasks.length} Gherkin scenarios under Epic ${epic.key}`
       });
 
     } catch (jiraError) {
-      console.error('JIRA integration error:', jiraError);
+      cleanLogger.error('JIRA-INTEGRATION', 'Failed to create JIRA items', {
+        error: jiraError.message
+      });
       throw new AppError(`JIRA integration failed: ${jiraError.message}`, 500);
     }
 
@@ -421,8 +489,8 @@ export const getJiraIntegrationStatus = async (req, res, next) => {
         has_user_story: !!scenario.jira_user_story_id,
         user_story_id: scenario.jira_user_story_id,
         epic_id: scenario.jira_epic_id,
-        subtask_ids: scenario.jira_subtask_ids || [],
-        total_subtasks: scenario.jira_subtask_ids?.length || 0
+        scenario_ids: scenario.jira_subtask_ids || [],
+        total_scenarios: scenario.jira_subtask_ids?.length || 0
       },
       can_create_user_story: hasEpicContext && !scenario.jira_user_story_id,
       requirements: {
@@ -527,7 +595,7 @@ export const bulkCreateJiraUserStories = async (req, res, next) => {
             key: jiraUserStory.key,
             url: jiraUserStory.url
           },
-          subtasks_count: jiraSubtasks.length
+          scenarios_count: jiraSubtasks.length
         });
 
       } catch (error) {
@@ -552,10 +620,10 @@ export const bulkCreateJiraUserStories = async (req, res, next) => {
           total_requested: scenarioIds.length,
           successful: results.length,
           failed: errors.length,
-          total_subtasks: results.reduce((sum, r) => sum + r.subtasks_count, 0)
+          total_scenarios: results.reduce((sum, r) => sum + r.scenarios_count, 0)
         }
       },
-      message: `Created ${results.length} user stories with ${results.reduce((sum, r) => sum + r.subtasks_count, 0)} subtasks. ${errors.length} failed.`
+      message: `Created ${results.length} user stories with ${results.reduce((sum, r) => sum + r.scenarios_count, 0)} Gherkin scenarios. ${errors.length} failed.`
     });
 
   } catch (error) {

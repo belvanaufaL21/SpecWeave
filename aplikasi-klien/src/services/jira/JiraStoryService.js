@@ -1,4 +1,5 @@
 import api from '../api.js';
+import cleanLogger from '../../config/cleanLogging.js';
 import { 
   JIRA_TIMEOUTS, 
   JIRA_ENDPOINTS,
@@ -14,14 +15,18 @@ import {
  */
 class JiraStoryService {
   /**
-   * Create complete story dengan scenarios
+   * Create complete story dengan scenarios dan development tasks
    * @param {string} connectionId - JIRA connection ID
    * @param {string} epicId - Epic ID
    * @param {Object} storyData - Story data
    * @param {Array} scenarios - Scenarios array
+   * @param {Array} developmentTasks - Development tasks array
    * @returns {Promise<Object>} Created story result
    */
-  static async createCompleteStory(connectionId, epicId, storyData, scenarios) {
+  static async createCompleteStory(connectionId, epicId, storyData, scenarios, developmentTasks = []) {
+    // Log: Starting export
+    cleanLogger.exportStart();
+    
     const operation = async (attempt) => {
       const timeout = getProgressiveTimeout(attempt, JIRA_TIMEOUTS.EXPORT_STORY);
       
@@ -30,17 +35,27 @@ class JiraStoryService {
       
       const response = await api.post(endpoint, {
         storyData,
-        scenarios
+        scenarios,
+        developmentTasks
       }, { timeout });
       
       if (response.data.success) {
+        // Log: Export success
+        cleanLogger.exportSuccess();
+        
         return { success: true, data: response.data.data };
       } else {
         throw new Error(response.data.error || JIRA_ERRORS.STORY_CREATE_FAILED);
       }
     };
     
-    return await retryJiraOperation(operation, 'Export story');
+    try {
+      return await retryJiraOperation(operation, 'Export story');
+    } catch (error) {
+      // Log: Export failed
+      cleanLogger.exportFailed(error.message);
+      throw error;
+    }
   }
 
   /**
@@ -48,10 +63,11 @@ class JiraStoryService {
    * @param {string} connectionId - JIRA connection ID
    * @param {Object} storyData - Story data
    * @param {Array} scenarios - Scenarios array
+   * @param {Array} developmentTasks - Development tasks array
    * @returns {Promise<Object>} Created story result
    */
-  static async createStoryWithoutEpic(connectionId, storyData, scenarios) {
-    return await this.createCompleteStory(connectionId, null, storyData, scenarios);
+  static async createStoryWithoutEpic(connectionId, storyData, scenarios, developmentTasks = []) {
+    return await this.createCompleteStory(connectionId, null, storyData, scenarios, developmentTasks);
   }
 
   /**

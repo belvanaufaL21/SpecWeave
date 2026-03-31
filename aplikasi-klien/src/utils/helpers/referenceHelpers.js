@@ -12,18 +12,39 @@ export function buildApiUrl(baseUrl, ...segments) {
   return [baseUrl, ...cleanSegments].join('/');
 }
 
-/**
- * Handle API response dengan error handling yang konsisten
- */
-export async function handleApiResponse(response) {
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+  /**
+   * Handle API response dengan error handling yang konsisten
+   */
+  export async function handleApiResponse(response) {
+    // Check if response is ok first
+    if (!response.ok) {
+      // If it's a 500 error, it might be a missing table - let the service handle offline mode
+      if (response.status === 500) {
+        throw new Error('Server error - switching to offline mode');
+      }
+      
+      // For other errors, try to parse JSON if possible
+      try {
+        const data = await response.json();
+        throw new Error(data.message || `Request failed with status ${response.status}`);
+      } catch (jsonError) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+    }
+    
+    // Try to parse JSON response
+    try {
+      const data = await response.json();
+      return data;
+    } catch (jsonError) {
+      // If JSON parsing fails, return a generic success response
+      return {
+        success: true,
+        data: [],
+        message: 'Empty response - switching to offline mode'
+      };
+    }
   }
-  
-  return data;
-}
 
 /**
  * Format reference untuk few-shot prompting

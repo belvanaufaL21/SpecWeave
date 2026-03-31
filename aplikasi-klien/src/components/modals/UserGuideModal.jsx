@@ -126,7 +126,7 @@ const UserGuideModal = ({ isOpen, onClose }) => {
             <h3 className="text-lg font-semibold text-white mb-3">🔗 Seamless JIRA Integration</h3>
             <p className="text-gray-300 mb-4">
               Integrasikan secara mulus dengan project JIRA Anda untuk sinkronisasi user stories, epics, dan tracking progress. 
-              SpecWeave mendukung JIRA Cloud dengan OAuth 2.0 authentication yang aman.
+              SpecWeave mendukung JIRA Cloud dengan API Token authentication yang aman.
             </p>
           </div>
 
@@ -150,8 +150,8 @@ const UserGuideModal = ({ isOpen, onClose }) => {
               <div className="flex items-start gap-4">
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0">3</div>
                 <div>
-                  <h5 className="font-medium text-white mb-1">OAuth Authentication</h5>
-                  <p className="text-gray-300 text-sm">Klik "Connect with OAuth" untuk authorize SpecWeave mengakses JIRA Anda dengan aman.</p>
+                  <h5 className="font-medium text-white mb-1">API Token Authentication</h5>
+                  <p className="text-gray-300 text-sm">Masukkan JIRA URL, email, dan API token untuk mengakses JIRA Anda dengan aman.</p>
                 </div>
               </div>
             </div>
@@ -372,7 +372,7 @@ const UserGuideModal = ({ isOpen, onClose }) => {
                     <li>JIRA URL format incorrect (harus https://company.atlassian.net)</li>
                     <li>User tidak memiliki Atlassian account yang valid</li>
                     <li>User bukan member dari JIRA site company</li>
-                    <li>OAuth app belum dikonfigurasi dengan benar</li>
+                    <li>API token tidak valid atau expired</li>
                   </ul>
                 </div>
               </div>
@@ -422,7 +422,7 @@ const UserGuideModal = ({ isOpen, onClose }) => {
                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-300">
                       <li>Check browser console untuk error messages</li>
                       <li>Disable browser extensions temporarily</li>
-                      <li>Verify server status (localhost:5000)</li>
+                      <li>Verify server status (localhost:5003)</li>
                       <li>Restart development server jika local</li>
                     </ul>
                   </div>

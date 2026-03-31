@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-const ContinueLearning = ({ onStartChat, onOpenTemplates, onOpenKnowledgeBase }) => {
+const ContinueLearning = ({ onStartChat, onOpenTemplates, onOpenReferenceLibrary }) => {
   const learningItems = [
     {
       id: 1,
@@ -20,7 +20,7 @@ const ContinueLearning = ({ onStartChat, onOpenTemplates, onOpenKnowledgeBase })
       type: "QUALITY ANALYSIS",
       icon: "📊",
       color: "from-blue-600 to-cyan-600",
-      action: onOpenKnowledgeBase
+      action: onOpenReferenceLibrary
     },
     {
       id: 3,

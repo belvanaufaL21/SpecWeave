@@ -6,10 +6,9 @@ export const JIRA_TIMEOUTS = {
   CONTEXT_SET: 30000,     // Increased to 30 seconds
   CONTEXT_GET: 45000,     // Increased to 45 seconds
   CONTEXT_CLEAR: 15000,    // Increased to 15 seconds
-  OAUTH_START: 45000,     // Increased to 45 seconds
-  OAUTH_COMPLETE: 60000,  // Increased to 60 seconds
   TEST_CONNECTION: 45000, // Increased to 45 seconds
   CREATE_CONNECTION: 45000, // Increased to 45 seconds
+  DELETE_CONNECTION: 30000, // 30 seconds
   EXPORT_STORY: 90000     // Increased to 90 seconds
 };
 
@@ -33,10 +32,10 @@ export const JIRA_ENDPOINTS = {
   EPICS: (connectionId, projectKey) => `/jira/connections/${connectionId}/projects/${projectKey}/epics`,
   EPIC_VALIDATE: (connectionId, epicId) => `/jira/connections/${connectionId}/epics/${epicId}/validate`,
   EPIC_CONTEXT: '/epics/context',
-  OAUTH_START: '/jira/oauth/start',
-  OAUTH_CALLBACK: '/jira/oauth/callback',
   TEST_CONNECTION: '/jira/test-connection',
-  CREATE_STORY: (connectionId, epicId) => `/jira/connections/${connectionId}/epics/${epicId}/complete-story`
+  CREATE_STORY: (connectionId, epicId) => `/jira/connections/${connectionId}/epics/${epicId}/complete-story`,
+  HEALTH_CHECK: (connectionId) => `/jira/connections/${connectionId}/health`,
+  HEALTH_CHECK_ALL: '/jira/connections/health-check'
 };
 
 // Error messages
@@ -48,10 +47,9 @@ export const JIRA_ERRORS = {
   CONTEXT_SET_FAILED: 'Failed to set Epic context',
   CONTEXT_GET_FAILED: 'Failed to get Epic context',
   CONTEXT_CLEAR_FAILED: 'Failed to clear Epic context',
-  OAUTH_START_FAILED: 'Failed to start OAuth flow',
-  OAUTH_COMPLETE_FAILED: 'Failed to complete OAuth flow',
   CONNECTION_TEST_FAILED: 'Connection test failed',
   CONNECTION_CREATE_FAILED: 'Failed to create connection',
+  CONNECTION_DELETE_FAILED: 'Failed to delete connection',
   STORY_CREATE_FAILED: 'Failed to create story'
 };
 

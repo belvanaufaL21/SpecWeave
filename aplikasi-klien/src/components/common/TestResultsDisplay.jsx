@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import TestingService from '../../services/testingService';
 
 const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBackToInput }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Debug logging
   useEffect(() => {
-    console.log('🔍 TestResultsDisplay received result:', result);
+    
   }, [result]);
 
   // Safety check for result
@@ -36,15 +37,15 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
   const getScoreColor = (score) => {
     if (!score && score !== 0) return 'text-gray-400';
     if (score >= 0.7) return 'text-green-400';
-    if (score >= 0.5) return 'text-yellow-400';
-    return 'text-red-400';
+    if (score >= 0.5) return 'text-blue-400';
+    return 'text-yellow-400';
   };
 
   const getScoreGradient = (score) => {
     if (!score && score !== 0) return 'from-gray-500 to-gray-600';
-    if (score >= 0.7) return 'from-green-500 to-emerald-500';
-    if (score >= 0.5) return 'from-yellow-500 to-orange-500';
-    return 'from-red-500 to-pink-500';
+    if (score >= 0.7) return 'from-green-500 to-green-600';
+    if (score >= 0.5) return 'from-blue-400 to-blue-500';
+    return 'from-yellow-500 to-yellow-600';
   };
 
   const getScoreLabel = (score) => {
@@ -87,8 +88,8 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${
                   alignment.similarity === 1.0 ? 'bg-green-500' :
-                  alignment.similarity > 0.7 ? 'bg-yellow-500' :
-                  alignment.similarity > 0.3 ? 'bg-orange-500' :
+                  alignment.similarity > 0.7 ? 'bg-blue-400' :
+                  alignment.similarity > 0.3 ? 'bg-yellow-400' :
                   'bg-red-500'
                 }`}></div>
                 <span className="text-xs text-gray-400 min-w-[40px]">
@@ -119,13 +120,13 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
         {result.improvement_suggestions.map((suggestion, index) => (
           <div key={index} className={`p-4 border rounded-lg ${
             suggestion.priority === 'high' ? 'border-red-500/30 bg-red-500/10' :
-            suggestion.priority === 'medium' ? 'border-yellow-500/30 bg-yellow-500/10' :
+            suggestion.priority === 'medium' ? 'border-yellow-400/30 bg-yellow-400/10' :
             'border-blue-500/30 bg-blue-500/10'
           }`}>
             <div className="flex items-start gap-3">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center mt-0.5 ${
                 suggestion.priority === 'high' ? 'bg-red-500' :
-                suggestion.priority === 'medium' ? 'bg-yellow-500' :
+                suggestion.priority === 'medium' ? 'bg-yellow-400' :
                 'bg-blue-500'
               }`}>
                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +140,7 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
                   <ul className="space-y-1">
                     {suggestion.actionable_steps.map((step, stepIndex) => (
                       <li key={stepIndex} className="text-xs text-gray-400 flex items-start gap-2">
-                        <span className="text-purple-400 mt-1">•</span>
+                        <span className="text-blue-400 mt-1">•</span>
                         <span>{step}</span>
                       </li>
                     ))}
@@ -196,8 +197,8 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
               />
               <defs>
                 <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#ec4899" />
+                  <stop offset="0%" stopColor="#a855f7" />
+                  <stop offset="100%" stopColor="#6366f1" />
                 </linearGradient>
               </defs>
             </svg>
@@ -222,7 +223,7 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="text-center p-4 bg-white/5 border border-white/10 rounded-lg">
             <div className="text-2xl font-bold text-blue-400 mb-1">
-              {result.precision ? (result.precision * 100).toFixed(1) : '0.0'}%
+              {TestingService.getMetricDisplay(result.precision)}
             </div>
             <div className="text-sm text-gray-400">Precision</div>
             <div className="text-xs text-gray-500 mt-1">
@@ -231,7 +232,7 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
           </div>
           <div className="text-center p-4 bg-white/5 border border-white/10 rounded-lg">
             <div className="text-2xl font-bold text-green-400 mb-1">
-              {result.recall ? (result.recall * 100).toFixed(1) : '0.0'}%
+              {TestingService.getMetricDisplay(result.recall)}
             </div>
             <div className="text-sm text-gray-400">Recall</div>
             <div className="text-xs text-gray-500 mt-1">
@@ -239,8 +240,8 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
             </div>
           </div>
           <div className="text-center p-4 bg-white/5 border border-white/10 rounded-lg">
-            <div className="text-2xl font-bold text-purple-400 mb-1">
-              {result.f_score ? (result.f_score * 100).toFixed(1) : '0.0'}%
+            <div className="text-2xl font-bold text-yellow-400 mb-1">
+              {TestingService.getMetricDisplay(result.f_score)}
             </div>
             <div className="text-sm text-gray-400">F-Score</div>
             <div className="text-xs text-gray-500 mt-1">
@@ -262,7 +263,7 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? 'border-purple-500 text-purple-300'
+                    ? 'border-blue-500 text-blue-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300'
                 }`}
               >
@@ -291,13 +292,13 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                       <span className="text-sm text-gray-400">Similar Matches</span>
-                      <span className="text-sm font-semibold text-yellow-400">
+                      <span className="text-sm font-semibold text-blue-400">
                         {result.detailed_breakdown?.similar_matches || 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                       <span className="text-sm text-gray-400">No Matches</span>
-                      <span className="text-sm font-semibold text-red-400">
+                      <span className="text-sm font-semibold text-yellow-400">
                         {result.detailed_breakdown?.no_matches || 0}
                       </span>
                     </div>
@@ -305,19 +306,19 @@ const TestResultsDisplay = ({ result, generatedScenario, referenceScenario, onBa
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                       <span className="text-sm text-gray-400">Match Rate</span>
-                      <span className="text-sm font-semibold text-blue-400">
-                        {((result.detailed_breakdown?.match_rate || 0) * 100).toFixed(1)}%
+                      <span className="text-sm font-semibold text-green-400">
+                        {TestingService.getMetricDisplay(result.detailed_breakdown?.match_rate)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                       <span className="text-sm text-gray-400">Coverage</span>
-                      <span className="text-sm font-semibold text-purple-400">
-                        {((result.detailed_breakdown?.coverage || 0) * 100).toFixed(1)}%
+                      <span className="text-sm font-semibold text-blue-400">
+                        {TestingService.getMetricDisplay(result.detailed_breakdown?.coverage)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                       <span className="text-sm text-gray-400">Fragmentation</span>
-                      <span className="text-sm font-semibold text-orange-400">
+                      <span className="text-sm font-semibold text-yellow-400">
                         {result.fragmentation_penalty?.toFixed(3) || 'N/A'}
                       </span>
                     </div>

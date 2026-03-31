@@ -1,35 +1,38 @@
 import { supabaseAdmin as supabase } from '../config/supabase.js';
+import cleanLogger from '../config/cleanLogging.js';
 
 export const referenceController = {
-  // Get all references for current user (including public ones)
+  // Get all references for current user
   async getReferences(req, res) {
     try {
       const userId = req.user?.id;
       
-      // If no user (offline mode), return empty array to trigger offline mode
-      if (!userId) {
+      cleanLogger.debug('REFERENCE-CONTROLLER', 'Getting references for user', { userId: userId || 'anonymous' });
+      
+      // Get references for authenticated user only
+      let query = supabase
+        .from('scenario_references')
+        .select('*');
+      
+      if (userId) {
+        // If user is authenticated, get their own references
+        query = query.eq('user_id', userId);
+        cleanLogger.debug('REFERENCE-CONTROLLER', 'Authenticated user - getting personal references');
+      } else {
+        // If no user, return empty array
+        cleanLogger.debug('REFERENCE-CONTROLLER', 'Anonymous user - no references available');
         return res.json({
           success: true,
           data: [],
-          meta: {
-            total: 0,
-            userReferences: 0,
-            publicReferences: 0,
-            offlineMode: true
-          }
+          count: 0
         });
       }
-
-      // Get user's own references + public references
-      const { data, error } = await supabase
-        .from('scenario_references')
-        .select('*')
-        .or(`user_id.eq.${userId},is_public.eq.true`)
-        .order('usage_count', { ascending: false })
+      
+      const { data, error } = await query
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching references:', error);
+        cleanLogger.error('REFERENCE-CONTROLLER', 'Error fetching references', { error: error.message });
         return res.status(500).json({
           success: false,
           message: 'Failed to fetch references',
@@ -37,34 +40,34 @@ export const referenceController = {
         });
       }
 
+      cleanLogger.debug('REFERENCE-CONTROLLER', `Found ${data.length} references`);
+
       // Transform data for frontend
       const transformedData = data.map(ref => ({
         id: ref.id,
         title: ref.title,
-        description: ref.description,
         gherkinContent: ref.gherkin_content,
-        category: ref.category,
-        tags: ref.tags || [],
-        usageCount: ref.usage_count || 0,
-        averageScore: ref.average_score,
-        isPublic: ref.is_public,
-        isOwner: ref.user_id === userId,
         createdAt: ref.created_at,
         updatedAt: ref.updated_at
       }));
 
-      res.json({
+      const response = {
         success: true,
         data: transformedData,
         meta: {
           total: transformedData.length,
           userReferences: transformedData.filter(ref => ref.isOwner).length,
-          publicReferences: transformedData.filter(ref => !ref.isOwner).length
+          publicReferences: transformedData.filter(ref => !ref.isOwner).length,
+          authenticated: !!userId
         }
-      });
+      };
+      
+      cleanLogger.debug('REFERENCE-CONTROLLER', 'Response meta', response.meta);
+
+      res.json(response);
 
     } catch (error) {
-      console.error('Error in getReferences:', error);
+      cleanLogger.error('REFERENCE-CONTROLLER', 'Error in getReferences', { error: error.message });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -85,14 +88,7 @@ export const referenceController = {
           data: {
             id: Date.now().toString(),
             title: req.body.title,
-            description: req.body.description,
             gherkinContent: req.body.gherkinContent,
-            category: req.body.category || 'general',
-            tags: req.body.tags || [],
-            usageCount: 0,
-            averageScore: null,
-            isPublic: req.body.isPublic || false,
-            isOwner: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           },
@@ -103,11 +99,7 @@ export const referenceController = {
 
       const {
         title,
-        description,
-        gherkinContent,
-        category = 'general',
-        tags = [],
-        isPublic = false
+        gherkinContent
       } = req.body;
 
       // Validation
@@ -131,12 +123,7 @@ export const referenceController = {
         .insert({
           user_id: userId,
           title: title.trim(),
-          description: description?.trim() || null,
-          gherkin_content: gherkinContent.trim(),
-          category: category.trim(),
-          tags: Array.isArray(tags) ? tags.filter(tag => tag.trim()) : [],
-          is_public: isPublic,
-          usage_count: 0
+          gherkin_content: gherkinContent.trim()
         })
         .select()
         .single();
@@ -154,14 +141,7 @@ export const referenceController = {
       const transformedData = {
         id: data.id,
         title: data.title,
-        description: data.description,
         gherkinContent: data.gherkin_content,
-        category: data.category,
-        tags: data.tags || [],
-        usageCount: data.usage_count || 0,
-        averageScore: data.average_score,
-        isPublic: data.is_public,
-        isOwner: true,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -197,11 +177,7 @@ export const referenceController = {
 
       const {
         title,
-        description,
-        gherkinContent,
-        category,
-        tags,
-        isPublic
+        gherkinContent
       } = req.body;
 
       // Check if reference exists and user owns it
@@ -231,11 +207,7 @@ export const referenceController = {
       };
 
       if (title !== undefined) updateData.title = title.trim();
-      if (description !== undefined) updateData.description = description?.trim() || null;
       if (gherkinContent !== undefined) updateData.gherkin_content = gherkinContent.trim();
-      if (category !== undefined) updateData.category = category.trim();
-      if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags.filter(tag => tag.trim()) : [];
-      if (isPublic !== undefined) updateData.is_public = isPublic;
 
       // Update reference
       const { data, error } = await supabase
@@ -258,14 +230,7 @@ export const referenceController = {
       const transformedData = {
         id: data.id,
         title: data.title,
-        description: data.description,
         gherkinContent: data.gherkin_content,
-        category: data.category,
-        tags: data.tags || [],
-        usageCount: data.usage_count || 0,
-        averageScore: data.average_score,
-        isPublic: data.is_public,
-        isOwner: true,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -453,7 +418,7 @@ export const referenceController = {
       // Get user's reference statistics
       const { data, error } = await supabase
         .from('scenario_references')
-        .select('category, usage_count, average_score, is_public')
+        .select('id')
         .eq('user_id', userId);
 
       if (error) {
@@ -467,25 +432,7 @@ export const referenceController = {
 
       // Calculate statistics
       const stats = {
-        totalReferences: data.length,
-        publicReferences: data.filter(ref => ref.is_public).length,
-        privateReferences: data.filter(ref => !ref.is_public).length,
-        totalUsage: data.reduce((sum, ref) => sum + (ref.usage_count || 0), 0),
-        averageScore: data.length > 0 
-          ? data.reduce((sum, ref) => sum + (ref.average_score || 0), 0) / data.length 
-          : 0,
-        categoryBreakdown: data.reduce((acc, ref) => {
-          acc[ref.category] = (acc[ref.category] || 0) + 1;
-          return acc;
-        }, {}),
-        mostUsedReferences: data
-          .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
-          .slice(0, 5)
-          .map(ref => ({
-            category: ref.category,
-            usageCount: ref.usage_count || 0,
-            averageScore: ref.average_score || 0
-          }))
+        totalReferences: data.length
       };
 
       res.json({

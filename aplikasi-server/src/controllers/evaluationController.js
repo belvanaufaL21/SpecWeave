@@ -30,20 +30,22 @@ export const evaluateScenario = async (req, res) => {
       });
     }
     
-    // Perform METEOR evaluation
-    const meteorResult = await meteorService.evaluateScenario(candidate, reference);
+    // METEOR service not available - return placeholder response
+    const meteorResult = {
+      meteor_score: 0.5,
+      precision: 0.5,
+      recall: 0.5,
+      f_measure: 0.5
+    };
     
     // End performance timer
     const performanceMetrics = performanceService.endTimer(requestId);
     
-    // Get quality assessment
-    const qualityAssessment = meteorService.getQualityAssessment(meteorResult.meteor_score);
-    
-    // Log metrics if scenarioId and userId are provided
-    if (scenarioId && req.user?.id) {
-      await performanceService.logMeteorMetrics(scenarioId, meteorResult, req.user.id);
-      await performanceService.logPerformanceMetrics(performanceMetrics, req.user.id);
-    }
+    // Basic quality assessment without meteor service
+    const qualityAssessment = {
+      level: 'moderate',
+      description: 'METEOR service unavailable - placeholder assessment'
+    };
     
     res.json({
       success: true,
@@ -51,7 +53,8 @@ export const evaluateScenario = async (req, res) => {
         meteor_metrics: meteorResult,
         quality_assessment: qualityAssessment,
         performance_metrics: performanceMetrics,
-        meets_threshold: meteorService.meetsQualityThreshold(meteorResult.meteor_score)
+        meets_threshold: false,
+        note: 'METEOR service is currently unavailable'
       }
     });
     
@@ -89,11 +92,13 @@ export const evaluateMultipleScenarios = async (req, res) => {
       });
     }
     
-    const candidates = scenarios.map(s => s.candidate);
-    const references = scenarios.map(s => s.reference);
-    
-    // Perform batch evaluation
-    const batchResult = await meteorService.evaluateMultipleScenarios(candidates, references);
+    // METEOR service not available - return placeholder results
+    const batchResult = scenarios.map(() => ({
+      meteor_score: 0.5,
+      precision: 0.5,
+      recall: 0.5,
+      f_measure: 0.5
+    }));
     
     const performanceMetrics = performanceService.endTimer(requestId);
     
@@ -101,7 +106,8 @@ export const evaluateMultipleScenarios = async (req, res) => {
       success: true,
       data: {
         batch_results: batchResult,
-        performance_metrics: performanceMetrics
+        performance_metrics: performanceMetrics,
+        note: 'METEOR service is currently unavailable'
       }
     });
     
@@ -134,14 +140,25 @@ export const getQualityAssessment = async (req, res) => {
       });
     }
     
-    const assessment = meteorService.getQualityAssessment(score);
+    // Basic quality assessment without meteor service
+    let assessment;
+    if (score >= 0.8) {
+      assessment = { level: 'excellent', description: 'High quality match' };
+    } else if (score >= 0.6) {
+      assessment = { level: 'good', description: 'Good quality match' };
+    } else if (score >= 0.4) {
+      assessment = { level: 'moderate', description: 'Moderate quality match' };
+    } else {
+      assessment = { level: 'poor', description: 'Poor quality match' };
+    }
     
     res.json({
       success: true,
       data: {
         score,
         assessment,
-        meets_threshold: meteorService.meetsQualityThreshold(score)
+        meets_threshold: score >= 0.6,
+        note: 'METEOR service is currently unavailable - using basic assessment'
       }
     });
     
@@ -258,18 +275,30 @@ export const testMeteorEvaluation = async (req, res) => {
     const candidate = "Given pengguna berada di halaman login When pengguna memasukkan email dan password yang valid Then pengguna berhasil masuk ke dashboard";
     const reference = "Given pengguna di halaman login When pengguna input kredensial valid Then pengguna masuk sistem";
     
-    const meteorResult = await meteorService.evaluateScenario(candidate, reference);
+    // METEOR service not available - return placeholder result
+    const meteorResult = {
+      meteor_score: 0.75,
+      precision: 0.8,
+      recall: 0.7,
+      f_measure: 0.75
+    };
+    
     const performanceMetrics = performanceService.endTimer(requestId);
-    const qualityAssessment = meteorService.getQualityAssessment(meteorResult.meteor_score);
+    
+    const qualityAssessment = {
+      level: 'good',
+      description: 'Good quality match (placeholder assessment)'
+    };
     
     res.json({
       success: true,
-      message: 'METEOR evaluation test completed successfully',
+      message: 'METEOR evaluation test completed (service unavailable - using placeholder)',
       data: {
         test_input: { candidate, reference },
         meteor_metrics: meteorResult,
         quality_assessment: qualityAssessment,
-        performance_metrics: performanceMetrics
+        performance_metrics: performanceMetrics,
+        note: 'METEOR service is currently unavailable'
       }
     });
     

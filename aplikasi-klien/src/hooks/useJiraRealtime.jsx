@@ -32,7 +32,7 @@ export const useJiraRealtime = (options = {}) => {
         
         // Only refresh if it's been a while since last update
         if (timeSinceLastUpdate > autoRefreshInterval) {
-          console.log('🔄 Auto-refreshing JIRA data...');
+          
           refreshAll();
         }
       }, autoRefreshInterval);
@@ -55,7 +55,7 @@ export const useJiraRealtime = (options = {}) => {
       
       // Only refresh if it's been more than 5 seconds since last refresh
       if (timeSinceLastRefresh > 5000) {
-        console.log('🔄 Refreshing JIRA data on window focus...');
+        
         refreshAll();
         lastRefreshRef.current = now;
       }
@@ -76,7 +76,7 @@ export const useJiraRealtime = (options = {}) => {
         
         // Only refresh if it's been more than 5 seconds since last refresh
         if (timeSinceLastRefresh > 5000) {
-          console.log('🔄 Refreshing JIRA data on visibility change...');
+          
           refreshAll();
           lastRefreshRef.current = now;
         }

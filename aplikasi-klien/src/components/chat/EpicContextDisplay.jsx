@@ -23,16 +23,23 @@ const EpicContextDisplay = ({ onChangeEpic }) => {
     
     // Listen for force Epic context events
     const handleForceEpicClear = () => {
-      console.log('🔄 [EPIC-DISPLAY] Force Epic clear event received');
+      console.log('🧹 [EPIC-DISPLAY] Force clearing epic context');
+      
+      // CRITICAL FIX: Immediately clear local state
+      setActiveProject(null);
+      setConnections([]);
+      
+      // Notify parent component
       if (onChangeEpic) {
         onChangeEpic(null);
       }
+      
       // Force re-render
       setForceRender(prev => prev + 1);
     };
     
     const handleForceEpicRefresh = () => {
-      console.log('🔄 [EPIC-DISPLAY] Force Epic refresh event received');
+      
       // Reload active project to ensure sync
       loadActiveProject();
       // Force re-render
@@ -41,7 +48,7 @@ const EpicContextDisplay = ({ onChangeEpic }) => {
     
     // ENHANCED: Additional event listeners for Epic context reset
     const handleEpicContextReset = () => {
-      console.log('🔄 [EPIC-DISPLAY] Epic context reset event received');
+      
       if (onChangeEpic) {
         onChangeEpic(null);
       }
@@ -50,7 +57,7 @@ const EpicContextDisplay = ({ onChangeEpic }) => {
     };
     
     const handleEpicContextCleared = () => {
-      console.log('🔄 [EPIC-DISPLAY] Epic context cleared event received');
+      
       if (onChangeEpic) {
         onChangeEpic(null);
       }
@@ -94,7 +101,6 @@ const EpicContextDisplay = ({ onChangeEpic }) => {
         
         // If we have an active project and it changed
         if (activeProject && activeProject.id !== newProjectId) {
-          console.log('🔄 [PROJECT-CHANGE] SMOOTH EPIC CLEAR');
           
           // OPTIMIZED: Single Epic clear operation
           try {
@@ -110,8 +116,7 @@ const EpicContextDisplay = ({ onChangeEpic }) => {
             
             // Single re-render trigger
             setForceRender(prev => prev + 1);
-            
-            console.log('✅ [PROJECT-CHANGE] SMOOTH EPIC CLEAR COMPLETED');
+
           } catch (clearError) {
             console.warn('Project change clear warning:', clearError.message);
           }

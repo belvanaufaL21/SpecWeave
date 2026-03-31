@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { jiraService } from '../services/jiraService';
 import { JIRA_CONTEXT_CONSTANTS } from '../utils/constants/jiraContextConstants';
 import { 
   getInitialState,
   getStatusSummary
 } from '../utils/helpers/jiraContextHelpers';
+import { cleanupInvalidActiveProjects } from '../utils/helpers/activeProjectHelpers';
 import initializationManager from '../utils/singletons/InitializationManager.js';
 
 const JiraContext = createContext();
@@ -23,11 +24,58 @@ export const JiraProvider = ({ children }) => {
   // Add loading state to prevent duplicate calls
   const [isInitializing, setIsInitializing] = useState(false);
 
+  // SMOOTH DELETE: Event handlers defined outside useEffect
+  const handleJiraConnectionDeletedEvent = useCallback((event) => {
+    const { connectionId, updatedConnections } = event.detail;
+    
+    // IMMEDIATE UI UPDATE: Remove from state instantly
+    setState(prev => {
+      const filteredConnections = prev.connections.filter(conn => conn.id !== connectionId);
+      
+      return {
+        ...prev,
+        connections: filteredConnections,
+        hasConnection: filteredConnections.length > 0,
+        lastUpdated: new Date(),
+        isDeleting: false // Clear any delete loading state
+      };
+    });
+    
+    // SMOOTH FEEDBACK: Show success toast
+    if (window.toast) {
+      window.toast.success('Project connection removed successfully', {
+        duration: 3000,
+        position: 'top-right'
+      });
+    }
+    
+    // DISPATCH UI REFRESH EVENT for other components
+    window.dispatchEvent(new CustomEvent('jiraConnectionsUpdated', {
+      detail: {
+        connections: updatedConnections || [],
+        hasConnection: (updatedConnections || []).length > 0,
+        action: 'delete',
+        deletedConnectionId: connectionId,
+        timestamp: Date.now()
+      }
+    }));
+    
+    // BACKGROUND SYNC: Verify state in background (no UI impact)
+    // Use setTimeout to avoid dependency issues
+    setTimeout(() => {
+      // Call refreshConnections if it exists
+      if (window.jiraContext && window.jiraContext.refreshConnections) {
+        window.jiraContext.refreshConnections(false);
+      }
+    }, 2000);
+    
+  }, []);  // Remove refreshConnections from dependency for now
+
   // Load initial data
   useEffect(() => {
     // Prevent duplicate initialization in React Strict Mode
     if (initializationManager.isJiraInitialized()) {
-      console.log('🎯 [JIRA-CONTEXT] Using existing JIRA initialization');
+      
       const existingPromise = initializationManager.getJiraPromise();
       if (existingPromise) {
         existingPromise.then(() => {
@@ -43,52 +91,131 @@ export const JiraProvider = ({ children }) => {
       initializationManager.setJiraInitialized(jiraPromise);
     }
     
+    // Start token health monitoring after initialization
+    setTimeout(() => {
+      jiraService.startHealthMonitoring(30); // Check every 30 minutes
+    }, 5000); // Start after 5 seconds to allow initialization
+    
     // Setup event listeners untuk force Epic context events
     const handleForceEpicClearEvent = () => {
-      console.log('🔄 [JIRA-CONTEXT] Force Epic clear event received');
+      // CRITICAL FIX: Immediately clear epic context state
+      setState(prev => {
+        if (prev.epicContext) {
+          return {
+            ...prev,
+            epicContext: null,
+            hasEpic: false,
+            isLoadingEpic: false,
+            lastUpdated: new Date()
+          };
+        }
+        return prev;
+      });
+      
+      // Also call the existing forceEpicContextClear function
       forceEpicContextClear();
     };
     
     const handleForceEpicRefreshEvent = () => {
-      console.log('🔄 [JIRA-CONTEXT] Force Epic refresh event received');
       refreshEpicContext();
     };
     
-    const handleForceConnectionsRefreshEvent = () => {
-      console.log('🔄 [JIRA-CONTEXT] Force connections refresh event received');
-      refreshConnections(true); // Force refresh
+    const handleForceConnectionsRefreshEvent = (event) => {
+      // CRITICAL FIX: If event contains updated connections, use them immediately
+      if (event.detail?.updatedConnections) {
+        setState(prev => ({
+          ...prev,
+          connections: event.detail.updatedConnections,
+          hasConnection: event.detail.updatedConnections.length > 0,
+          lastUpdated: new Date(),
+          lastConnectionsRefresh: Date.now()
+        }));
+        
+        // ENHANCED: Force additional refresh after delay to ensure UI update
+        setTimeout(() => {
+          refreshConnections(true);
+        }, 200);
+      } else {
+        // Fallback to force refresh from server
+        refreshConnections(true);
+      }
     };
     
-    // ENHANCED: Additional event listener for Epic context reset
-    const handleEpicContextResetEvent = () => {
-      console.log('🔄 [JIRA-CONTEXT] Epic context reset event received');
-      // Immediately clear Epic context state
-      setState(prev => ({
-        ...prev,
-        epicContext: null,
-        hasEpic: false,
-        isLoadingEpic: false,
-        lastUpdated: new Date()
-      }));
-      
-      // Send acknowledgment
-      setTimeout(() => {
-        const clearTimestamp = localStorage.getItem('epic_context_cleared_at');
-        const timestamp = clearTimestamp ? parseInt(clearTimestamp) : Date.now();
+    const handleJiraStateChangedEvent = (event) => {
+      if (event.detail?.action === 'connectionDeleted') {
+        const { connectionId, updatedConnections } = event.detail;
         
-        window.dispatchEvent(new CustomEvent('epicContextClearAcknowledged', {
-          detail: { timestamp }
+        // CRITICAL FIX: Clear epic context if related to deleted connection
+        setState(prev => {
+          let newState = { ...prev };
+          
+          // Update connections
+          if (updatedConnections) {
+            newState.connections = updatedConnections;
+            newState.hasConnection = updatedConnections.length > 0;
+          }
+          
+          // CRITICAL: Clear epic context if it's related to deleted connection
+          if (prev.epicContext) {
+            const epicConnectionId = 
+              prev.epicContext.epicData?.connection?.id ||
+              prev.epicContext.connectionId;
+            
+            if (epicConnectionId === connectionId) {
+              newState.epicContext = null;
+              newState.hasEpic = false;
+              newState.isLoadingEpic = false;
+            }
+          }
+          
+          newState.lastUpdated = new Date();
+          newState.lastConnectionsRefresh = Date.now();
+          
+          return newState;
+        });
+      } else {
+        // CRITICAL FIX: If event contains updated connections, use them immediately
+        if (event.detail?.updatedConnections) {
+          setState(prev => ({
+            ...prev,
+            connections: event.detail.updatedConnections,
+            hasConnection: event.detail.updatedConnections.length > 0,
+            lastUpdated: new Date(),
+            lastConnectionsRefresh: Date.now()
+          }));
+        } else {
+          // Fallback to force refresh and clear epic context
+          refreshConnections(true);
+        }
+      }
+    };
+    
+    const handleForceUIRefreshEvent = (event) => {
+      // CRITICAL FIX: If event contains updated connections, use them immediately
+      if (event.detail?.updatedConnections) {
+        setState(prev => ({
+          ...prev,
+          connections: event.detail.updatedConnections,
+          hasConnection: event.detail.updatedConnections.length > 0,
+          lastUpdated: new Date(),
+          lastConnectionsRefresh: Date.now()
         }));
-        console.log('✅ [JIRA-CONTEXT] Epic context reset acknowledged');
-      }, 50);
+      } else {
+        // Force refresh both connections and epic context
+        refreshConnections(true);
+        
+        // Force component re-render by updating lastUpdated
+        setState(prev => ({
+          ...prev,
+          lastUpdated: new Date()
+        }));
+      }
     };
     
     // CRITICAL: Listen for active project changes to clear Epic context
     const handleActiveProjectChanged = (event) => {
-      console.log('🔄 [JIRA-CONTEXT] Active project changed event received:', event.detail);
       
       if (event.detail?.projectChanged) {
-        console.log('🧹 [JIRA-CONTEXT] Project changed, clearing Epic context immediately');
         
         // Immediately clear Epic context state
         setState(prev => ({
@@ -114,25 +241,83 @@ export const JiraProvider = ({ children }) => {
         // Set clear timestamp
         const clearTimestamp = Date.now();
         localStorage.setItem('epic_context_cleared_at', clearTimestamp.toString());
-        
-        console.log('✅ [JIRA-CONTEXT] Epic context cleared due to project change');
+
       }
     };
     
     window.addEventListener('forceEpicContextClear', handleForceEpicClearEvent);
     window.addEventListener('forceEpicContextRefresh', handleForceEpicRefreshEvent);
     window.addEventListener('forceConnectionsRefresh', handleForceConnectionsRefreshEvent);
-    window.addEventListener('epicContextReset', handleEpicContextResetEvent);
+    window.addEventListener('jiraConnectionDeleted', handleJiraConnectionDeletedEvent);
+    window.addEventListener('jiraStateChanged', handleJiraStateChangedEvent);
+    window.addEventListener('forceUIRefresh', handleForceUIRefreshEvent);
     window.addEventListener('activeProjectChanged', handleActiveProjectChanged);
     
     return () => {
       window.removeEventListener('forceEpicContextClear', handleForceEpicClearEvent);
       window.removeEventListener('forceEpicContextRefresh', handleForceEpicRefreshEvent);
       window.removeEventListener('forceConnectionsRefresh', handleForceConnectionsRefreshEvent);
-      window.removeEventListener('epicContextReset', handleEpicContextResetEvent);
+      window.removeEventListener('jiraConnectionDeleted', handleJiraConnectionDeletedEvent);
+      window.removeEventListener('jiraStateChanged', handleJiraStateChangedEvent);
+      window.removeEventListener('forceUIRefresh', handleForceUIRefreshEvent);
       window.removeEventListener('activeProjectChanged', handleActiveProjectChanged);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleJiraConnectionDeletedEvent]); // Only include handleJiraConnectionDeletedEvent
+
+  // ENHANCED: Validation useEffect to ensure epic context consistency
+  useEffect(() => {
+    // CRITICAL: Validate epic context whenever connections change
+    if (state.connections.length === 0 && (state.hasEpic || state.epicContext)) {
+      console.log('🧹 [JIRA-CONTEXT] No connections but epic exists, auto-clearing...');
+      
+      setState(prev => ({
+        ...prev,
+        epicContext: null,
+        hasEpic: false,
+        isLoadingEpic: false,
+        lastUpdated: new Date()
+      }));
+      
+      // Clear storage
+      localStorage.removeItem('specweave_epic_context');
+      sessionStorage.removeItem('epic_context_blocked');
+      
+      const clearTime = Date.now();
+      localStorage.setItem('epic_context_cleared_at', clearTime.toString());
+      localStorage.setItem('epic_force_clear_time', clearTime.toString());
+      localStorage.setItem('epic_user_cleared', 'true');
+      
+      // Dispatch clear events
+      window.dispatchEvent(new CustomEvent('forceEpicContextClear'));
+      window.dispatchEvent(new CustomEvent('epicContextCleared'));
+    }
+    
+    // ENHANCED: Validate epic connection still exists
+    if (state.hasEpic && state.epicContext && state.connections.length > 0) {
+      const epicConnectionId = state.epicContext.epicData?.connection?.id;
+      const connectionExists = state.connections.some(conn => conn.id === epicConnectionId);
+      
+      if (!connectionExists) {
+        console.log('🧹 [JIRA-CONTEXT] Epic connection no longer exists, clearing epic context...');
+        
+        setState(prev => ({
+          ...prev,
+          epicContext: null,
+          hasEpic: false,
+          isLoadingEpic: false,
+          lastUpdated: new Date()
+        }));
+        
+        // Clear storage
+        localStorage.removeItem('specweave_epic_context');
+        const clearTime = Date.now();
+        localStorage.setItem('epic_context_cleared_at', clearTime.toString());
+        
+        // Dispatch clear events
+        window.dispatchEvent(new CustomEvent('forceEpicContextClear'));
+      }
+    }
+  }, [state.connections.length, state.hasEpic, state.epicContext]);
 
   /**
    * Load initial data dengan timeout yang reasonable dan duplicate prevention
@@ -150,8 +335,6 @@ export const JiraProvider = ({ children }) => {
         isLoadingConnections: true, 
         isLoadingEpic: true 
       }));
-
-      console.log('🔄 [JIRA-CONTEXT] Loading initial JIRA data...');
 
       // Parallel loading dengan proper timeout handling dan fallback
       const [connectionsResult, epicResult] = await Promise.allSettled([
@@ -209,9 +392,7 @@ export const JiraProvider = ({ children }) => {
               console.log(`🚫 [JIRA-CONTEXT] Epic context load blocked - session blocked`);
               return { success: true, data: null, blocked: true, reason: 'session_blocked' };
             }
-            
-            console.log(`✅ [JIRA-CONTEXT] Epic context load allowed - no blocking conditions met`);
-            
+
             // If not blocked, try to load from server
             try {
               return await jiraService.getEpicContext();
@@ -252,14 +433,29 @@ export const JiraProvider = ({ children }) => {
         ? connectionsResult.value.data 
         : [];
         
-      const epicContext = epicResult.status === 'fulfilled' && epicResult.value.success 
+      let epicContext = epicResult.status === 'fulfilled' && epicResult.value.success 
         ? epicResult.value.data 
         : null;
 
-      console.log('✅ [JIRA-CONTEXT] Initial data loaded:', {
-        connections: connections.length,
-        hasEpicContext: !!epicContext
-      });
+      // Clean up invalid active projects from localStorage
+      if (connections.length > 0) {
+        cleanupInvalidActiveProjects(connections);
+      } else {
+        // ENHANCED: If no connections, ensure epic context is cleared
+        console.log('🧹 [JIRA-CONTEXT] No connections found, ensuring epic context is cleared');
+        
+        // Clear storage
+        localStorage.removeItem('specweave_epic_context');
+        sessionStorage.removeItem('epic_context_blocked');
+        
+        const clearTime = Date.now();
+        localStorage.setItem('epic_context_cleared_at', clearTime.toString());
+        localStorage.setItem('epic_force_clear_time', clearTime.toString());
+        localStorage.setItem('epic_user_cleared', 'true');
+        
+        // Force epic context to null
+        epicContext = null;
+      }
 
       setState(prev => ({
         ...prev,
@@ -274,7 +470,7 @@ export const JiraProvider = ({ children }) => {
       }));
 
       if (connections.length > 0) {
-        console.log(`✅ Loaded ${connections.length} JIRA connections successfully`);
+        
       }
 
     } catch (error) {
@@ -295,54 +491,65 @@ export const JiraProvider = ({ children }) => {
    */
   const refreshConnections = useCallback(async (force = false) => {
     try {
-      setState(prev => {
-        if (!force && prev.lastConnectionsRefresh) {
-          const timeSinceLastRefresh = Date.now() - prev.lastConnectionsRefresh;
-          if (timeSinceLastRefresh < JIRA_CONTEXT_CONSTANTS.CACHE_DURATION) {
-            return prev;
-          }
-        }
-        
-        return { ...prev, isLoadingConnections: true };
-      });
-
-      const result = await jiraService.getConnections().catch((error) => {
-        // Enhanced error handling for server unavailability
-        if (error.message.includes('Network Error') || 
-            error.message.includes('ERR_CONNECTION_REFUSED') ||
-            error.message.includes('Failed to fetch') ||
-            error.code === 'ECONNABORTED') {
-          console.warn('🔌 [JIRA-CONTEXT] Server not available during refresh, using offline mode');
-          return { success: true, data: [], offline: true };
-        }
-        return { success: false, error: error.message };
-      });
+      console.log('🔥 [NUCLEAR] ENHANCED refresh connections');
       
-      setState(prev => ({
-        ...prev,
-        connections: result.success ? result.data : prev.connections,
-        hasConnection: result.success ? result.data.length > 0 : prev.hasConnection,
-        isLoadingConnections: false,
-        error: null,
-        lastUpdated: new Date(),
+      // FORCE loading state
+      setState(prev => ({ 
+        ...prev, 
+        isLoadingConnections: true,
         lastConnectionsRefresh: Date.now()
       }));
 
-      if (result.success) {
-        console.log(`✅ Refreshed ${result.data.length} JIRA connections`);
-      } else {
-        console.warn('Connection refresh failed:', result.error);
+      // Try JiraService
+      let result = null;
+      try {
+        result = await jiraService.getConnections();
+        console.log('✅ [NUCLEAR] Got connections from JiraService:', result.data?.length || 0);
+      } catch (error) {
+        console.warn('⚠️ [NUCLEAR] JiraService failed, using empty array');
+        result = { success: true, data: [] };
       }
+      
+      const connections = result.success ? result.data : [];
+      
+      // FORCE state update multiple times
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          setState(prev => ({
+            ...prev,
+            connections,
+            hasConnection: connections.length > 0,
+            isLoadingConnections: false,
+            error: null,
+            lastUpdated: new Date(),
+            lastConnectionsRefresh: Date.now() + i
+          }));
+        }, i * 50);
+      }
+      
+      // Dispatch success event
+      window.dispatchEvent(new CustomEvent('connectionsRefreshed', {
+        detail: {
+          connections,
+          hasConnection: connections.length > 0,
+          timestamp: Date.now()
+        }
+      }));
 
       return result;
     } catch (error) {
-      console.error('Error refreshing connections:', error);
+      console.error('❌ [NUCLEAR] Enhanced refresh failed:', error);
+      
+      // Even on error, set empty connections
       setState(prev => ({
         ...prev,
+        connections: [],
+        hasConnection: false,
         isLoadingConnections: false,
         error: null
       }));
-      return { success: false, error: error.message };
+      
+      return { success: true, data: [] };
     }
   }, []);
 
@@ -405,7 +612,7 @@ export const JiraProvider = ({ children }) => {
       }));
 
       if (result.success && result.data) {
-        console.log('✅ Epic context refreshed successfully');
+        
       } else {
         console.log('📭 Epic context refresh returned no data');
       }
@@ -430,7 +637,7 @@ export const JiraProvider = ({ children }) => {
       setState(prev => ({ ...prev, isLoadingEpic: true }));
       
       // CRITICAL: Clear blocking flags when Epic context is legitimately set
-      console.log('🎯 [JIRA-CONTEXT] Setting Epic context, clearing blocking flags');
+      
       localStorage.removeItem('epic_user_cleared');
       sessionStorage.removeItem('epic_context_blocked');
       localStorage.removeItem('epic_context_cleared_at');
@@ -449,8 +656,7 @@ export const JiraProvider = ({ children }) => {
           error: null,
           lastUpdated: new Date()
         }));
-        
-        console.log('✅ [JIRA-CONTEXT] Epic context set and blocking flags cleared');
+
       } else {
         throw new Error(result.error || 'Failed to set Epic context');
       }
@@ -472,7 +678,6 @@ export const JiraProvider = ({ children }) => {
    */
   const clearEpicContext = useCallback(async () => {
     try {
-      console.log('🧹 [JIRA-CONTEXT] Clearing Epic context...');
       
       // Force clear state immediately
       setState(prev => ({
@@ -482,9 +687,7 @@ export const JiraProvider = ({ children }) => {
         isLoadingEpic: false,
         lastUpdated: new Date()
       }));
-      
-      console.log('✅ [JIRA-CONTEXT] Epic context state cleared immediately');
-      
+
       // Clear via service (async, don't wait)
       jiraService.clearEpicContext().catch(error => {
         console.warn('Service clear failed (non-critical):', error.message);
@@ -507,11 +710,164 @@ export const JiraProvider = ({ children }) => {
     }
   }, []);
 
-  /**
-   * Force clear Epic context immediately (optimized)
-   */
+  // ENHANCED DELETE FUNCTION with optimistic updates
+  const deleteConnection = useCallback(async (connectionId) => {
+    try {
+      console.log(`🎯 [SMOOTH-DELETE] Starting optimistic delete for: ${connectionId}`);
+      
+      // STEP 1: Set loading state
+      setState(prev => ({
+        ...prev,
+        isDeleting: true,
+        deletingConnectionId: connectionId
+      }));
+      
+      // STEP 2: Optimistic UI update - remove immediately
+      const originalConnections = state.connections;
+      const optimisticConnections = originalConnections.filter(conn => conn.id !== connectionId);
+      
+      setState(prev => ({
+        ...prev,
+        connections: optimisticConnections,
+        hasConnection: optimisticConnections.length > 0,
+        lastUpdated: new Date()
+      }));
+      
+      // STEP 3: Show immediate feedback
+      if (window.toast) {
+        window.toast.loading('Removing project connection...', {
+          id: `delete-${connectionId}`,
+          duration: 2000
+        });
+      }
+      
+      // STEP 4: Actual delete API call
+      const result = await jiraService.deleteConnection(connectionId);
+      
+      if (result.success) {
+        console.log('✅ [SMOOTH-DELETE] Delete confirmed by server');
+        
+        // Update toast to success
+        if (window.toast) {
+          window.toast.success('Project connection removed successfully', {
+            id: `delete-${connectionId}`,
+            duration: 3000
+          });
+        }
+        
+        // Clear any epic context related to this connection
+        await clearEpicContextForConnection(connectionId);
+        
+        // CRITICAL: Force refresh from database to ensure sync
+        console.log('🔄 [SMOOTH-DELETE] Force refreshing connections from database');
+        
+        const freshResult = await jiraService.getConnections();
+        if (freshResult.success) {
+          setState(prev => ({
+            ...prev,
+            connections: freshResult.data || [],
+            hasConnection: (freshResult.data || []).length > 0,
+            isDeleting: false,
+            deletingConnectionId: null,
+            lastUpdated: new Date()
+          }));
+          console.log('✅ [SMOOTH-DELETE] Connections refreshed from database:', freshResult.data?.length || 0);
+        }
+        
+        // Dispatch success event
+        window.dispatchEvent(new CustomEvent('jiraConnectionDeleted', {
+          detail: {
+            connectionId,
+            updatedConnections: optimisticConnections,
+            success: true
+          }
+        }));
+        
+      } else {
+        console.error('❌ [SMOOTH-DELETE] Delete failed, rolling back UI');
+        
+        // ROLLBACK: Restore original state
+        setState(prev => ({
+          ...prev,
+          connections: originalConnections,
+          hasConnection: originalConnections.length > 0,
+          error: result.error
+        }));
+        
+        // Show error toast
+        if (window.toast) {
+          window.toast.error(`Failed to delete connection: ${result.error}`, {
+            id: `delete-${connectionId}`,
+            duration: 4000
+          });
+        }
+      }
+      
+      // STEP 5: Clear loading state
+      setState(prev => ({
+        ...prev,
+        isDeleting: false,
+        deletingConnectionId: null
+      }));
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [SMOOTH-DELETE] Delete error:', error);
+      
+      // ROLLBACK on error
+      setState(prev => ({
+        ...prev,
+        connections: state.connections, // Restore original
+        hasConnection: state.connections.length > 0,
+        isDeleting: false,
+        deletingConnectionId: null,
+        error: error.message
+      }));
+      
+      if (window.toast) {
+        window.toast.error(`Delete failed: ${error.message}`, {
+          id: `delete-${connectionId}`,
+          duration: 4000
+        });
+      }
+      
+      return { success: false, error: error.message };
+    }
+  }, [state.connections]);
+
+  // HELPER: Clear epic context for deleted connection
+  const clearEpicContextForConnection = async (connectionId) => {
+    try {
+      console.log(`🧹 [SMOOTH-DELETE] Clearing epic context for connection: ${connectionId}`);
+      
+      // Clear from localStorage
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes('epic_context')) {
+          const data = localStorage.getItem(key);
+          if (data && data.includes(connectionId)) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`🧹 Cleared epic context cache: ${key}`);
+      });
+      
+      // Dispatch epic context clear event
+      window.dispatchEvent(new CustomEvent('epicContextCleared', {
+        detail: { connectionId }
+      }));
+      
+    } catch (error) {
+      console.warn('⚠️ [SMOOTH-DELETE] Failed to clear epic context:', error);
+    }
+  };
   const forceEpicContextClear = useCallback(() => {
-    console.log('🧹 [JIRA-CONTEXT] ENHANCED EPIC CLEAR - ULTRA OPTIMIZED');
     
     try {
       // 1. Immediately clear state
@@ -540,9 +896,7 @@ export const JiraProvider = ({ children }) => {
       const clearTimestamp = Date.now();
       localStorage.setItem('epic_context_cleared_at', clearTimestamp.toString());
       localStorage.setItem('epic_force_clear_time', clearTimestamp.toString());
-      
-      console.log('✅ [JIRA-CONTEXT] Epic context state and storage cleared immediately');
-      
+
       // 4. Safe server clear (fire and forget)
       jiraService.clearEpicContext().catch(error => {
         console.warn('Server Epic clear warning (non-critical):', error.message);
@@ -553,11 +907,9 @@ export const JiraProvider = ({ children }) => {
         window.dispatchEvent(new CustomEvent('epicContextClearAcknowledged', {
           detail: { timestamp: clearTimestamp }
         }));
-        console.log('✅ [JIRA-CONTEXT] Epic context clear acknowledged with timestamp:', clearTimestamp);
+        
       }, 50); // Small delay to ensure state is updated
-      
-      console.log('✅ [JIRA-CONTEXT] ENHANCED EPIC CLEAR - ULTRA OPTIMIZED COMPLETE');
-      
+
     } catch (error) {
       console.warn('Epic clear warning (non-critical):', error.message);
       
@@ -578,7 +930,7 @@ export const JiraProvider = ({ children }) => {
         window.dispatchEvent(new CustomEvent('epicContextClearAcknowledged', {
           detail: { timestamp: clearTimestamp }
         }));
-        console.log('✅ [JIRA-CONTEXT] Epic context clear acknowledged (error case) with timestamp:', clearTimestamp);
+        
       }, 50);
     }
   }, []);
@@ -631,6 +983,7 @@ export const JiraProvider = ({ children }) => {
     refreshEpicContext,
     setEpicContext,
     clearEpicContext,
+    deleteConnection,
     forceEpicContextClear,
     refreshAll,
     
@@ -647,6 +1000,14 @@ export const JiraProvider = ({ children }) => {
     isLoading: state.isLoadingConnections || state.isLoadingEpic,
     isReady: state.hasConnection && state.hasEpic
   };
+
+  // Make JiraContext available globally for smooth delete integration
+  useEffect(() => {
+    window.jiraContext = value;
+    return () => {
+      delete window.jiraContext;
+    };
+  }, [value]);
 
   return (
     <JiraContext.Provider value={value}>

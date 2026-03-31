@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { supabase } from '../config/supabase.js';
+import ErrorRecovery from '../utils/errors/ErrorRecovery.js';
+import cleanLogger from '../config/cleanLogging.js';
 
 // Pastikan port 5000 sesuai dengan server Anda
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5003/api';
@@ -31,29 +33,26 @@ api.interceptors.request.use(
         const fiveMinutes = 5 * 60 * 1000;
         
         if (expiresAt - now < fiveMinutes) {
-          console.log('🔄 [API] Token expiring soon, refreshing...');
-          
           try {
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
             if (refreshError) {
-              console.warn('⚠️ [API] Token refresh failed:', refreshError.message);
+              console.warn('Token refresh failed:', refreshError.message);
             } else if (refreshData?.session?.access_token) {
-              console.log('✅ [API] Token refreshed successfully');
               session = refreshData.session;
             }
           } catch (refreshError) {
-            console.warn('⚠️ [API] Token refresh exception:', refreshError.message);
+            console.warn('Token refresh exception:', refreshError.message);
           }
         }
         
         config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log('🔑 [API] Auth token added to request');
       } else {
-        console.warn('⚠️ [API] No auth session found for request');
+        console.warn('No auth session found for request');
       }
     } catch (error) {
-      console.error('❌ [API] Error getting auth token:', error);
+      const recovery = ErrorRecovery.handleUnexpectedError(error, 'API_AUTH');
+      cleanLogger.error('API', recovery.userMessage);
     }
     return config;
   },
@@ -70,7 +69,7 @@ api.interceptors.response.use(
     
     // Handle 401 Unauthorized - but be more careful about when to logout
     if (error.response?.status === 401 && !originalRequest._tokenRefreshed) {
-      console.warn('401 Unauthorized received:', error.response?.data?.message || 'No message');
+      const recovery = ErrorRecovery.handleAuthError(error, 'API_AUTH');
       
       // Check if this is actually an auth issue or just a service connection issue
       const errorMessage = error.response?.data?.message || '';
@@ -79,7 +78,6 @@ api.interceptors.response.use(
                                    errorMessage.toLowerCase().includes('network');
       
       if (isJiraConnectionError) {
-        console.log('🔗 [API] 401 seems to be a service connection issue, not auth expiry');
         // Don't logout for service connection issues
         return Promise.reject(new Error(errorMessage || 'Service connection error'));
       }
@@ -88,19 +86,13 @@ api.interceptors.response.use(
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session && session.access_token) {
-          console.log('🔍 [API] User has valid session, 401 might be service-specific');
-          
           // Try to refresh token in case it's expired
-          console.log('🔄 [API] Attempting token refresh for 401 error...');
           const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
           
           if (refreshError) {
-            console.warn('⚠️ [API] Token refresh failed:', refreshError.message);
-            // Don't logout immediately, might be service issue
+            cleanLogger.warn('API', 'Token refresh failed');
             return Promise.reject(new Error(errorMessage || 'Service authorization error'));
           } else if (refreshData?.session?.access_token) {
-            console.log('✅ [API] Token refreshed, retrying original request...');
-            
             // Update the authorization header with new token
             originalRequest.headers.Authorization = `Bearer ${refreshData.session.access_token}`;
             originalRequest._tokenRefreshed = true; // Prevent infinite retry
@@ -108,28 +100,29 @@ api.interceptors.response.use(
             // Retry the original request with new token
             return api(originalRequest);
           } else {
-            console.warn('⚠️ [API] Token refresh returned no session');
+            cleanLogger.warn('API', 'Token refresh returned no session');
             return Promise.reject(new Error(errorMessage || 'Service authorization error'));
           }
         }
       } catch (sessionError) {
-        console.warn('Error checking session:', sessionError);
+        cleanLogger.warn('API', 'Error checking session');
       }
       
       // Only logout if we're sure it's an auth expiry issue
-      console.error('🚪 [API] Confirmed auth expiry - redirecting to login');
+      cleanLogger.error('API', recovery.userMessage);
       supabase.auth.signOut();
       window.location.href = '/';
-      return Promise.reject(new Error('Session expired. Please login again.'));
+      return Promise.reject(new Error(recovery.userMessage));
     }
     
     // Handle timeout errors and network issues with retry
     if ((error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR' || !error.response) && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.warn('🔄 [API] Network/timeout error, retrying...', originalRequest.url);
+      const recovery = ErrorRecovery.handleNetworkError(error, 'API_NETWORK');
+      cleanLogger.warn('API', `Network/timeout error, retrying... ${originalRequest.url}`);
       
-      // Progressive delay: 2s for first retry
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Progressive delay: 1s for first retry (reduced from 2s)
+      await new Promise(resolve => setTimeout(resolve, recovery.retryDelay || 1000));
       
       return api(originalRequest);
     }
@@ -137,18 +130,19 @@ api.interceptors.response.use(
     // Handle 5xx server errors with retry (but not 401/403)
     if (error.response?.status >= 500 && error.response?.status < 600 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.warn('🔄 [API] Server error, retrying...', originalRequest.url, error.response.status);
+      const recovery = ErrorRecovery.handleServiceError(error, 'API_SERVER');
+      cleanLogger.warn('API', `Server error, retrying... ${originalRequest.url} ${error.response.status}`);
       
-      // Wait 3 seconds for server errors
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for server errors
+      await new Promise(resolve => setTimeout(resolve, recovery.retryDelay || 3000));
       
       return api(originalRequest);
     }
     
-    // Menangkap pesan error dari backend
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
-    console.error('API Error:', message);
-    return Promise.reject(new Error(message));
+    // Handle all other errors with ErrorRecovery
+    const recovery = await ErrorRecovery.handleError(error, 'API');
+    cleanLogger.error('API', recovery.userMessage);
+    return Promise.reject(new Error(recovery.userMessage));
   }
 );
 
@@ -161,10 +155,13 @@ export const generateGherkinAPI = async (userStory, options = {}) => {
     userStory,
     evaluateQuality: options.enableMeteor || false
   };
-  
-  console.log("📤 API Payload:", payload);
-  
-  const response = await api.post('/gherkin/generate', payload);
+
+  const config = {};
+  if (options.signal) {
+    config.signal = options.signal;
+  }
+
+  const response = await api.post('/gherkin/generate', payload, config);
   return response.data; // Mengembalikan { success: true, data: { ... } }
 };
 

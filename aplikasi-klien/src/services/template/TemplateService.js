@@ -151,12 +151,56 @@ class TemplateService {
     if (limit) params.append('limit', limit);
     if (offset) params.append('offset', offset);
 
-    const response = await fetch(`${this.baseUrl}/templates?${params}`, {
-      method: 'GET',
-      headers: await getAuthHeaders()
-    });
+    // Try authenticated endpoint first, fallback to public system templates
+    try {
+      const response = await fetch(`${this.baseUrl}/templates?${params}`, {
+        method: 'GET',
+        headers: await getAuthHeaders()
+      });
 
-    return handleApiResponse(response);
+      if (response.ok) {
+        const result = await handleApiResponse(response);
+
+        return result;
+      }
+      
+      // If authentication fails, try public system templates endpoint
+      if (response.status === 401 || response.status === 403) {
+        
+        const publicResponse = await fetch(`${this.baseUrl}/templates/system?${params}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await handleApiResponse(publicResponse);
+
+        return result;
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } catch (error) {
+      console.error('❌ [TEMPLATE-SERVICE] Error in searchTemplates:', error);
+      
+      // Final fallback: try public system templates without auth
+      try {
+        
+        const fallbackResponse = await fetch(`${this.baseUrl}/templates/system?${params}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await handleApiResponse(fallbackResponse);
+
+        return result;
+      } catch (fallbackError) {
+        console.error('❌ [TEMPLATE-SERVICE] Fallback also failed:', fallbackError);
+        throw error; // Throw original error
+      }
+    }
   }
 
   /**

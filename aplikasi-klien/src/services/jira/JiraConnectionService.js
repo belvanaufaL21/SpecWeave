@@ -1,4 +1,5 @@
 import api from '../api.js';
+import cleanLogger from '../../config/cleanLogging.js';
 import { 
   JIRA_TIMEOUTS, 
   JIRA_ENDPOINTS, 
@@ -17,22 +18,45 @@ import {
 class JiraConnectionService {
   /**
    * Get JIRA connections for the current user
+   * @param {boolean} forceRefresh - Force refresh from database
    * @returns {Promise<Object>} JIRA connections
    */
-  static async getConnections() {
+  static async getConnections(forceRefresh = false) {
     try {
+      // Clear connection cache if force refresh
+      if (forceRefresh && window.jiraCache) {
+        delete window.jiraCache.connections;
+        console.log('🔄 [JIRA-CONNECTION] Cache cleared, forcing fresh fetch');
+      }
+      
       const response = await withJiraTimeout(
         api.get(JIRA_ENDPOINTS.CONNECTIONS, { 
           headers: {
-            ...JIRA_HEADERS.CACHE_SHORT,
-            ...JIRA_HEADERS.FAST_REQUEST
+            ...JIRA_HEADERS.FAST_REQUEST,
+            'Cache-Control': 'no-cache',
+            'X-Force-Refresh': 'true',
+            'X-Timestamp': Date.now().toString() // Prevent browser cache
           }
         }),
         JIRA_TIMEOUTS.CONNECTIONS,
         'Get connections'
       );
       
-      return handleJiraSuccess(response, []);
+      const result = handleJiraSuccess(response, []);
+      
+      // Cache the fresh connections
+      if (result.success && window.jiraCache) {
+        window.jiraCache.connections = {
+          data: result.data,
+          timestamp: Date.now()
+        };
+      }
+      
+      // Only log in development
+      if (import.meta.env.DEV) {
+        cleanLogger.debug('JIRA-CONNECTION', `Fetched ${result.data?.length || 0} connections`);
+      }
+      return result;
     } catch (error) {
       return handleJiraError(error, 'Get connections');
     }
@@ -45,15 +69,29 @@ class JiraConnectionService {
    */
   static async testConnection(connectionData) {
     try {
+      // Log: Testing connection
+      cleanLogger.jiraTestConnection();
+      
       const response = await withJiraTimeout(
         api.post(JIRA_ENDPOINTS.TEST_CONNECTION, connectionData),
         JIRA_TIMEOUTS.TEST_CONNECTION,
         'Test connection'
       );
       
-      return handleJiraSuccess(response);
+      const result = handleJiraSuccess(response);
+      
+      // Log: Connection success or failure
+      if (result.success) {
+        cleanLogger.jiraConnectionSuccess();
+      } else {
+        cleanLogger.jiraConnectionFailed(result.error);
+      }
+      
+      return result;
     } catch (error) {
-      return handleJiraError(error, 'Test connection');
+      const result = handleJiraError(error, 'Test connection');
+      cleanLogger.jiraConnectionFailed(result.error);
+      return result;
     }
   }
 
@@ -77,51 +115,21 @@ class JiraConnectionService {
   }
 
   /**
-   * Start OAuth flow
-   * @param {Object} connectionData - Connection data
-   * @returns {Promise<Object>} OAuth authorization URL
+   * Delete JIRA connection
+   * @param {string} connectionId - Connection ID to delete
+   * @returns {Promise<Object>} Delete result
    */
-  static async startOAuthFlow(connectionData = {}) {
+  static async deleteConnection(connectionId) {
     try {
       const response = await withJiraTimeout(
-        api.post(JIRA_ENDPOINTS.OAUTH_START, connectionData),
-        JIRA_TIMEOUTS.OAUTH_START,
-        'Start OAuth flow'
-      );
-      
-      if (response.data.success && response.data.data?.authorizationUrl) {
-        return { 
-          success: true, 
-          data: response.data.data 
-        };
-      } else {
-        throw new Error(response.data.error || JIRA_ERRORS.OAUTH_START_FAILED);
-      }
-    } catch (error) {
-      return handleJiraError(error, 'Start OAuth flow');
-    }
-  }
-
-  /**
-   * Complete OAuth flow
-   * @param {string} oauthToken - OAuth token
-   * @param {string} oauthVerifier - OAuth verifier
-   * @returns {Promise<Object>} Created connection
-   */
-  static async completeOAuthFlow(oauthToken, oauthVerifier) {
-    try {
-      const response = await withJiraTimeout(
-        api.post(JIRA_ENDPOINTS.OAUTH_CALLBACK, {
-          oauth_token: oauthToken,
-          oauth_verifier: oauthVerifier
-        }),
-        JIRA_TIMEOUTS.OAUTH_COMPLETE,
-        'Complete OAuth flow'
+        api.delete(`${JIRA_ENDPOINTS.CONNECTIONS}/${connectionId}`),
+        JIRA_TIMEOUTS.DELETE_CONNECTION,
+        'Delete connection'
       );
       
       return handleJiraSuccess(response);
     } catch (error) {
-      return handleJiraError(error, 'Complete OAuth flow');
+      return handleJiraError(error, 'Delete connection');
     }
   }
 }

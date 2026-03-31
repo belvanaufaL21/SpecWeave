@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import templateService from '../services/templateService.js';
 
 /**
@@ -17,35 +17,54 @@ export const useTemplates = (options = {}) => {
     tags = []
   } = options;
 
-  // Load templates
+  // Use ref to store the latest options to avoid stale closures
+  const optionsRef = useRef({ category, search, tags });
+  optionsRef.current = { category, search, tags };
+  
+  // Track if we're currently loading to prevent multiple requests
+  const loadingRef = useRef(false);
+
+  // Load templates - stable function that doesn't change on every render
   const loadTemplates = useCallback(async (filters = {}) => {
+    // Prevent multiple simultaneous requests
+    if (loadingRef.current) {
+      
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setLoading(true);
       setError(null);
 
+      const currentOptions = optionsRef.current;
       const searchFilters = {
-        category: category || filters.category,
-        search: search || filters.search,
-        tags: tags.length > 0 ? tags : filters.tags,
+        category: currentOptions.category || filters.category,
+        search: currentOptions.search || filters.search,
+        tags: currentOptions.tags.length > 0 ? currentOptions.tags : filters.tags,
         ...filters
       };
 
       const response = await templateService.searchTemplates(searchFilters);
+
       setTemplates(response.data || []);
     } catch (err) {
+      console.error('❌ [USE-TEMPLATES] Error loading templates:', err);
       setError(err.message || 'Failed to load templates');
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  }, [category, search, tags]);
+  }, []); // Empty dependency array - function is stable
 
-  // Load categories
+  // Load categories - stable function
   const loadCategories = useCallback(async () => {
     try {
       const response = await templateService.getTemplateCategories();
       setCategories(response.data || []);
     } catch (err) {
-      // Failed to load categories
+      // Failed to load categories - not critical
+      console.warn('Failed to load categories:', err);
     }
   }, []);
 
@@ -162,7 +181,7 @@ export const useTemplates = (options = {}) => {
       loadTemplates();
       loadCategories();
     }
-  }, [autoLoad, loadTemplates, loadCategories]);
+  }, [autoLoad]); // Removed loadTemplates and loadCategories from dependencies to prevent infinite loop
 
   return {
     // Data

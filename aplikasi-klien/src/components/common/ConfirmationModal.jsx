@@ -40,9 +40,9 @@ const ConfirmationModal = ({
         return {
           iconBg: 'bg-gradient-to-br from-red-500/20 to-rose-500/20',
           iconColor: 'text-red-400',
-          confirmBg: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700',
-          confirmShadow: 'hover:shadow-red-500/25',
-          borderColor: 'border-red-500/20'
+          confirmBg: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800',
+          confirmShadow: 'hover:shadow-red-500/50 shadow-lg shadow-red-500/30',
+          borderColor: 'border-red-500/30'
         };
       case 'warning':
         return {

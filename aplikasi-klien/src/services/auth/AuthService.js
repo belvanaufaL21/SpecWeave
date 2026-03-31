@@ -57,7 +57,7 @@ class AuthService {
     // Check cache first (5 minute cache)
     const cached = this.profileCache.get(userId);
     if (cached && Date.now() - cached.timestamp < 300000) {
-      console.log(`🎯 [AUTH] Using cached profile for user: ${userId}`);
+      
       return cached.profile;
     }
 
@@ -86,7 +86,6 @@ class AuthService {
     
     try {
       this.fetchingProfiles.add(userId);
-      console.log(`🔍 [AUTH] Fetching profile for user: ${userId}${retryCount > 0 ? ` (attempt ${retryCount + 1})` : ''}`);
       
       const { data, error } = await withTimeout(
         supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
@@ -97,15 +96,19 @@ class AuthService {
       if (error) {
         console.warn(`⚠️ [AUTH] Profile fetch error:`, error);
         
+        // If it's a 409 conflict or user deleted error, throw immediately
+        if (error.code === '409' || error.code === 'PGRST116' || error.message?.includes('conflict')) {
+          console.error('🚨 [AUTH] User deleted or conflict - throwing error');
+          throw new Error('USER_DELETED');
+        }
+        
         // If it's a timeout or network error and we haven't exceeded max retries
         if (retryCount < maxRetries && (error.message.includes('timeout') || error.message.includes('network'))) {
-          console.log(`🔄 [AUTH] Retrying profile fetch (${retryCount + 1}/${maxRetries})...`);
+          
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Progressive delay
           return await this.fetchUserProfile(userId, retryCount + 1);
         }
-        
-        console.log(`🔧 [AUTH] Using fallback default profile due to error`);
-        
+
         // Try to get user metadata for better profile creation
         let userMetadata = {};
         try {
@@ -134,7 +137,6 @@ class AuthService {
 
       // Check if profile exists
       if (!data) {
-        console.log(`🔧 [AUTH] No profile found, creating default profile`);
         
         // Try to get user metadata for better profile creation
         let userMetadata = {};
@@ -162,8 +164,6 @@ class AuthService {
         return newProfile;
       }
 
-      console.log(`✅ [AUTH] Profile fetched successfully`);
-      
       // Cache the successful result
       this.profileCache.set(userId, {
         profile: data,
@@ -176,7 +176,7 @@ class AuthService {
       
       // Retry logic for timeout errors
       if (retryCount < maxRetries && error.message.includes('timeout')) {
-        console.log(`🔄 [AUTH] Retrying profile fetch due to timeout (${retryCount + 1}/${maxRetries})...`);
+        
         await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1))); // Progressive delay: 2s, 4s
         return await this.fetchUserProfile(userId, retryCount + 1);
       }
@@ -197,7 +197,6 @@ class AuthService {
       }
       
       const defaultProfile = createDefaultProfile(userId, userMetadata);
-      console.log(`🔧 [AUTH] Using default profile as fallback after ${retryCount + 1} attempts`);
       
       // Cache the default profile
       this.profileCache.set(userId, {
@@ -248,7 +247,7 @@ class AuthService {
         .maybeSingle();
       
       if (existingProfile) {
-        console.log('✅ [AUTH] Profile already exists, returning existing profile');
+        
         return existingProfile;
       }
       
@@ -262,7 +261,7 @@ class AuthService {
       if (error) {
         // If duplicate key error, try to fetch the existing profile
         if (error.code === '23505') {
-          console.log('🔄 [AUTH] Profile already exists (duplicate key), fetching existing profile');
+          
           const { data: existingProfile } = await supabase
             .from('profiles')
             .select('*')
@@ -282,8 +281,7 @@ class AuthService {
         console.warn('No profile returned from insert, returning default');
         return defaultProfile;
       }
-      
-      console.log('✅ [AUTH] Profile created successfully:', insertedProfile.name);
+
       return insertedProfile;
     } catch (error) {
       console.warn('Failed to create default profile:', error);
@@ -491,7 +489,18 @@ class AuthService {
       );
       
       if (error) {
-        console.warn('Supabase signOut error:', error);
+        console.warn('⚠️ [AUTH-SERVICE] Supabase signOut error:', error);
+        
+        // Check if it's a 403 Forbidden error (common when session expired)
+        if (error.message?.includes('403') || 
+            error.message?.includes('Forbidden') ||
+            error.status === 403) {
+          console.log('📝 [AUTH-SERVICE] Session already expired (403) - proceeding with local cleanup');
+        } else {
+          console.warn('🔄 [AUTH-SERVICE] Other signOut error - proceeding with local cleanup anyway');
+        }
+      } else {
+        console.log('✅ [AUTH-SERVICE] Supabase signOut successful');
       }
 
       // Clear storage regardless of signOut success/failure
@@ -499,7 +508,16 @@ class AuthService {
       
       return { error: null };
     } catch (error) {
-      console.warn('Sign out error:', error);
+      console.warn('❌ [AUTH-SERVICE] Sign out error:', error);
+      
+      // Handle specific error types
+      if (error.message?.includes('403') || 
+          error.message?.includes('Forbidden') ||
+          error.message?.includes('timeout')) {
+        console.log('📝 [AUTH-SERVICE] Expected error during signOut - session likely expired');
+      } else {
+        console.warn('🔄 [AUTH-SERVICE] Unexpected signOut error - continuing with cleanup');
+      }
       
       // Force clear storage even if signOut fails
       clearAuthStorage();

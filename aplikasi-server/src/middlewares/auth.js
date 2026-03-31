@@ -1,33 +1,35 @@
 import authService from '../services/authService.js';
 import { AppError } from './errorHandler.js';
+import cleanLogger from '../config/cleanLogging.js';
 
 /**
  * Authentication middleware for protecting routes
  */
 export const authenticate = async (req, res, next) => {
   try {
-    console.log('🔐 [AUTH-MIDDLEWARE] Processing authentication...');
-    
     const authHeader = req.headers.authorization;
-    console.log('🔍 [AUTH-MIDDLEWARE] Auth header present:', !!authHeader);
+    console.log('🔐 [AUTHENTICATE] Auth header:', authHeader ? `Bearer ${authHeader.substring(7, 27)}...` : 'MISSING');
     
     const token = authService.extractToken(authHeader);
-    console.log('🔍 [AUTH-MIDDLEWARE] Token extracted:', !!token);
+    console.log('🔐 [AUTHENTICATE] Token extracted:', token ? 'YES' : 'NO');
 
     if (!token) {
-      console.warn('⚠️ [AUTH-MIDDLEWARE] No token provided');
+      console.log('❌ [AUTHENTICATE] No token provided');
+      cleanLogger.warn('AUTH-MIDDLEWARE', 'No token provided');
       throw new AppError('Access token is required', 401);
     }
 
-    console.log('🔍 [AUTH-MIDDLEWARE] Verifying token...');
     const user = await authService.verifyToken(token);
+    console.log('🔐 [AUTHENTICATE] Token verified:', user ? `User: ${user.email}` : 'INVALID');
     
     if (!user) {
-      console.warn('⚠️ [AUTH-MIDDLEWARE] Token verification failed');
+      console.log('❌ [AUTHENTICATE] Token verification failed');
+      cleanLogger.warn('AUTH-MIDDLEWARE', 'Token verification failed');
       throw new AppError('Invalid or expired token', 401);
     }
 
-    console.log('✅ [AUTH-MIDDLEWARE] User authenticated:', user.email);
+    console.log('✅ [AUTHENTICATE] User authenticated:', user.email);
+    cleanLogger.debug('AUTH-MIDDLEWARE', 'User authenticated', { email: user.email });
 
     // TEMPORARY FIX: Use user data from JWT token directly
     // Skip getUserProfile since it's failing due to Supabase project mismatch
@@ -41,10 +43,10 @@ export const authenticate = async (req, res, next) => {
       }
     };
     
-    console.log('✅ [AUTH-MIDDLEWARE] Authentication successful (using JWT data)');
     next();
   } catch (error) {
-    console.error('❌ [AUTH-MIDDLEWARE] Authentication failed:', error.message);
+    console.error('❌ [AUTHENTICATE] Error:', error.message);
+    cleanLogger.error('AUTH-MIDDLEWARE', 'Authentication failed', { error: error.message });
     if (error instanceof AppError) {
       next(error);
     } else {
@@ -60,18 +62,42 @@ export const authenticate = async (req, res, next) => {
 export const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
+    console.log('🔐 [OPTIONAL-AUTH] Auth header:', authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'MISSING');
+    
     const token = authService.extractToken(authHeader);
+    console.log('🔐 [OPTIONAL-AUTH] Token extracted:', token ? 'YES' : 'NO');
 
     if (token) {
       const user = await authService.verifyToken(token);
+      console.log('🔐 [OPTIONAL-AUTH] Token verified:', user ? `User ID: ${user.id}` : 'INVALID');
+      
       if (user) {
-        const userProfile = await authService.getUserProfile(user.id);
-        req.user = userProfile;
+        try {
+          // Try to get full user profile
+          const userProfile = await authService.getUserProfile(user.id);
+          req.user = userProfile;
+          console.log('✅ [OPTIONAL-AUTH] User profile loaded:', userProfile.id);
+        } catch (profileError) {
+          // Fallback: Use JWT data directly
+          req.user = {
+            id: user.id,
+            email: user.email,
+            profile: {
+              name: user.email.split('@')[0],
+              role: 'user',
+              preferences: {}
+            }
+          };
+          console.log('✅ [OPTIONAL-AUTH] Using JWT data directly:', user.id);
+        }
       }
+    } else {
+      console.log('⚠️ [OPTIONAL-AUTH] No token found in request');
     }
     
     next();
   } catch (error) {
+    console.error('❌ [OPTIONAL-AUTH] Error:', error.message);
     // Don't fail on optional auth errors, just continue without user
     next();
   }

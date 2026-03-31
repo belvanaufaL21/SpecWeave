@@ -1,25 +1,15 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import LoadingSpinner from '../common/LoadingSpinner';
-import Logo from '../common/Logo';
+import AppLoader from '../common/AppLoader';
 
 const ProtectedRoute = ({ children, requireRole = null }) => {
   const { user, loading, hasRole } = useAuth();
   const location = useLocation();
 
-  // Show loading spinner while checking authentication
+  // Wait for auth check without showing loader
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#020203] flex items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 animate-pulse">
-            <Logo size="xl" showText={false} />
-          </div>
-          <LoadingSpinner size="md" text="Authenticating..." />
-        </div>
-      </div>
-    );
+    return null; // No loader, just wait
   }
 
   // Redirect to login if not authenticated

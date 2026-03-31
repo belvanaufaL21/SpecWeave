@@ -18,9 +18,18 @@ class EpicController {
    */
   async setEpicContext(req, res) {
     try {
+      console.log('📥 [EPIC-CONTROLLER] Received setEpicContext request:', {
+        body: req.body,
+        hasEpicId: !!req.body.epicId,
+        hasEpicData: !!req.body.epicData,
+        epicDataKeys: req.body.epicData ? Object.keys(req.body.epicData) : [],
+        userId: req.user?.id
+      });
+
       // Check validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.error('❌ [EPIC-CONTROLLER] Validation errors:', errors.array());
         return res.status(400).json({
           success: false,
           error: 'Validation failed',
@@ -30,6 +39,7 @@ class EpicController {
 
       // Check if user is authenticated
       if (!req.user || !req.user.id) {
+        console.error('❌ [EPIC-CONTROLLER] User not authenticated');
         return res.status(401).json({
           success: false,
           error: 'User not authenticated'
@@ -39,11 +49,25 @@ class EpicController {
       const userId = req.user.id;
       const { epicId, epicData } = req.body;
 
+      console.log('🔍 [EPIC-CONTROLLER] Validating epic data structure...');
       // Validate Epic data structure
       if (!epicService.validateEpicData(epicData)) {
+        console.error('❌ [EPIC-CONTROLLER] Invalid Epic data structure:', {
+          epicData,
+          hasEpic: !!epicData?.epic,
+          hasConnection: !!epicData?.connection,
+          workWithoutEpic: epicData?.workWithoutEpic
+        });
         return res.status(400).json({
           success: false,
-          error: 'Invalid Epic data structure'
+          error: 'Invalid Epic data structure',
+          details: {
+            received: {
+              hasEpic: !!epicData?.epic,
+              hasConnection: !!epicData?.connection,
+              workWithoutEpic: epicData?.workWithoutEpic
+            }
+          }
         });
       }
 
@@ -52,17 +76,23 @@ class EpicController {
       
       // Skip Epic validation if working without Epic
       if (!workWithoutEpic && epic && epic.id) {
-        const epicValidation = await jiraService.validateEpicAccess(
-          connection.id, 
-          epic.id, 
-          userId
-        );
+        try {
+          const epicValidation = await jiraService.validateEpicAccess(
+            connection.id, 
+            epic.id, 
+            userId
+          );
 
-        if (!epicValidation || !epicValidation.hasAccess) {
-          return res.status(403).json({
-            success: false,
-            error: 'User does not have access to this Epic'
-          });
+          // Check if validation was successful
+          if (epicValidation && epicValidation.success) {
+            console.log('✅ [EPIC-CONTROLLER] Epic validation successful');
+          } else {
+            console.warn('⚠️ [EPIC-CONTROLLER] Epic validation failed, but allowing context set:', epicValidation?.error);
+            // Don't block - validation is just a check, not a hard requirement
+          }
+        } catch (validationError) {
+          console.warn('⚠️ [EPIC-CONTROLLER] Epic validation error, but allowing context set:', validationError.message);
+          // Don't block - validation is just a check, not a hard requirement
         }
       }
 

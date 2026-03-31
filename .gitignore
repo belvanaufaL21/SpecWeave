@@ -2,12 +2,25 @@
 node_modules/
 */node_modules/
 
-# Environment files
+# Environment files (NEVER commit these!)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+aplikasi-klien/.env
+aplikasi-server/.env
+
+# SSL Certificates (NEVER commit these!)
+nginx/ssl/
+*.pem
+*.key
+*.crt
+*.csr
+
+# JIRA OAuth Keys (NEVER commit these!)
+keys/
+*.privatekey
 
 # Build outputs
 dist/
@@ -115,3 +128,24 @@ Thumbs.db
 # Temporary folders (to be removed)
 client/
 server/
+
+# Documentation files (internal only, not for public repo)
+.kiro/
+*.SUMMARY.md
+*CHECKPOINT*.md
+*ISSUE-FIX*.md
+*MIGRATION-*.md
+*TASK-*.md
+*BUG-FIX*.md
+*AUDIT*.md
+
+# Utility scripts (internal only)
+skrip-utilitas/
+*.bat
+
+# Temporary markdown files
+CARA-MENGHILANGKAN-LOG*.md
+CONSOLE-CLEANUP-SUMMARY.md
+QUICK-LOGGING-FIX.md
+remove-verbose-logs*.ps1
+clear-cache-and-restart.ps1

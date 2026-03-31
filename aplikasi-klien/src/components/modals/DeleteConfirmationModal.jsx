@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const DeleteConfirmationModal = ({ 
   isOpen, 
@@ -12,15 +13,11 @@ const DeleteConfirmationModal = ({
   isDangerous = true 
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmationText, setConfirmationText] = useState('');
-  const [showTextConfirmation, setShowTextConfirmation] = useState(false);
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setIsDeleting(false);
-      setConfirmationText('');
-      setShowTextConfirmation(false);
     }
   }, [isOpen]);
 
@@ -44,10 +41,6 @@ const DeleteConfirmationModal = ({
   }, [isOpen, isDeleting, onClose]);
 
   const handleConfirm = async () => {
-    if (showTextConfirmation && confirmationText !== 'DELETE') {
-      return;
-    }
-
     setIsDeleting(true);
     try {
       await onConfirm();
@@ -65,28 +58,53 @@ const DeleteConfirmationModal = ({
     }
   };
 
-  const isConfirmDisabled = showTextConfirmation ? confirmationText !== 'DELETE' : false;
-
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
+      style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
     >
-      <div className="relative w-full max-w-md bg-[#1a1a1a] border border-red-500/20 rounded-2xl shadow-2xl transform transition-all duration-300 scale-100">
+      <div 
+        className="relative w-full max-w-md rounded-2xl shadow-2xl transform transition-all duration-300 scale-100"
+        style={{
+          backgroundColor: '#09090A',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          margin: 'auto',
+          maxHeight: '90vh',
+          overflow: 'auto'
+        }}
+      >
         
         {/* Header with Warning Icon */}
         <div className="p-6 pb-4">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div 
+              className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{
+                backgroundColor: '#160D0C',
+                border: '1px solid #442726'
+              }}
+            >
+              <svg className="w-6 h-6" style={{ color: '#EE4038' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
-              <p className="text-sm text-gray-400">This action cannot be undone</p>
+              {itemName && (
+                <p className="text-sm text-gray-400">{itemName}</p>
+              )}
             </div>
           </div>
 
@@ -95,32 +113,7 @@ const DeleteConfirmationModal = ({
             <p className="text-gray-300 leading-relaxed">
               {message}
             </p>
-            {itemName && (
-              <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-sm text-red-300">
-                  <span className="font-medium">Item:</span> {itemName}
-                </p>
-              </div>
-            )}
           </div>
-
-          {/* Text Confirmation for Dangerous Actions */}
-          {isDangerous && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Type <span className="font-mono text-red-400 bg-red-500/10 px-2 py-1 rounded">DELETE</span> to confirm:
-              </label>
-              <input
-                type="text"
-                value={confirmationText}
-                onChange={(e) => setConfirmationText(e.target.value)}
-                onFocus={() => setShowTextConfirmation(true)}
-                placeholder="Type DELETE to confirm"
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50 focus:bg-gray-800/70 transition-all"
-                disabled={isDeleting}
-              />
-            </div>
-          )}
         </div>
 
         {/* Footer Actions */}
@@ -129,18 +122,55 @@ const DeleteConfirmationModal = ({
             <button
               onClick={onClose}
               disabled={isDeleting}
-              className="flex-1 px-4 py-3 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600/50 text-gray-300 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 text-gray-300 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: '#0D0D0D',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = '#1a1a1a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = '#0D0D0D';
+                }
+              }}
             >
               {cancelText}
             </button>
             <button
               onClick={handleConfirm}
-              disabled={isDeleting || isConfirmDisabled}
+              disabled={isDeleting}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                isConfirmDisabled
-                  ? 'bg-gray-600/30 border border-gray-600/30 text-gray-500 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700 border border-red-500 text-white hover:shadow-lg hover:shadow-red-500/25'
+                isDeleting
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
               }`}
+              style={
+                isDeleting
+                  ? {
+                      backgroundColor: '#EE4038',
+                      border: '1px solid #EE4038',
+                      color: '#FFFFFF'
+                    }
+                  : {
+                      backgroundColor: '#EE4038',
+                      border: '1px solid #EE4038',
+                      color: '#FFFFFF'
+                    }
+              }
+              onMouseEnter={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = '#f1554d';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.backgroundColor = '#EE4038';
+                }
+              }}
             >
               {isDeleting ? (
                 <>
@@ -164,8 +194,14 @@ const DeleteConfirmationModal = ({
         {/* Loading Overlay */}
         {isDeleting && (
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-            <div className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 flex items-center gap-3">
-              <svg className="w-5 h-5 animate-spin text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div 
+              className="rounded-lg p-4 flex items-center gap-3"
+              style={{
+                backgroundColor: '#09090A',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}
+            >
+              <svg className="w-5 h-5 animate-spin" style={{ color: '#EE4038' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               <span className="text-sm text-gray-300">Processing...</span>
@@ -175,6 +211,9 @@ const DeleteConfirmationModal = ({
       </div>
     </div>
   );
+
+  // Render modal in a portal to avoid parent container constraints
+  return createPortal(modalContent, document.body);
 };
 
 export default DeleteConfirmationModal;

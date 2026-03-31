@@ -1,44 +1,47 @@
 # Skrip Utilitas
 
-Folder ini berisi berbagai script utilitas untuk setup dan maintenance aplikasi.
+Folder ini berisi script utilitas untuk menjalankan aplikasi dengan mudah.
 
 ## File Script
 
-### Database
-- `setup-database.js` - Script untuk setup database awal
-- `migrate_references.js` - Migration script untuk tabel references
-- `migrate_references_direct.js` - Direct migration script
+### Development Scripts
+- `jalankan-klien.bat` - Menjalankan aplikasi client (frontend)
+- `jalankan-server.bat` - Menjalankan aplikasi server (backend)
 
-### Python Scripts
-- `enhanced_meteor_evaluator.py` - Enhanced METEOR evaluator
-- `meteor_evaluator.py` - Basic METEOR evaluator
-- `requirements.txt` - Python dependencies
-- `meteor_env/` - Python virtual environment
-
-### JavaScript Utilities
-- `insert_default_templates.js` - Insert default templates ke database
+### Database Setup
+- `insert_default_templates.js` - Insert default templates ke database (untuk initial setup)
 
 ## Cara Penggunaan
 
-### Setup Database
+### Menjalankan Aplikasi
+
+**Client (Frontend):**
 ```bash
-node skrip-utilitas/setup-database.js
+# Windows
+skrip-utilitas\jalankan-klien.bat
+
+# Manual
+cd aplikasi-klien
+npm run dev
 ```
 
-### Migration References
+**Server (Backend):**
 ```bash
-node skrip-utilitas/migrate_references.js
+# Windows
+skrip-utilitas\jalankan-server.bat
+
+# Manual
+cd aplikasi-server
+npm run dev:clean
 ```
 
-### Python METEOR Evaluator
+### Insert Default Templates (One-time setup)
 ```bash
-cd skrip-utilitas
-pip install -r requirements.txt
-python enhanced_meteor_evaluator.py
+node skrip-utilitas/insert_default_templates.js
 ```
 
 ## Catatan
 
-- Pastikan database path sudah benar di konfigurasi
-- Untuk Python scripts, pastikan Python 3.x sudah terinstall
-- Virtual environment direkomendasikan untuk Python dependencies
+- Pastikan sudah menjalankan `npm install` di folder `aplikasi-klien` dan `aplikasi-server`
+- Pastikan file `.env` sudah dikonfigurasi dengan benar di masing-masing folder
+- Python dependencies untuk METEOR/Sentence-BERT ada di `aplikasi-server/src/python/`

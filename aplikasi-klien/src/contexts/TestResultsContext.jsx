@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import UserDataService from '../services/UserDataService';
+import cleanLogger from '../config/cleanLogging';
 
 const TestResultsContext = createContext();
 
@@ -12,48 +14,142 @@ export const useTestResults = () => {
 
 export const TestResultsProvider = ({ children }) => {
   // Store test results by scenario ID (messageId + scenarioIndex)
-  const [testResults, setTestResults] = useState(() => {
-    try {
-      const saved = localStorage.getItem('specweave_test_results');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [testResults, setTestResults] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  // Save to localStorage whenever testResults changes
+  // Load test results from database on mount
   useEffect(() => {
+    loadTestResultsFromDatabase();
+  }, []);
+
+  const loadTestResultsFromDatabase = async () => {
     try {
-      localStorage.setItem('specweave_test_results', JSON.stringify(testResults));
+      setLoading(true);
+      
+      const result = await UserDataService.getAllTestResults();
+      
+      if (result.success) {
+        // Convert database format to context format
+        const resultsMap = {};
+        result.data.forEach(testResult => {
+          // Use scenario_id as key
+          const scenarioId = testResult.scenario_id;
+          
+          resultsMap[scenarioId] = {
+            // Spread test_details if it exists
+            ...(testResult.test_details || {}),
+            // Override with database fields
+            scenarioId: testResult.scenario_id,
+            messageId: testResult.message_id,
+            scenarioIndex: testResult.scenario_index,
+            meteor_score: testResult.score, // Use score field from test_results
+            score: testResult.score,
+            testType: testResult.test_type,
+            timestamp: testResult.test_details?.timestamp || testResult.created_at,
+            generatedText: testResult.generated_text,
+            referenceText: testResult.reference_text
+          };
+        });
+        
+        setTestResults(resultsMap);
+        // Only log in development
+        if (import.meta.env.DEV) {
+          cleanLogger.debug('TEST-RESULTS', `Loaded ${Object.keys(resultsMap).length} test results from database`);
+        }
+
+      } else {
+        cleanLogger.error('TEST-RESULTS', 'Failed to load test results', result.error);
+      }
     } catch (error) {
-      console.error('Error saving test results:', error);
+      cleanLogger.error('TEST-RESULTS', 'Error loading test results', error);
+    } finally {
+      setLoading(false);
     }
-  }, [testResults]);
+  };
 
   // Add test result for a scenario
-  const addTestResult = useCallback((messageId, scenarioIndex, result) => {
+  const addTestResult = useCallback(async (messageId, scenarioIndex, result) => {
     const scenarioId = `${messageId}-${scenarioIndex}`;
     const newResult = {
       ...result,
       timestamp: new Date().toISOString(),
       scenarioId,
       messageId,
-      scenarioIndex
+      scenarioIndex,
+      // CRITICAL: Add chatId to ensure proper filtering per chat
+      chatId: result.chatId || 'unknown'
     };
     
-    setTestResults(prev => {
-      const updated = {
-        ...prev,
-        [scenarioId]: newResult
-      };
-      return updated;
-    });
+    try {
+      console.log('💾 [TEST-RESULTS] Saving test result to database:', {
+        scenarioId,
+        messageId,
+        chatId: newResult.chatId,
+        scenarioIndex
+      });
+      
+      // CRITICAL FIX: Update local state IMMEDIATELY for instant UI feedback
+      // Use functional update to ensure we have the latest state
+      setTestResults(prev => {
+        const updated = {
+          ...prev,
+          [scenarioId]: newResult
+        };
+        console.log('✅ [TEST-RESULTS] Local state updated immediately:', {
+          scenarioId,
+          hasResult: !!updated[scenarioId],
+          totalResults: Object.keys(updated).length
+        });
+        return updated;
+      });
+      
+      // DISABLED: Frontend no longer saves to database
+      // Backend SSE endpoints (runMeteorTestSSE, runSentenceBertTestSSE) handle the save
+      // to new tables: meteor_test_results and sentence_bert_test_results
+      console.log('💾 [TEST-RESULTS] Save handled by backend SSE - frontend save disabled');
+      
+      /* COMMENTED OUT - Backend SSE now handles saving
+      const saveResult = await UserDataService.saveTestResult(newResult);
+      
+      if (saveResult.success) {
+        console.log('✅ [TEST-RESULTS] Test result saved to database successfully');
+        
+        // Update with database response to ensure consistency
+        setTestResults(prev => ({
+          ...prev,
+          [scenarioId]: {
+            ...newResult,
+            ...(saveResult.data.test_details || {}),
+            scenarioId: saveResult.data.scenario_id,
+            messageId: saveResult.data.message_id,
+            scenarioIndex: saveResult.data.scenario_index,
+            meteor_score: saveResult.data.score,
+            score: saveResult.data.score,
+            testType: saveResult.data.test_type
+          }
+        }));
+        
+      } else {
+        console.error('❌ [TEST-RESULTS] Failed to save to database:', saveResult.error);
+        // Local state already updated, so UI still works
+      }
+      */
+    } catch (error) {
+      console.error('❌ [TEST-RESULTS] Error saving test result:', error);
+      // Local state already updated, so UI still works
+    }
   }, []);
 
   // Get test result for a scenario
   const getTestResult = useCallback((messageId, scenarioIndex) => {
     if (typeof messageId === 'string' && messageId.includes('-') && scenarioIndex === undefined) {
-      // If messageId looks like a timestamp, search by timestamp
+      // If messageId looks like a scenarioId (messageId-scenarioIndex format), use it directly
+      const result = testResults[messageId];
+      if (result) {
+        return result;
+      }
+      
+      // Fallback: search by timestamp if not found as scenarioId
       return Object.values(testResults).find(result => result.timestamp === messageId) || null;
     }
     const scenarioId = `${messageId}-${scenarioIndex}`;
@@ -66,23 +162,56 @@ export const TestResultsProvider = ({ children }) => {
     return !!testResults[scenarioId];
   }, [testResults]);
 
+  // Get test results for specific chat
+  const getTestResultsForChat = useCallback((chatId) => {
+    if (!chatId) return {};
+    
+    const chatResults = {};
+    Object.entries(testResults).forEach(([scenarioId, result]) => {
+      if (result.chatId === chatId) {
+        chatResults[scenarioId] = result;
+      }
+    });
+
+    return chatResults;
+  }, [testResults]);
+
   // Get all test results
   const getAllTestResults = useCallback(() => {
     return testResults;
   }, [testResults]);
 
   // Clear all test results
-  const clearTestResults = useCallback(() => {
-    setTestResults({});
-  }, []);
+  const clearTestResults = useCallback(async () => {
+    try {
+      console.log('🗑️ [TEST-RESULTS] Clearing all test results...');
+      
+      // Clear from database (delete all user's test results)
+      const allResults = Object.keys(testResults);
+      for (const scenarioId of allResults) {
+        await UserDataService.deleteTestResult(scenarioId);
+      }
+
+      // Clear local state
+      setTestResults({});
+    } catch (error) {
+      console.error('❌ [TEST-RESULTS] Error clearing test results:', error);
+      
+      // Still clear local state
+      setTestResults({});
+    }
+  }, [testResults]);
 
   const value = {
     testResults,
+    loading,
     addTestResult,
     getTestResult,
     isScenarioTested,
     getAllTestResults,
-    clearTestResults
+    getTestResultsForChat,
+    clearTestResults,
+    loadTestResultsFromDatabase
   };
 
   return (

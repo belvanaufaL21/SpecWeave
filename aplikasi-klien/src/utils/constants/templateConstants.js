@@ -4,7 +4,7 @@
 
 export const TEMPLATE_CONSTANTS = {
   // Default base URL
-  DEFAULT_BASE_URL: 'http://localhost:5000/api',
+  DEFAULT_BASE_URL: 'http://localhost:5003/api',
 
   // Sort options
   SORT_OPTIONS: {
