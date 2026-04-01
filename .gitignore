@@ -138,6 +138,11 @@ server/
 *TASK-*.md
 *BUG-FIX*.md
 *AUDIT*.md
+*CLEANUP*.md
+IDCLOUDHOST-*.md
+DEPLOYMENT-COMPARISON.md
+cleanup-and-push.*
+scripts/README.md
 
 # Utility scripts (internal only)
 skrip-utilitas/
@@ -150,10 +155,9 @@ QUICK-LOGGING-FIX.md
 remove-verbose-logs*.ps1
 clear-cache-and-restart.ps1
 
-# Railway documentation (internal only)
-RAILWAY-*.md
-CARA-CEK-RAILWAY-BUILD.md
-DEPLOY-FRONTEND-SEKARANG.md
-PLATFORM-COMPARISON-DETAILED.md
-README-RAILWAY.md
-railway.json
+# Deployment scripts (internal only)
+scripts/deploy-to-vps.sh
+scripts/quick-deploy.sh
+scripts/check-deployment.sh
+.deployignore
+.gitattributes
