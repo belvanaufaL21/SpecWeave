@@ -149,6 +149,7 @@ skrip-utilitas/
 CARA-MENGHILANGKAN-LOG*.md
 CONSOLE-CLEANUP-SUMMARY.md
 QUICK-LOGGING-FIX.md
+SPECWEAVE_DESIGN_SYSTEM.md
 remove-verbose-logs*.ps1
 clear-cache-and-restart.ps1
 

@@ -1,0 +1,17 @@
+# Nixpacks configuration for Railway deployment
+[phases.setup]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+
+[phases.install]
+cmds = [
+  "npm ci --only=production",
+  "pip install -r src/python/requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "python -c 'import nltk; nltk.download(\"wordnet\"); nltk.download(\"omw-1.4\")'"
+]
+
+[start]
+cmd = "node index.js"
