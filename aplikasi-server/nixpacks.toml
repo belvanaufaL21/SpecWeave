@@ -1,12 +1,19 @@
+# Nixpacks configuration for SpecWeave Backend
+# This file tells Railway how to build and run the backend server
+
 [phases.setup]
-nixPkgs = ["nodejs-20_x", "python311"]
+nixPkgs = ["nodejs-20_x", "python311", "python311Packages.pip"]
 
 [phases.install]
-cmds = ["npm ci --production=false"]
+cmds = [
+  "npm ci --production=false"
+]
+
+[phases.build]
+cmds = [
+  "python3 -m pip install --user sentence-transformers nltk scikit-learn",
+  "python3 -c \"import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')\""
+]
 
 [start]
 cmd = "npm start"
-
-[variables]
-NODE_ENV = "production"
-NODE_OPTIONS = "--max-old-space-size=512"
