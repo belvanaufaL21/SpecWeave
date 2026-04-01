@@ -17,6 +17,11 @@ WORKDIR /app
 
 # Copy Python requirements and install packages
 COPY src/python/requirements.txt /app/src/python/requirements.txt
+
+# Install PyTorch CPU-only first (reduces image size by ~2GB)
+RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install other Python packages
 RUN pip3 install --no-cache-dir -r /app/src/python/requirements.txt
 
 # Download NLTK data and Sentence-BERT model in a single layer
