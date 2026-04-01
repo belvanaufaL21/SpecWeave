@@ -139,9 +139,6 @@ server/
 *BUG-FIX*.md
 *AUDIT*.md
 *CLEANUP*.md
-IDCLOUDHOST-*.md
-DEPLOYMENT-COMPARISON.md
-cleanup-and-push.*
 scripts/README.md
 
 # Utility scripts (internal only)

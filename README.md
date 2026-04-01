@@ -116,63 +116,40 @@ Sebelum menjalankan SpecWeave, pastikan kamu sudah install:
 
 SpecWeave dapat di-deploy dengan beberapa cara:
 
-### Option 1: Railway.app (Recommended - No Card Required!) ⭐
-Deploy ke cloud TANPA kartu kredit dalam 15 menit!
+### Option 1: Railway (Recommended) ⭐
+Deploy ke Railway untuk deployment yang cepat dan mudah!
 
-- ✅ **NO CARD REQUIRED** - $5 free credit
-- ✅ **Full Docker support**
-- ✅ **Always-on** (tidak sleep)
-- ✅ **Auto-deploy dari Git**
-- ✅ **SSL/HTTPS otomatis**
-- ✅ **Cheaper** - $5/mo vs $7/mo
-
-**Quick Start:**
-```bash
-# 1. Push ke GitHub
-git push origin main
-
-# 2. Deploy di Railway (via dashboard)
-# Ikuti panduan: RAILWAY-QUICK-START.md
-```
-
-📖 **Documentation:**
-- **[Railway Index](./RAILWAY-INDEX.md)** - Daftar lengkap dokumentasi
-- **[Quick Start](./RAILWAY-QUICK-START.md)** - Deploy dalam 15 menit
-- **[Full Guide](./RAILWAY-DEPLOYMENT.md)** - Panduan lengkap
-- **[Setup Guide](./RAILWAY-SETUP-GUIDE.md)** - Step-by-step detail
-- **[Troubleshooting](./RAILWAY-TROUBLESHOOTING.md)** - Solusi masalah
-- **[Cost Analysis](./RAILWAY-COST-ANALYSIS.md)** - Analisis biaya
-- **[vs Render](./RAILWAY-VS-RENDER.md)** - Perbandingan platform
-
-### Option 2: Render.com (Requires Card)
-Deploy ke cloud dengan zero DevOps dalam 30 menit!
-
-- ✅ **SSL/HTTPS otomatis**
-- ✅ **Auto-deploy dari Git**
-- ✅ **Free tier forever**
-- ⚠️ **Requires credit card**
+- ✅ **Zero Configuration** - Deploy langsung dari GitHub
+- ✅ **Auto Deploy** - Otomatis deploy setiap push ke main branch
+- ✅ **Free Tier** - $5 credit gratis setiap bulan
+- ✅ **Built-in Database** - PostgreSQL included
+- ✅ **Custom Domain** - Support custom domain gratis
 
 **Quick Start:**
 ```bash
 # 1. Push ke GitHub
 git push origin main
 
-# 2. Deploy di Render (via dashboard)
-# Ikuti panduan: RENDER-DEPLOYMENT.md
+# 2. Connect ke Railway
+# - Login ke railway.app
+# - New Project → Deploy from GitHub
+# - Pilih repository SpecWeave
+# - Railway akan auto-detect dan deploy
+
+# 3. Setup Environment Variables di Railway Dashboard
+# SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, dll
 ```
 
-📖 **[Panduan Lengkap Deploy ke Render](./RENDER-DEPLOYMENT.md)**
-
-### Option 3: VPS/Cloud Server (Full Control)
-Deploy ke VPS dengan Docker untuk kontrol penuh.
+### Option 2: Docker (VPS/Cloud)
+Deploy ke VPS atau cloud provider dengan Docker.
 
 - ✅ **Full control server**
-- ✅ **Lebih murah long-term**
 - ✅ **Custom configuration**
+- ✅ **Scalable infrastructure**
 
 📖 **[Panduan Deploy dengan Docker](./README-DOCKER.md)**
 
-### Option 4: Local Development
+### Option 3: Local Development
 Jalankan di local machine untuk development.
 
 ## 🚀 Panduan Instalasi (Local Development)
