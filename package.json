@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "description": "SpecWeave - Convert User Stories to Gherkin",
+  "private": true,
+  "workspaces": [
+    "aplikasi-server",
+    "aplikasi-klien"
+  ],
   "scripts": {
     "start": "cd aplikasi-server && npm start",
     "dev": "cd aplikasi-server && npm run dev",
