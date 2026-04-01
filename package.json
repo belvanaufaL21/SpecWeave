@@ -1,13 +1,15 @@
 {
-  "name": "specweave-ui-refresh-test",
+  "name": "specweave-monorepo",
   "version": "1.0.0",
   "type": "module",
-  "description": "Test script untuk memverifikasi perbaikan UI refresh bug",
-  "main": "test_ui_refresh_fix.js",
+  "description": "SpecWeave - Convert User Stories to Gherkin",
   "scripts": {
-    "test:ui-refresh": "node test_ui_refresh_fix.js"
+    "start": "cd aplikasi-server && npm start",
+    "dev": "cd aplikasi-server && npm run dev",
+    "install:server": "cd aplikasi-server && npm install",
+    "install:client": "cd aplikasi-klien && npm install"
   },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
