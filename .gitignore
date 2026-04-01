@@ -157,5 +157,7 @@ clear-cache-and-restart.ps1
 scripts/deploy-to-vps.sh
 scripts/quick-deploy.sh
 scripts/check-deployment.sh
+set-railway-env.ps1
+RAILWAY-DEPLOYMENT-GUIDE.md
 .deployignore
 .gitattributes
