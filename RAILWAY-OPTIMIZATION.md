@@ -54,17 +54,28 @@ npm warn config production Use `--omit=dev` instead.
 
 ## Langkah Deploy Ulang
 
-### 1. Push Changes ke Repository
+### 1. Set Root Directory di Railway Dashboard
+
+**PENTING:** Railway perlu tahu bahwa backend ada di folder `aplikasi-server`
+
+1. Buka Railway Dashboard → Your Service
+2. Go to "Settings" tab
+3. Scroll ke "Source" section
+4. Klik "Add Root Directory"
+5. Set ke: `aplikasi-server`
+6. Save changes
+
+### 2. Push Changes ke Repository
 ```bash
 git add .
 git commit -m "feat: optimize Railway deployment with Node.js 20 and memory settings"
 git push
 ```
 
-### 2. Railway akan Auto-Deploy
+### 3. Railway akan Auto-Deploy
 Railway akan mendeteksi perubahan dan melakukan deployment otomatis dengan konfigurasi baru.
 
-### 3. Verifikasi di Railway Dashboard
+### 4. Verifikasi di Railway Dashboard
 
 **Cek Environment Variables:**
 Pastikan variable berikut sudah diset di Railway:
