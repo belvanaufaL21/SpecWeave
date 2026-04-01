@@ -1,12 +1,14 @@
-# Nixpacks configuration for Railway frontend deployment
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs-20_x"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --production=false"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx serve -s dist -l $PORT"
+cmd = "npx serve -s dist -l 3000"
+
+[variables]
+NODE_ENV = "production"
