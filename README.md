@@ -116,13 +116,41 @@ Sebelum menjalankan SpecWeave, pastikan kamu sudah install:
 
 SpecWeave dapat di-deploy dengan beberapa cara:
 
-### Option 1: Render.com (Recommended - Termudah) ⭐
+### Option 1: Railway.app (Recommended - No Card Required!) ⭐
+Deploy ke cloud TANPA kartu kredit dalam 15 menit!
+
+- ✅ **NO CARD REQUIRED** - $5 free credit
+- ✅ **Full Docker support**
+- ✅ **Always-on** (tidak sleep)
+- ✅ **Auto-deploy dari Git**
+- ✅ **SSL/HTTPS otomatis**
+- ✅ **Cheaper** - $5/mo vs $7/mo
+
+**Quick Start:**
+```bash
+# 1. Push ke GitHub
+git push origin main
+
+# 2. Deploy di Railway (via dashboard)
+# Ikuti panduan: RAILWAY-QUICK-START.md
+```
+
+📖 **Documentation:**
+- **[Railway Index](./RAILWAY-INDEX.md)** - Daftar lengkap dokumentasi
+- **[Quick Start](./RAILWAY-QUICK-START.md)** - Deploy dalam 15 menit
+- **[Full Guide](./RAILWAY-DEPLOYMENT.md)** - Panduan lengkap
+- **[Setup Guide](./RAILWAY-SETUP-GUIDE.md)** - Step-by-step detail
+- **[Troubleshooting](./RAILWAY-TROUBLESHOOTING.md)** - Solusi masalah
+- **[Cost Analysis](./RAILWAY-COST-ANALYSIS.md)** - Analisis biaya
+- **[vs Render](./RAILWAY-VS-RENDER.md)** - Perbandingan platform
+
+### Option 2: Render.com (Requires Card)
 Deploy ke cloud dengan zero DevOps dalam 30 menit!
 
 - ✅ **SSL/HTTPS otomatis**
 - ✅ **Auto-deploy dari Git**
-- ✅ **Free tier tersedia**
-- ✅ **Zero maintenance**
+- ✅ **Free tier forever**
+- ⚠️ **Requires credit card**
 
 **Quick Start:**
 ```bash
@@ -135,7 +163,7 @@ git push origin main
 
 📖 **[Panduan Lengkap Deploy ke Render](./RENDER-DEPLOYMENT.md)**
 
-### Option 2: VPS/Cloud Server (Full Control)
+### Option 3: VPS/Cloud Server (Full Control)
 Deploy ke VPS dengan Docker untuk kontrol penuh.
 
 - ✅ **Full control server**
@@ -144,7 +172,7 @@ Deploy ke VPS dengan Docker untuk kontrol penuh.
 
 📖 **[Panduan Deploy dengan Docker](./README-DOCKER.md)**
 
-### Option 3: Local Development
+### Option 4: Local Development
 Jalankan di local machine untuk development.
 
 ## 🚀 Panduan Instalasi (Local Development)
