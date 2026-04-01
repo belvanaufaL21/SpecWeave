@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_18"]
 
 [phases.install]
-cmds = ["npm ci --prefix aplikasi-server --production"]
+cmds = ["npm ci --prefix aplikasi-server --omit=dev"]
 
 [phases.build]
-cmds = ["echo 'No build step needed for backend'"]
+cmds = []
 
 [start]
-cmd = "cd aplikasi-server && npm start"
+cmd = "cd aplikasi-server && node --no-warnings index.js"
