@@ -149,3 +149,11 @@ CONSOLE-CLEANUP-SUMMARY.md
 QUICK-LOGGING-FIX.md
 remove-verbose-logs*.ps1
 clear-cache-and-restart.ps1
+
+# Railway documentation (internal only)
+RAILWAY-*.md
+CARA-CEK-RAILWAY-BUILD.md
+DEPLOY-FRONTEND-SEKARANG.md
+PLATFORM-COMPARISON-DETAILED.md
+README-RAILWAY.md
+railway.json

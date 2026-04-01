@@ -56,17 +56,17 @@ class AlertingService {
 
     // System resource rules
     this.addAlertRule('high_memory_usage', {
-      condition: (memoryPercent) => memoryPercent > 90,
+      condition: (memoryPercent) => memoryPercent > 95,
       severity: 'critical',
-      message: 'Memory usage exceeded 90%',
+      message: 'Memory usage exceeded 95%',
       cooldown: 300000,
       channels: ['console', 'webhook', 'email']
     });
 
     this.addAlertRule('elevated_memory_usage', {
-      condition: (memoryPercent) => memoryPercent > 80,
+      condition: (memoryPercent) => memoryPercent > 85,
       severity: 'warning',
-      message: 'Memory usage exceeded 80%',
+      message: 'Memory usage exceeded 85%',
       cooldown: 600000,
       channels: ['console', 'webhook']
     });

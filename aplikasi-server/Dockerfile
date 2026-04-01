@@ -1,8 +1,8 @@
 # Backend Production Dockerfile
-# Multi-runtime container with Node.js 18+ and Python 3.8+
+# Multi-runtime container with Node.js 20+ and Python 3.8+
 # Security: Uses official images, non-root user, minimal attack surface
 
-FROM node:18-bullseye
+FROM node:20-bullseye
 
 # Install Python 3.8+, pip, and build dependencies in a single layer
 RUN apt-get update && apt-get install -y \
