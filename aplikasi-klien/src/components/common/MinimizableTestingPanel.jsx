@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useResponsive } from '../../hooks/useResponsive';
 import TestedScenariosOverview from './TestedScenariosOverview';
 
@@ -18,28 +18,25 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
   // Mobile: Full-screen modal (controlled by parent)
   if (isMobile) {
     return (
-      <AnimatePresence>
+      <>
+        {/* Backdrop */}
         {isOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              onClick={toggleMinimize}
-            />
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+            style={{ opacity: isOpen ? 1 : 0 }}
+            onClick={toggleMinimize}
+          />
+        )}
 
-            {/* Panel */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="fixed inset-y-0 right-0 w-full z-50 flex flex-col"
-              style={{ backgroundColor: '#09090A' }}
-            >
+        {/* Panel */}
+        <div
+          className={`
+            fixed inset-y-0 right-0 w-full z-50 flex flex-col
+            bg-[#09090A]
+            transition-transform duration-300 cubic-bezier(0.2, 0, 0, 1)
+            ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+          `}
+        >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
                 <div className="flex items-center gap-2">
@@ -63,10 +60,8 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
               <div className="flex-1 overflow-y-auto p-4">
                 <TestedScenariosOverview activeChatId={activeChatId} chatMessages={chatMessages} />
               </div>
-            </motion.div>
+            </div>
           </>
-        )}
-      </AnimatePresence>
     );
   }
 
