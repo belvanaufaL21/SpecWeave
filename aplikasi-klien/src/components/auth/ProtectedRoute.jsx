@@ -7,9 +7,9 @@ const ProtectedRoute = ({ children, requireRole = null }) => {
   const { user, loading, hasRole } = useAuth();
   const location = useLocation();
 
-  // Wait for auth check without showing loader
+  // Show loader while checking auth
   if (loading) {
-    return null; // No loader, just wait
+    return <AppLoader />;
   }
 
   // Redirect to login if not authenticated
