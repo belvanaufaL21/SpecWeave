@@ -26,6 +26,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
               onClick={toggleMinimize}
             />
@@ -35,7 +36,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="fixed inset-y-0 right-0 w-full z-50 flex flex-col"
               style={{ backgroundColor: '#09090A' }}
             >
