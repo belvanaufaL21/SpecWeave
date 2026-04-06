@@ -1970,7 +1970,7 @@ const ChatRefined = () => {
                       });
                     }}
                     placeholder="Masukkan user story Anda..."
-                    className="w-full bg-transparent text-white placeholder-gray-500 resize-none outline-none min-h-[120px] text-base focus:outline-none"
+                    className={`w-full bg-transparent text-white placeholder-gray-500 resize-none outline-none text-base focus:outline-none ${isMobile ? 'min-h-[80px]' : 'min-h-[120px]'}`}
                     disabled={loadingChats[activeChatId]}
                   />
                   
@@ -2107,7 +2107,7 @@ const ChatRefined = () => {
                     <h3 className="text-sm font-medium">Login Sistem</h3>
                     <span className="text-xs px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md">Authentication</span>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
+                  <p className={`text-sm text-gray-400 leading-relaxed ${isMobile ? 'line-clamp-2' : ''}`}>
                     Sebagai pengguna, saya ingin login menggunakan email dan password agar dapat mengakses dashboard aplikasi.
                   </p>
                 </div>
@@ -2120,7 +2120,7 @@ const ChatRefined = () => {
                     <h3 className="text-sm font-medium">User Profile Management</h3>
                     <span className="text-xs px-2.5 py-1 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-md">User Management</span>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
+                  <p className={`text-sm text-gray-400 leading-relaxed ${isMobile ? 'line-clamp-2' : ''}`}>
                     Sebagai pengguna, saya ingin mengedit profil saya (nama, email, foto) agar informasi akun saya selalu terkini.
                   </p>
                 </div>
@@ -2133,7 +2133,7 @@ const ChatRefined = () => {
                     <h3 className="text-sm font-medium">Product Catalog</h3>
                     <span className="text-xs px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md">E-Commerce</span>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
+                  <p className={`text-sm text-gray-400 leading-relaxed ${isMobile ? 'line-clamp-2' : ''}`}>
                     Sebagai customer, saya ingin melihat katalog produk dengan filter kategori agar dapat menemukan produk yang saya butuhkan.
                   </p>
                 </div>
