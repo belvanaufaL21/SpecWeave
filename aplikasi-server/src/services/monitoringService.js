@@ -25,8 +25,8 @@ class MonitoringService {
         critical: 10    // 10% error rate
       },
       memoryUsage: {
-        warning: 85,    // 85% memory usage (increased from 80%)
-        critical: 95    // 95% memory usage (increased from 90% to accommodate ML models)
+        warning: 90,    // 90% memory usage (relaxed for 2GB heap)
+        critical: 97    // 97% memory usage (only alert when truly critical)
       },
       cpuUsage: {
         warning: 70,    // 70% CPU usage

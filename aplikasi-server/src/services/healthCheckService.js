@@ -62,7 +62,7 @@ class HealthCheckService {
         const percentage = (memory.heapUsed / memory.heapTotal) * 100;
         
         return {
-          healthy: percentage < 95, // Increased from 90% to match monitoring thresholds
+          healthy: percentage < 97, // Relaxed from 95% to 97% for 2GB heap
           responseTime: 0,
           details: {
             heapUsed: memory.heapUsed,
