@@ -20,6 +20,7 @@ import MeteorReviewModal from '../components/modals/MeteorReviewModal';
 import DeleteConfirmationModal from '../components/modals/DeleteConfirmationModal';
 import ReferenceLibraryWithAutoSettings from '../components/common/ReferenceLibraryWithAutoSettings';
 import TestedScenariosOverview from '../components/common/TestedScenariosOverview';
+import MinimizableTestingPanel from '../components/common/MinimizableTestingPanel';
 import Logo from '../components/common/Logo';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
@@ -28,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useJira } from '../contexts/JiraContext';
 import { TestResultsProvider, useTestResults } from '../contexts/TestResultsContext';
 import { useChat as useChatContext } from '../contexts/ChatContext';
+import { useResponsive } from '../hooks/useResponsive';
 import { jiraService } from '../services/jiraService';
 import { getEpicButtonText, getEpicContextDisplayText, getActiveProjectInfo } from '../utils/helpers/activeProjectHelpers';
 import cleanLogger from '../config/cleanLogging.js';
@@ -37,6 +39,7 @@ const ChatRefined = () => {
   const { messages: hookMessages, isLoading, currentChatId: hookChatId, loadingChats, isChatLoading, isAnyLoading, sendMessage, clearMessages, loadMessages } = useChat();
   const { user, profile, signOut } = useAuth();
   const { addTestResult, getAllTestResults } = useTestResults();
+  const { isMobile } = useResponsive();
   
   // Get current AI model info
   const llmInfo = getCurrentLLMInfo();
@@ -1601,23 +1604,31 @@ const ChatRefined = () => {
       </div>
       
       {/* TRIGGER ZONE */}
-      {!isPinned && (
+      {!isPinned && !isMobile && (
         <div 
             onMouseEnter={handleTriggerEnter}
             className="fixed top-0 left-0 w-5 h-full z-50 bg-transparent" 
         />
       )}
 
+      {/* Mobile Overlay */}
+      {isMobile && isSidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+          onClick={() => setIsHovered(false)}
+        />
+      )}
+
       {/* LEFT SIDEBAR - Collapsible Design */}
       <aside 
-        onMouseLeave={() => !isPinned && setIsHovered(false)}
+        onMouseLeave={() => !isPinned && !isMobile && setIsHovered(false)}
         className={`
             fixed top-0 left-0 h-full z-40 flex flex-col
             bg-[#0f0f14] border-r border-white/5 shadow-[10px_0_40px_rgba(0,0,0,0.5)]
             transition-transform duration-300 cubic-bezier(0.2, 0, 0, 1)
             ${isSidebarVisible ? 'translate-x-0' : '-translate-x-full'}
         `}
-        style={{ width: '280px' }}
+        style={{ width: isMobile ? '100%' : '280px' }}
       >
         
         {/* Header Section */}
@@ -1830,11 +1841,12 @@ const ChatRefined = () => {
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title={isMobile ? "Pilih Template" : undefined}
               >
                 <svg className="w-4 h-4" style={{ color: '#FFFFFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="text-sm">Pilih Template</span>
+                {!isMobile && <span className="text-sm">Pilih Template</span>}
               </button>
             </div>
 
@@ -1848,22 +1860,30 @@ const ChatRefined = () => {
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#160D14'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title={isMobile ? (hasConnection 
+                  ? (() => {
+                      const activeProjectInfo = getActiveProjectInfo(connections);
+                      return activeProjectInfo.success ? activeProjectInfo.projectName : 'ProjectDL2';
+                    })()
+                  : 'No Project') : undefined}
               >
                 {/* JIRA Logo - Blue when connected, Red when not */}
                 <svg className={`w-4 h-4 ${hasConnection ? 'text-blue-500' : 'text-red-500'}`} viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
                 </svg>
-                <span className="text-sm">
-                  {hasConnection 
-                    ? (() => {
-                        const activeProjectInfo = getActiveProjectInfo(connections);
-                        return activeProjectInfo.success ? activeProjectInfo.projectName : 'ProjectDL2';
-                      })()
-                    : 'No Project'
-                  }
-                </span>
+                {!isMobile && (
+                  <span className="text-sm">
+                    {hasConnection 
+                      ? (() => {
+                          const activeProjectInfo = getActiveProjectInfo(connections);
+                          return activeProjectInfo.success ? activeProjectInfo.projectName : 'ProjectDL2';
+                        })()
+                      : 'No Project'
+                    }
+                  </span>
+                )}
                 {/* Connection Indicator - Blue when connected, Red when not */}
-                <div className={`w-2 h-2 rounded-full ${hasConnection ? 'bg-blue-500' : 'bg-red-500'}`}></div>
+                {!isMobile && <div className={`w-2 h-2 rounded-full ${hasConnection ? 'bg-blue-500' : 'bg-red-500'}`}></div>}
               </button>
 
               {/* Epic Button */}
@@ -1873,19 +1893,24 @@ const ChatRefined = () => {
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title={isMobile ? (hasEpic && epicContext 
+                  ? (epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Select Epic')
+                  : 'No Epic') : undefined}
               >
                 {/* Epic Lightning Icon - Purple when selected, Red when not */}
                 <svg className={`w-4 h-4 ${hasEpic && epicContext ? 'text-purple-500' : 'text-red-500'}`} viewBox="0 0 24 24" fill="currentColor">
                   <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
                 </svg>
-                <span className="text-sm">
-                  {hasEpic && epicContext 
-                    ? (epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Select Epic')
-                    : 'No Epic'
-                  }
-                </span>
+                {!isMobile && (
+                  <span className="text-sm">
+                    {hasEpic && epicContext 
+                      ? (epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Select Epic')
+                      : 'No Epic'
+                    }
+                  </span>
+                )}
                 {/* Connection Indicator - Purple when selected, Red when not */}
-                <div className={`w-2 h-2 rounded-full ${hasEpic && epicContext ? 'bg-purple-500' : 'bg-red-500'}`}></div>
+                {!isMobile && <div className={`w-2 h-2 rounded-full ${hasEpic && epicContext ? 'bg-purple-500' : 'bg-red-500'}`}></div>}
               </button>
             </div>
           </div>
@@ -2266,20 +2291,11 @@ const ChatRefined = () => {
         )}
       </main>
 
-      {/* RIGHT PANEL - METEOR Testing (Always Open) */}
-      <div className="w-80 xl:w-96 bg-[#020203] border-l border-white/5 flex flex-col flex-shrink-0">
-        <div className="px-6 py-4 bg-transparent flex items-center h-[73px]">
-          <h3 className="text-base font-semibold text-white">Testing Scenario</h3>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6">
-          <TestedScenariosOverview 
-            key={`${meteorPanelRefresh}-${activeChatId}`}
-            activeChatId={activeChatId} 
-            chatMessages={allMessages}
-          />
-        </div>
-      </div>
+      {/* RIGHT PANEL - METEOR Testing (Responsive) */}
+      <MinimizableTestingPanel
+        activeChatId={activeChatId}
+        chatMessages={allMessages}
+      />
 
       {/* MODALS */}
       <FormatGuide
