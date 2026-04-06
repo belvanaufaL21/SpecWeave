@@ -697,7 +697,7 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
       />
 
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
-        <div className={`${isUser ? 'max-w-[70%]' : 'max-w-full'} w-full`}>
+        <div className={`${isUser ? (isMobile ? 'max-w-full' : 'max-w-[70%]') : 'max-w-full'} w-full`}>
           <div className={`flex items-start ${isMobile ? 'gap-0' : 'gap-3'} ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
             {/* Avatar - Figma Design - Hidden on mobile */}
             {!isMobile && (
