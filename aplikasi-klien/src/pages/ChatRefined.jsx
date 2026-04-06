@@ -1937,18 +1937,18 @@ const ChatRefined = () => {
         <div className="flex-1 overflow-y-auto">
           {allMessages.length === 0 ? (
             // Empty State - Show when no messages (with centered ChatInput like Landing)
-            <div className="flex flex-col items-center justify-center h-full px-8 py-8 text-center">
+            <div className="flex flex-col items-center justify-center h-full px-4 md:px-8 py-4 md:py-8 text-center">
               {/* Welcome Message */}
-              <h2 className="text-4xl font-bold text-white mb-3">
+              <h2 className={`font-bold text-white mb-2 md:mb-3 ${isMobile ? 'text-2xl' : 'text-4xl'}`}>
                 Hi there, {profile?.name?.split(' ')[0] || 'Yuka'}!
               </h2>
-              <p className="text-gray-400 mb-10 max-w-md">
+              <p className={`text-gray-400 mb-6 md:mb-10 max-w-md ${isMobile ? 'text-sm' : ''}`}>
                 Mau konversi User story Anda menjadi Scenario Gherkin?
               </p>
 
               {/* Centered Chat Input - Same as Landing Page */}
-              <div className="w-full max-w-4xl mb-10">
-                <div className="backdrop-blur-lg rounded-2xl border p-6 shadow-2xl" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+              <div className="w-full max-w-4xl mb-6 md:mb-10">
+                <div className="backdrop-blur-lg rounded-2xl border p-4 md:p-6 shadow-2xl" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -1970,15 +1970,15 @@ const ChatRefined = () => {
                       });
                     }}
                     placeholder="Masukkan user story Anda..."
-                    className="w-full bg-transparent text-white placeholder-gray-500 resize-none outline-none min-h-[120px] text-base focus:outline-none"
+                    className={`w-full bg-transparent text-white placeholder-gray-500 resize-none outline-none focus:outline-none ${isMobile ? 'min-h-[80px] text-sm' : 'min-h-[120px] text-base'}`}
                     disabled={loadingChats[activeChatId]}
                   />
                   
-                  <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-                    <div className="flex items-center gap-4 flex-wrap">
+                  <div className={`flex items-center justify-between flex-wrap gap-3 md:gap-4 ${isMobile ? 'mt-3' : 'mt-6'}`}>
+                    <div className="flex items-center gap-2 md:gap-4 flex-wrap">
                       <button
                         onClick={() => setShowFormatGuide(!showFormatGuide)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
+                        className={`flex items-center gap-2 rounded-lg transition-colors border ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
                         title={isMobile ? "Format Guide" : undefined}
                       >
@@ -1993,7 +1993,7 @@ const ChatRefined = () => {
                           setInput("As a [role], I want [feature], so that [benefit]");
                           setShowFormatGuide(false);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
+                        className={`flex items-center gap-2 rounded-lg transition-colors border ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
                         title={isMobile ? "Use Format" : undefined}
                       >
@@ -2004,11 +2004,11 @@ const ChatRefined = () => {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                       <div className="relative">
                         <button
                           onClick={() => setShowAIDropdown(!showAIDropdown)}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition-colors hover:border-white/10"
+                          className={`flex items-center gap-2 rounded-lg border transition-colors hover:border-white/10 ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
                           style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
                           title={isMobile ? llmInfo.shortName : undefined}
                         >
@@ -2069,7 +2069,7 @@ const ChatRefined = () => {
                           }
                         }}
                         disabled={!input.trim() || loadingChats[activeChatId]}
-                        className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 border ${
+                        className={`rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 border ${isMobile ? 'px-4 py-1.5' : 'px-6 py-2'} ${
                           input.trim() && !(loadingChats[activeChatId])
                             ? 'border-[#2C1A43]'
                             : 'border-white/5'
@@ -2097,46 +2097,48 @@ const ChatRefined = () => {
                 </div>
               </div>
 
-              {/* Example Stories */}
-              <div className="w-full max-w-2xl space-y-3">
+              {/* Example Stories - Show only 2 on mobile, 3 on desktop */}
+              <div className="w-full max-w-2xl space-y-2 md:space-y-3">
                 <div 
                   onClick={() => setInput("Sebagai pengguna, saya ingin login menggunakan email dan password agar dapat mengakses dashboard aplikasi.")}
-                  className="p-5 bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer"
+                  className={`bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer ${isMobile ? 'p-3' : 'p-5'}`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Login Sistem</h3>
-                    <span className="text-xs px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md">Authentication</span>
+                  <div className={`flex items-center justify-between ${isMobile ? 'mb-2' : 'mb-3'}`}>
+                    <h3 className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>Login Sistem</h3>
+                    <span className={`px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md ${isMobile ? 'text-[10px]' : 'text-xs'}`}>Authentication</span>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
+                  <p className={`text-gray-400 leading-relaxed ${isMobile ? 'text-xs' : 'text-sm'}`}>
                     Sebagai pengguna, saya ingin login menggunakan email dan password agar dapat mengakses dashboard aplikasi.
                   </p>
                 </div>
 
                 <div 
                   onClick={() => setInput("Sebagai pengguna, saya ingin mengedit profil saya (nama, email, foto) agar informasi akun saya selalu terkini.")}
-                  className="p-5 bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer"
+                  className={`bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer ${isMobile ? 'p-3' : 'p-5'}`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">User Profile Management</h3>
-                    <span className="text-xs px-2.5 py-1 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-md">User Management</span>
+                  <div className={`flex items-center justify-between ${isMobile ? 'mb-2' : 'mb-3'}`}>
+                    <h3 className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>User Profile Management</h3>
+                    <span className={`px-2.5 py-1 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-md ${isMobile ? 'text-[10px]' : 'text-xs'}`}>User Management</span>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
+                  <p className={`text-gray-400 leading-relaxed ${isMobile ? 'text-xs' : 'text-sm'}`}>
                     Sebagai pengguna, saya ingin mengedit profil saya (nama, email, foto) agar informasi akun saya selalu terkini.
                   </p>
                 </div>
 
-                <div 
-                  onClick={() => setInput("Sebagai customer, saya ingin melihat katalog produk dengan filter kategori agar dapat menemukan produk yang saya butuhkan.")}
-                  className="p-5 bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Product Catalog</h3>
-                    <span className="text-xs px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md">E-Commerce</span>
+                {!isMobile && (
+                  <div 
+                    onClick={() => setInput("Sebagai customer, saya ingin melihat katalog produk dengan filter kategori agar dapat menemukan produk yang saya butuhkan.")}
+                    className="p-5 bg-[#09090A] border border-white/5 rounded-xl text-left hover:bg-[#0d0d0d] transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium">Product Catalog</h3>
+                      <span className="text-xs px-2.5 py-1 bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] rounded-md">E-Commerce</span>
+                    </div>
+                    <p className="text-sm text-gray-400 leading-relaxed">
+                      Sebagai customer, saya ingin melihat katalog produk dengan filter kategori agar dapat menemukan produk yang saya butuhkan.
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
-                    Sebagai customer, saya ingin melihat katalog produk dengan filter kategori agar dapat menemukan produk yang saya butuhkan.
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           ) : (
