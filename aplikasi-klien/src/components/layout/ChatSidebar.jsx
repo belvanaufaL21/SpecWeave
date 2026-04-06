@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../common/Logo';
 import JiraStatusIndicator from '../common/JiraStatusIndicator';
 import SidebarProfileDropdown from '../common/SidebarProfileDropdown';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const NavigationButton = ({ onClick, icon, label, className = "" }) => (
   <motion.button
@@ -107,6 +108,8 @@ const ChatSidebar = ({
   onOpenUserGuide,
   onMouseLeave
 }) => {
+  const { isMobile } = useResponsive();
+  
   // State for sidebar persistence
   const [sidebarState, setSidebarState] = useState(() => {
     try {
@@ -140,7 +143,7 @@ const ChatSidebar = ({
       }
     },
     hidden: {
-      x: -280,
+      x: isMobile ? -window.innerWidth : -280,
       transition: {
         type: "spring",
         stiffness: 300,
@@ -163,7 +166,7 @@ const ChatSidebar = ({
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile/Desktop Overlay */}
       <AnimatePresence>
         {isVisible && !isPinned && (
           <motion.div
@@ -171,7 +174,7 @@ const ChatSidebar = ({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
+            className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-30 ${isMobile ? '' : 'md:hidden'}`}
             onClick={onTogglePin}
           />
         )}
@@ -182,12 +185,12 @@ const ChatSidebar = ({
         variants={sidebarVariants}
         initial="hidden"
         animate={isVisible ? "visible" : "hidden"}
-        onMouseLeave={onMouseLeave}
+        onMouseLeave={!isMobile ? onMouseLeave : undefined}
         className={`
           fixed top-0 left-0 h-full z-40 flex flex-col
           bg-[#0a0a0f]/95 backdrop-blur-3xl border-r border-white/10 shadow-[10px_0_40px_rgba(147,51,234,0.1)]
         `}
-        style={{ width: '280px' }}
+        style={{ width: isMobile ? '100%' : '280px' }}
       >
         <div className="p-5 flex flex-col h-full w-full">
           {/* Header with enhanced animations */}
