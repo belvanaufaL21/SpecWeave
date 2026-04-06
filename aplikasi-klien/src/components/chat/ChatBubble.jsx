@@ -5,6 +5,7 @@ import GeneralResponseFormatter from './GeneralResponseFormatter';
 import PatternUsedModal from '../modals/PatternUsedModal';
 import { useTestResults } from '../../contexts/TestResultsContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { formatTime } from '../../utils/localization';
 import cleanLogger from '../../config/cleanLogging.js';
 
@@ -13,6 +14,7 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
   const isError = message.role === 'error';
   const { isScenarioTested, getTestResult, getAllTestResults } = useTestResults();
   const { user, profile } = useAuth();
+  const { isMobile } = useResponsive();
   
   // Get user initials from profile or user data (consistent with ProfileModal)
   const getUserInitial = () => {
@@ -696,32 +698,34 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
 
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
         <div className={`${isUser ? 'max-w-[70%]' : 'max-w-full'} w-full`}>
-          <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-            {/* Avatar - Figma Design */}
-            <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-              isUser 
-                ? 'border' 
-                : isError 
-                  ? 'bg-gradient-to-br from-red-500 to-red-600' 
-                  : 'border'
-            }`}
-            style={isUser ? { backgroundColor: '#160D14', borderColor: '#44273D' } : (!isError ? { backgroundColor: '#120C18', borderColor: '#2C1A43' } : {})}
-            >
-              {isUser ? (
-                <span className="text-sm font-semibold" style={{ color: '#FF7AD0' }}>{getUserInitial()}</span>
-              ) : isError ? (
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              ) : (
-                <img 
-                  src="/logo.png"
-                  alt="SpecWeave"
-                  className="w-8 h-8 rounded-lg"
-                  style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
-                />
-              )}
-            </div>
+          <div className={`flex items-start ${isMobile ? 'gap-0' : 'gap-3'} ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+            {/* Avatar - Figma Design - Hidden on mobile */}
+            {!isMobile && (
+              <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                isUser 
+                  ? 'border' 
+                  : isError 
+                    ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                    : 'border'
+              }`}
+              style={isUser ? { backgroundColor: '#160D14', borderColor: '#44273D' } : (!isError ? { backgroundColor: '#120C18', borderColor: '#2C1A43' } : {})}
+              >
+                {isUser ? (
+                  <span className="text-sm font-semibold" style={{ color: '#FF7AD0' }}>{getUserInitial()}</span>
+                ) : isError ? (
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                ) : (
+                  <img 
+                    src="/logo.png"
+                    alt="SpecWeave"
+                    className="w-8 h-8 rounded-lg"
+                    style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Message Content - Figma Design */}
             <div className="flex-1 flex flex-col gap-2">
