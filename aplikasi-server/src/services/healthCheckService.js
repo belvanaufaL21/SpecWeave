@@ -433,7 +433,7 @@ class HealthCheckService {
       overallHealth
     };
     
-    // Store in memory (limit to last 100 entries)
+    // Store in memory (limit to last 50 entries instead of 100)
     if (!this.healthHistory.has('global')) {
       this.healthHistory.set('global', []);
     }
@@ -456,7 +456,8 @@ class HealthCheckService {
     
     history.push(historyEntry);
     
-    if (history.length > 100) {
+    // More aggressive cleanup - keep only 50 entries
+    if (history.length > 50) {
       history.shift();
     }
     

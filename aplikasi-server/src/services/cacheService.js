@@ -403,9 +403,20 @@ class CacheService {
 // Create singleton instance
 const cacheService = new CacheService();
 
-// Cleanup memory cache every 5 minutes
+// Cleanup memory cache every 2 minutes (more aggressive)
 setInterval(() => {
   cacheService.cleanupMemoryCache();
-}, 5 * 60 * 1000);
+}, 2 * 60 * 1000);
+
+// Force garbage collection hint every 10 minutes if available
+if (global.gc) {
+  setInterval(() => {
+    try {
+      global.gc();
+    } catch (e) {
+      // GC not available
+    }
+  }, 10 * 60 * 1000);
+}
 
 export default cacheService;

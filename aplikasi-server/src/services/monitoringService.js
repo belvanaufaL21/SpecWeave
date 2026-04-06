@@ -639,25 +639,33 @@ class MonitoringService {
    */
   cleanupOldMetrics() {
     const oneHourAgo = Date.now() - 3600000;
+    const thirtyMinutesAgo = Date.now() - 1800000; // More aggressive cleanup
     
-    // Clean performance metrics
+    // Clean performance metrics (keep only 30 minutes)
     for (const [key, metric] of this.metrics.performance.entries()) {
-      if (metric.timestamp < oneHourAgo) {
+      if (metric.timestamp < thirtyMinutesAgo) {
         this.metrics.performance.delete(key);
       }
     }
     
-    // Clean error metrics
+    // Clean error metrics (keep only 30 minutes)
     for (const [key, metric] of this.metrics.errors.entries()) {
-      if (metric.timestamp < oneHourAgo) {
+      if (metric.timestamp < thirtyMinutesAgo) {
         this.metrics.errors.delete(key);
       }
     }
     
-    // Clean system metrics
+    // Clean system metrics (keep only 30 minutes)
     for (const [key, metric] of this.metrics.system.entries()) {
-      if (metric.timestamp < oneHourAgo) {
+      if (metric.timestamp < thirtyMinutesAgo) {
         this.metrics.system.delete(key);
+      }
+    }
+    
+    // Clean alerts (keep only 1 hour)
+    for (const [key, alert] of this.metrics.alerts.entries()) {
+      if (alert.timestamp < oneHourAgo) {
+        this.metrics.alerts.delete(key);
       }
     }
     
@@ -666,6 +674,26 @@ class MonitoringService {
       if (Date.now() - timestamp > 300000) { // 5 minutes
         this.alertCooldown.delete(key);
       }
+    }
+    
+    // Limit Map sizes to prevent unbounded growth
+    const maxSize = 1000;
+    if (this.metrics.performance.size > maxSize) {
+      const toDelete = this.metrics.performance.size - maxSize;
+      const keys = Array.from(this.metrics.performance.keys()).slice(0, toDelete);
+      keys.forEach(key => this.metrics.performance.delete(key));
+    }
+    
+    if (this.metrics.errors.size > maxSize) {
+      const toDelete = this.metrics.errors.size - maxSize;
+      const keys = Array.from(this.metrics.errors.keys()).slice(0, toDelete);
+      keys.forEach(key => this.metrics.errors.delete(key));
+    }
+    
+    if (this.metrics.system.size > maxSize) {
+      const toDelete = this.metrics.system.size - maxSize;
+      const keys = Array.from(this.metrics.system.keys()).slice(0, toDelete);
+      keys.forEach(key => this.metrics.system.delete(key));
     }
   }
 
