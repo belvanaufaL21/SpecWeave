@@ -1811,7 +1811,7 @@ const ChatRefined = () => {
         className={`
             flex-1 flex flex-col h-screen relative z-10 w-full min-w-0 
             transition-all duration-300 ease-in-out
-            ${isPinned ? 'pl-[280px]' : 'pl-0'} 
+            ${isPinned && !isMobile ? 'pl-[280px]' : 'pl-0'} 
             ${isMeteorPanelOpen ? 'min-w-0' : ''}
         `}
       >
