@@ -1963,11 +1963,12 @@ const ChatRefined = () => {
                         onClick={() => setShowFormatGuide(!showFormatGuide)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                        title={isMobile ? "Format Guide" : undefined}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        Format Guide
+                        {!isMobile && "Format Guide"}
                       </button>
                       
                       <button
@@ -1977,11 +1978,12 @@ const ChatRefined = () => {
                         }}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                        title={isMobile ? "Use Format" : undefined}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
-                        Use Format
+                        {!isMobile && "Use Format"}
                       </button>
                     </div>
 
@@ -1991,11 +1993,12 @@ const ChatRefined = () => {
                           onClick={() => setShowAIDropdown(!showAIDropdown)}
                           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition-colors hover:border-white/10"
                           style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                          title={isMobile ? llmInfo.shortName : undefined}
                         >
                           <div className="w-5 h-5 rounded bg-transparent flex items-center justify-center text-[10px] font-bold">
                             {llmInfo.icon}
                           </div>
-                          <span className="text-gray-300">{llmInfo.shortName}</span>
+                          {!isMobile && <span className="text-gray-300">{llmInfo.shortName}</span>}
                           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
@@ -2174,11 +2177,12 @@ const ChatRefined = () => {
                       onClick={() => setShowFormatGuide(!showFormatGuide)}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                       style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                      title={isMobile ? "Format Guide" : undefined}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
-                      Format Guide
+                      {!isMobile && "Format Guide"}
                     </button>
                     
                     <button
@@ -2188,11 +2192,12 @@ const ChatRefined = () => {
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                       style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                      title={isMobile ? "Use Format" : undefined}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                       </svg>
-                      Use Format
+                      {!isMobile && "Use Format"}
                     </button>
                   </div>
 
@@ -2202,11 +2207,12 @@ const ChatRefined = () => {
                         onClick={() => setShowAIDropdown(!showAIDropdown)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition-colors hover:border-white/10"
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                        title={isMobile ? llmInfo.shortName : undefined}
                       >
                         <div className="w-5 h-5 rounded bg-transparent flex items-center justify-center text-[10px] font-bold">
                           {llmInfo.icon}
                         </div>
-                        <span className="text-gray-300">{llmInfo.shortName}</span>
+                        {!isMobile && <span className="text-gray-300">{llmInfo.shortName}</span>}
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
