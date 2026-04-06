@@ -49,7 +49,16 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Cache-Control',
+    'X-Fast-Request',
+    'X-Force-Refresh',
+    'X-Timestamp',
+    'X-Health-Check',
+    'X-Bulk-Health-Check'
+  ]
 }));
 app.use(express.json());
 

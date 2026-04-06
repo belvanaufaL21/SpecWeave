@@ -6,10 +6,10 @@ import cleanLogger from '../config/cleanLogging.js';
 // Pastikan port 5000 sesuai dengan server Anda
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5003/api';
 
-// Debug logging untuk production
-console.log('🔧 [API CONFIG] Base URL:', API_BASE);
-console.log('🔧 [API CONFIG] VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('🔧 [API CONFIG] Mode:', import.meta.env.MODE);
+// Only log in development mode
+if (import.meta.env.DEV) {
+  cleanLogger.info('API', `Base URL: ${API_BASE}`);
+}
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -27,7 +27,9 @@ api.interceptors.request.use(
       let { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.warn('Error getting session:', error);
+        if (import.meta.env.DEV) {
+          cleanLogger.warn('API', 'Error getting session');
+        }
         return config;
       }
       
@@ -41,19 +43,19 @@ api.interceptors.request.use(
           try {
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
-            if (refreshError) {
-              console.warn('Token refresh failed:', refreshError.message);
+            if (refreshError && import.meta.env.DEV) {
+              cleanLogger.warn('API', 'Token refresh failed');
             } else if (refreshData?.session?.access_token) {
               session = refreshData.session;
             }
           } catch (refreshError) {
-            console.warn('Token refresh exception:', refreshError.message);
+            if (import.meta.env.DEV) {
+              cleanLogger.warn('API', 'Token refresh exception');
+            }
           }
         }
         
         config.headers.Authorization = `Bearer ${session.access_token}`;
-      } else {
-        console.warn('No auth session found for request');
       }
     } catch (error) {
       const recovery = ErrorRecovery.handleUnexpectedError(error, 'API_AUTH');
