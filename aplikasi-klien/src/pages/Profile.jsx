@@ -637,19 +637,19 @@ const Profile = () => {
                 >
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      <div className="text-2xl font-bold text-[#FF7AD0]">
                         {contextHistory.length}
                       </div>
                       <div className="text-sm text-white/50 mt-1">Chats</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                      <div className="text-2xl font-bold text-[#C27AFF]">
                         {Math.floor(Math.random() * 50) + 10}
                       </div>
                       <div className="text-sm text-white/50 mt-1">Projects</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                      <div className="text-2xl font-bold text-[#FF7AD0]">
                         {Math.floor(Math.random() * 100) + 50}
                       </div>
                       <div className="text-sm text-white/50 mt-1">Tasks</div>
