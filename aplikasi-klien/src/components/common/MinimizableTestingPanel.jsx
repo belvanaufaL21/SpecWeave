@@ -28,7 +28,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
             transition-transform duration-300 cubic-bezier(0.2, 0, 0, 1)
             ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           `}
-          style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
+          style={{ backgroundColor: '#09090A', backgroundImage: 'none' }}
         >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}>
