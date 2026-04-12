@@ -1752,7 +1752,7 @@ const ChatRefined = () => {
             <div className="flex flex-col items-center justify-center h-full px-8 py-8 text-center">
               {/* Welcome Message */}
               <h2 className="text-4xl font-bold text-white mb-3">
-                Hi there, {profile?.name?.split(' ')[0] || 'Yuka'}!
+                Yahalo, {profile?.name?.split(' ')[0] || 'Yuka'}!
               </h2>
               <p className="text-gray-400 mb-10 max-w-md">
                 Mau konversi User story Anda menjadi Scenario Gherkin?
