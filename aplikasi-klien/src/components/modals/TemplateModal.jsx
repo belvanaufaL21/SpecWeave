@@ -529,9 +529,9 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
             </button>
           </div>
 
-          <div className="flex h-[65vh]">
+          <div className="flex h-[65vh] overflow-hidden">
             {/* Categories Sidebar */}
-            <div className="w-80 border-r border-white/5 p-6 flex flex-col max-h-full overflow-x-hidden">
+            <div className="w-80 border-r border-white/5 p-6 flex flex-col max-h-full overflow-x-hidden flex-shrink-0">
               
               {/* Search */}
               <div className="relative mb-6 flex-shrink-0">
@@ -591,7 +591,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
             </div>
 
             {/* Templates Grid */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
               {templatesLoading ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mb-4" />
@@ -648,7 +648,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
                   {filteredTemplates.map((template, index) => (
                     <motion.div
                       key={template.id}
