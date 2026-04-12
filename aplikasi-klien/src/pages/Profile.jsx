@@ -37,6 +37,13 @@ const Profile = () => {
   // Avatar picker state
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
 
+  // Delete confirmation state
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    chatId: null,
+    chatTitle: ''
+  });
+
   // Modal states
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isReferenceLibraryOpen, setIsReferenceLibraryOpen] = useState(false);
@@ -197,8 +204,24 @@ const Profile = () => {
   };
 
   const handleDeleteChat = async (chatId) => {
-    await contextDeleteChat(chatId);
+    const chat = contextHistory.find(c => c.id.toString() === chatId.toString());
+    setDeleteConfirmation({
+      isOpen: true,
+      chatId: chatId,
+      chatTitle: chat?.title || 'this chat'
+    });
     setDropdownChatId(null);
+  };
+
+  const confirmDeleteChat = async () => {
+    if (deleteConfirmation.chatId) {
+      await contextDeleteChat(deleteConfirmation.chatId);
+      setDeleteConfirmation({ isOpen: false, chatId: null, chatTitle: '' });
+    }
+  };
+
+  const cancelDeleteChat = () => {
+    setDeleteConfirmation({ isOpen: false, chatId: null, chatTitle: '' });
   };
 
   // Close dropdown when sidebar is closed or user clicks outside
@@ -670,6 +693,56 @@ const Profile = () => {
             onSelect={handleAvatarSelect}
             onClose={() => setIsAvatarPickerOpen(false)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmation.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={cancelDeleteChat}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-2">Delete Chat</h3>
+                  <p className="text-sm text-white/60">
+                    Are you sure you want to delete "{deleteConfirmation.chatTitle}"? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDeleteChat}
+                  className="flex-1 px-4 py-3 bg-transparent hover:bg-white/[0.03] border border-white/10 rounded-xl text-white/60 hover:text-white transition-all font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteChat}
+                  className="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-400 hover:text-red-300 transition-all font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
