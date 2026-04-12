@@ -9,23 +9,19 @@ export const referenceController = {
       
       cleanLogger.debug('REFERENCE-CONTROLLER', 'Getting references for user', { userId: userId || 'anonymous' });
       
-      // Get references for authenticated user only
+      // Get references: templates (user_id IS NULL) + user's own references
       let query = supabase
         .from('scenario_references')
         .select('*');
       
       if (userId) {
-        // If user is authenticated, get their own references
-        query = query.eq('user_id', userId);
-        cleanLogger.debug('REFERENCE-CONTROLLER', 'Authenticated user - getting personal references');
+        // If user is authenticated, get templates + their own references
+        query = query.or(`user_id.is.null,user_id.eq.${userId}`);
+        cleanLogger.debug('REFERENCE-CONTROLLER', 'Authenticated user - getting templates + personal references');
       } else {
-        // If no user, return empty array
-        cleanLogger.debug('REFERENCE-CONTROLLER', 'Anonymous user - no references available');
-        return res.json({
-          success: true,
-          data: [],
-          count: 0
-        });
+        // If no user, only show templates
+        query = query.is('user_id', null);
+        cleanLogger.debug('REFERENCE-CONTROLLER', 'Anonymous user - showing templates only');
       }
       
       const { data, error } = await query
@@ -40,15 +36,42 @@ export const referenceController = {
         });
       }
 
-      cleanLogger.debug('REFERENCE-CONTROLLER', `Found ${data.length} references`);
+      cleanLogger.debug('REFERENCE-CONTROLLER', `Found ${data.length} references before filtering`);
+
+      // Get user's hidden templates if authenticated
+      let hiddenTemplateIds = [];
+      if (userId) {
+        const { data: hiddenData } = await supabase
+          .from('user_hidden_templates')
+          .select('template_id')
+          .eq('user_id', userId);
+        
+        if (hiddenData) {
+          hiddenTemplateIds = hiddenData.map(h => h.template_id);
+          cleanLogger.debug('REFERENCE-CONTROLLER', `User has ${hiddenTemplateIds.length} hidden templates`);
+        }
+      }
+
+      // Filter out hidden templates
+      const filteredData = data.filter(ref => {
+        // If it's a template and user has hidden it, exclude it
+        if (!ref.user_id && hiddenTemplateIds.includes(ref.id)) {
+          return false;
+        }
+        return true;
+      });
+
+      cleanLogger.debug('REFERENCE-CONTROLLER', `Showing ${filteredData.length} references after filtering`);
 
       // Transform data for frontend
-      const transformedData = data.map(ref => ({
+      const transformedData = filteredData.map(ref => ({
         id: ref.id,
         title: ref.title,
         gherkinContent: ref.gherkin_content,
         createdAt: ref.created_at,
-        updatedAt: ref.updated_at
+        updatedAt: ref.updated_at,
+        isTemplate: !ref.user_id, // Template if no user_id
+        isOwner: ref.user_id === userId // User owns it if user_id matches
       }));
 
       const response = {
@@ -56,8 +79,8 @@ export const referenceController = {
         data: transformedData,
         meta: {
           total: transformedData.length,
+          templates: transformedData.filter(ref => ref.isTemplate).length,
           userReferences: transformedData.filter(ref => ref.isOwner).length,
-          publicReferences: transformedData.filter(ref => !ref.isOwner).length,
           authenticated: !!userId
         }
       };
@@ -194,6 +217,15 @@ export const referenceController = {
         });
       }
 
+      // Cannot update templates (user_id is null) - user should copy it instead
+      if (!existingRef.user_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot edit template. Please copy it to your library first.',
+          shouldCopy: true
+        });
+      }
+
       if (existingRef.user_id !== userId) {
         return res.status(403).json({
           success: false,
@@ -251,7 +283,7 @@ export const referenceController = {
     }
   },
 
-  // Delete reference
+  // Delete reference (or hide template)
   async deleteReference(req, res) {
     try {
       const userId = req.user?.id;
@@ -266,7 +298,7 @@ export const referenceController = {
         });
       }
 
-      // Check if reference exists and user owns it
+      // Check if reference exists
       const { data: existingRef, error: fetchError } = await supabase
         .from('scenario_references')
         .select('user_id, title')
@@ -280,6 +312,48 @@ export const referenceController = {
         });
       }
 
+      // If it's a template (user_id is null), hide it instead of deleting
+      if (!existingRef.user_id) {
+        // Check if already hidden
+        const { data: alreadyHidden } = await supabase
+          .from('user_hidden_templates')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('template_id', referenceId)
+          .single();
+
+        if (alreadyHidden) {
+          return res.json({
+            success: true,
+            message: `Template "${existingRef.title}" already hidden`
+          });
+        }
+
+        // Hide the template for this user
+        const { error: hideError } = await supabase
+          .from('user_hidden_templates')
+          .insert({
+            user_id: userId,
+            template_id: referenceId
+          });
+
+        if (hideError) {
+          console.error('Error hiding template:', hideError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to hide template',
+            error: hideError.message
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: `Template "${existingRef.title}" hidden successfully`,
+          isHidden: true
+        });
+      }
+
+      // If it's user's own reference, check ownership
       if (existingRef.user_id !== userId) {
         return res.status(403).json({
           success: false,
@@ -287,7 +361,7 @@ export const referenceController = {
         });
       }
 
-      // Delete reference
+      // Delete user's own reference
       const { error } = await supabase
         .from('scenario_references')
         .delete()
@@ -309,6 +383,71 @@ export const referenceController = {
 
     } catch (error) {
       console.error('Error in deleteReference:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
+  },
+
+  // Unhide a template (restore hidden template)
+  async unhideTemplate(req, res) {
+    try {
+      const userId = req.user?.id;
+      const templateId = req.params.id;
+      
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      // Verify it's actually a template
+      const { data: template, error: fetchError } = await supabase
+        .from('scenario_references')
+        .select('user_id, title')
+        .eq('id', templateId)
+        .single();
+
+      if (fetchError || !template) {
+        return res.status(404).json({
+          success: false,
+          message: 'Template not found'
+        });
+      }
+
+      if (template.user_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'This is not a template, cannot unhide'
+        });
+      }
+
+      // Remove from hidden templates
+      const { error } = await supabase
+        .from('user_hidden_templates')
+        .delete()
+        .eq('user_id', userId)
+        .eq('template_id', templateId);
+
+      if (error) {
+        console.error('Error unhiding template:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to unhide template',
+          error: error.message
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Template "${template.title}" restored successfully`
+      });
+
+    } catch (error) {
+      console.error('Error in unhideTemplate:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',

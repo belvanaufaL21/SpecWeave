@@ -14,6 +14,9 @@ router.post('/', referenceController.createReference);
 router.put('/:id', referenceController.updateReference);
 router.delete('/:id', referenceController.deleteReference);
 
+// Template management
+router.post('/:id/unhide', referenceController.unhideTemplate);
+
 // Usage tracking
 router.post('/:id/usage', referenceController.incrementUsage);
 
