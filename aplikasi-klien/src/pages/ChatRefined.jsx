@@ -534,12 +534,11 @@ const ChatRefined = () => {
   // Handle initial template message from Dashboard
   useEffect(() => {
     if (location.state?.initialMessage) {
-      handleNewChat();
-      setTimeout(() => {
-        handleSendMessage(location.state.initialMessage);
-      }, 100);
+      // Instead of sending immediately, just populate the input field
+      setInput(location.state.initialMessage);
       
-      navigate(location.pathname, { replace: true });
+      // Clear the state to prevent re-triggering
+      navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state?.initialMessage]);
 
@@ -1010,45 +1009,18 @@ const ChatRefined = () => {
     // Close template modal first
     setIsTemplateModalOpen(false);
     
-    // For templates, bypass Epic requirement and create chat directly
-    let currentId = activeChatId;
+    // Check if there are existing messages to determine which input to populate
+    const currentMessages = activeChatId ? (contextChats[activeChatId] || []) : [];
     
-    if (!currentId) {
-      console.log('🆕 [CHAT-REFINED] Creating new chat for template');
-      // Create new chat using context
-      const result = await contextCreateNewChat();
-      
-      if (result.success) {
-        currentId = result.chatId;
-        setActiveChatId(currentId);
-
-        // Navigate to the new chat URL to show conversation
-        navigate(`/chat?id=${currentId}`, { replace: true });
-      } else {
-        console.error('❌ [CHAT-REFINED] Failed to create new chat:', result.error);
-        return;
-      }
+    if (currentMessages.length > 0) {
+      // If there are messages, populate the bottom input
+      setInputBottom(templateContent);
+    } else {
+      // If no messages (welcome state), populate the top input
+      setInput(templateContent);
     }
-
-    // Get current messages from context
-    const currentMessages = contextChats[currentId] || [];
-
-    const userMessage = { 
-      id: Date.now().toString(), 
-      role: 'user', 
-      content: templateContent, 
-      createdAt: new Date() 
-    };
     
-    console.log('💬 [CHAT-REFINED] Adding user message:', userMessage);
-    
-    // Update messages using context
-    const updatedMessages = [...currentMessages, userMessage];
-    await updateChatMessages(currentId, updatedMessages);
-    
-    console.log('🤖 [CHAT-REFINED] Sending message to AI');
-    // Send message to AI (templates can work without Epic context)
-    sendMessage(templateContent, { epicContext: epicContext });
+    console.log('✅ [CHAT-REFINED] Template inserted into input field:', templateContent.substring(0, 50) + '...');
   };
 
   // Chat management handlers

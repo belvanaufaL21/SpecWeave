@@ -549,7 +549,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
 
               {/* Category List */}
               <div 
-                className="space-y-2"
+                className="space-y-2 overflow-y-auto flex-1 custom-scrollbar"
               >
                 {templatesLoading ? (
                   // Loading skeleton for categories
