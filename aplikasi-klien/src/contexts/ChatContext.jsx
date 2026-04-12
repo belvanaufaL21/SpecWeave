@@ -178,7 +178,8 @@ export const ChatProvider = ({ children }) => {
       
       console.log('💾 [CHAT-CONTEXT] Saving to database:', chatId);
       
-      // Save to database asynchronously (don't block UI)
+      // Save to database asynchronously in background (don't block UI)
+      // Don't await this - let it run in background
       const historyItem = history.find(h => h.id === chatId);
       const sessionData = {
         title: historyItem?.title || generateUniqueChatTitle(history),
@@ -188,17 +189,20 @@ export const ChatProvider = ({ children }) => {
         }
       };
       
-      // Only update timestamp in database if there are new messages
-      const result = await UserDataService.saveChatSession(chatId, sessionData, {
+      // Fire and forget - save in background
+      UserDataService.saveChatSession(chatId, sessionData, {
         updateTimestamp: hasNewMessages
+      }).then(result => {
+        if (result.success) {
+          console.log('✅ [CHAT-CONTEXT] Messages saved to database for chat:', chatId);
+        } else {
+          console.error('❌ [CHAT-CONTEXT] Failed to save chat messages:', result.error);
+        }
+      }).catch(error => {
+        console.error('❌ [CHAT-CONTEXT] Error saving to database:', error);
       });
       
-      if (result.success) {
-        console.log('✅ [CHAT-CONTEXT] Messages saved to database for chat:', chatId);
-      } else {
-        console.error('❌ [CHAT-CONTEXT] Failed to save chat messages:', result.error);
-      }
-      
+      // Return immediately after state update, don't wait for database
       return { success: true };
     } catch (error) {
       console.error('❌ [CHAT-CONTEXT] Error updating chat messages:', error);

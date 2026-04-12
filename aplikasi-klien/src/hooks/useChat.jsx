@@ -139,23 +139,21 @@ export const useChat = () => {
           };
         }
 
-        // CRITICAL FIX: Stop loading IMMEDIATELY after receiving AI response
-        // Don't wait for database save to complete
-        setIsLoading(false);
-        setLoadingChats(prev => ({ ...prev, [chatId]: false }));
-        setCurrentChatId(null);
-        
-        // CRITICAL: Save directly to context via callback instead of hook state
-        // This happens in background, doesn't block UI
+        // CRITICAL: Save message to state first so it appears in UI
         if (onMessageReceived) {
           console.log('💾 [USE-CHAT] Saving AI message to context for chat:', chatId);
-          onMessageReceived(aiMessage, chatId).catch(err => {
-            console.error('❌ [USE-CHAT] Error saving message to context:', err);
-          });
+          // Wait for message to be added to state (so it appears in UI)
+          await onMessageReceived(aiMessage, chatId);
         } else {
           // Fallback: add to hook state (old behavior)
           setMessages(prev => [...prev, aiMessage]);
         }
+        
+        // CRITICAL FIX: Stop loading IMMEDIATELY after message is in state
+        // Don't wait for database save to complete (that happens in background)
+        setIsLoading(false);
+        setLoadingChats(prev => ({ ...prev, [chatId]: false }));
+        setCurrentChatId(null);
       } else {
         throw new Error(response.error || 'Failed to generate response');
       }
@@ -171,11 +169,6 @@ export const useChat = () => {
       const errorMessage = err.response?.data?.error || 'Failed to generate Gherkin. Please try again.';
       setError(errorMessage);
       
-      // Stop loading before showing error
-      setIsLoading(false);
-      setLoadingChats(prev => ({ ...prev, [chatId]: false }));
-      setCurrentChatId(null);
-      
       // Add error message to chat
       const errorMessageId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const errorMsg = {
@@ -186,14 +179,17 @@ export const useChat = () => {
         chatId: chatId
       };
 
-      // Save error directly to context (in background)
+      // Save error to state first
       if (onMessageReceived) {
-        onMessageReceived(errorMsg, chatId).catch(err => {
-          console.error('❌ [USE-CHAT] Error saving error message:', err);
-        });
+        await onMessageReceived(errorMsg, chatId);
       } else {
         setMessages(prev => [...prev, errorMsg]);
       }
+      
+      // Stop loading after error message is in state
+      setIsLoading(false);
+      setLoadingChats(prev => ({ ...prev, [chatId]: false }));
+      setCurrentChatId(null);
     }
   }, []);
 
