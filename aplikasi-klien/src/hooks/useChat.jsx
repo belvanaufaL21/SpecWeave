@@ -139,10 +139,19 @@ export const useChat = () => {
           };
         }
 
+        // CRITICAL FIX: Stop loading IMMEDIATELY after receiving AI response
+        // Don't wait for database save to complete
+        setIsLoading(false);
+        setLoadingChats(prev => ({ ...prev, [chatId]: false }));
+        setCurrentChatId(null);
+        
         // CRITICAL: Save directly to context via callback instead of hook state
+        // This happens in background, doesn't block UI
         if (onMessageReceived) {
           console.log('💾 [USE-CHAT] Saving AI message to context for chat:', chatId);
-          await onMessageReceived(aiMessage, chatId);
+          onMessageReceived(aiMessage, chatId).catch(err => {
+            console.error('❌ [USE-CHAT] Error saving message to context:', err);
+          });
         } else {
           // Fallback: add to hook state (old behavior)
           setMessages(prev => [...prev, aiMessage]);
@@ -162,6 +171,11 @@ export const useChat = () => {
       const errorMessage = err.response?.data?.error || 'Failed to generate Gherkin. Please try again.';
       setError(errorMessage);
       
+      // Stop loading before showing error
+      setIsLoading(false);
+      setLoadingChats(prev => ({ ...prev, [chatId]: false }));
+      setCurrentChatId(null);
+      
       // Add error message to chat
       const errorMessageId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const errorMsg = {
@@ -172,16 +186,14 @@ export const useChat = () => {
         chatId: chatId
       };
 
-      // Save error directly to context
+      // Save error directly to context (in background)
       if (onMessageReceived) {
-        await onMessageReceived(errorMsg, chatId);
+        onMessageReceived(errorMsg, chatId).catch(err => {
+          console.error('❌ [USE-CHAT] Error saving error message:', err);
+        });
       } else {
         setMessages(prev => [...prev, errorMsg]);
       }
-    } finally {
-      setIsLoading(false);
-      setLoadingChats(prev => ({ ...prev, [chatId]: false }));
-      setCurrentChatId(null);
     }
   }, []);
 
