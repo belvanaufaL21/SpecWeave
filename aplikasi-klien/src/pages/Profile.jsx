@@ -494,8 +494,8 @@ const Profile = () => {
             ${isPinned ? 'pl-[280px]' : 'pl-0'} 
         `}
       >
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex items-center justify-center">
+          <div className="max-w-4xl mx-auto w-full">
             {/* Centered Profile Card */}
             <motion.div
               className="bg-transparent border border-white/5 rounded-3xl shadow-2xl overflow-hidden"
@@ -541,17 +541,7 @@ const Profile = () => {
                     )}
                   </div>
 
-                  {/* User Role Badge */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="mt-4 px-4 py-1.5 bg-transparent border border-white/5 rounded-full"
-                  >
-                    <span className="text-sm font-medium bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                      Premium User
-                    </span>
-                  </motion.div>
+                  {/* User Role Badge - REMOVED */}
                 </div>
 
                 {/* Form Fields */}
