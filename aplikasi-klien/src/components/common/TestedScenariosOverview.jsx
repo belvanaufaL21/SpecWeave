@@ -84,7 +84,7 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
   return (
     <div className="space-y-4">
       {/* Feature & User Story Header */}
-      <div className="border rounded-xl p-4" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43' }}>
+      <div className="border rounded-xl p-4" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
         <h4 className="text-sm font-semibold text-white mb-2">{currentUserStoryData.feature}</h4>
         <p className="text-xs text-gray-400 leading-relaxed">{currentUserStoryData.userStory}</p>
       </div>
@@ -121,18 +121,12 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
               className="border rounded-xl p-3 transition-all"
               style={{ 
                 borderColor: 'rgba(255, 255, 255, 0.05)',
-                background: 'linear-gradient(to bottom right, rgba(2, 2, 3, 0.8), rgba(0, 0, 0, 0.9))'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#09090A';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(2, 2, 3, 0.8), rgba(0, 0, 0, 0.9))';
+                backgroundColor: '#09090A'
               }}
             >
               <div className="flex items-center gap-3">
                 {/* Number Badge */}
-                <div className="w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center border flex-shrink-0" style={{ backgroundColor: '#160D14', borderColor: '#44273D', color: '#FF7AD0' }}>
+                <div className="w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center border flex-shrink-0" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#C27AFF' }}>
                   {index + 1}
                 </div>
 
@@ -220,7 +214,7 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
                       : 'text-gray-400'
                   }`}
                   style={isActive 
-                    ? { backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#C27AFF' }
+                    ? { backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#C27AFF' }
                     : { borderColor: 'rgba(255, 255, 255, 0.05)' }
                   }
                   onMouseEnter={(e) => {
