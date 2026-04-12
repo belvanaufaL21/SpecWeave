@@ -9,7 +9,7 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { formatTime } from '../../utils/localization';
 import cleanLogger from '../../config/cleanLogging.js';
 
-const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
+const ChatBubble = ({ message, activeChatId }) => {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
   const { isScenarioTested, getTestResult, getAllTestResults } = useTestResults();
@@ -45,109 +45,9 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
   // State untuk track hover pada scenarios
   const [hoveredScenario, setHoveredScenario] = useState(null);
   
-  // State untuk edit user message
-  const [isEditingUserMessage, setIsEditingUserMessage] = useState(false);
-  const [editedUserMessage, setEditedUserMessage] = useState(message.content);
-  
-  // State untuk version navigation (for messages with multiple input/output pairs)
-  const [currentVersionIndex, setCurrentVersionIndex] = useState(() => {
-    // Initialize with the latest version
-    return message.versions ? message.versions.length - 1 : 0;
-  });
-  
-  // Get versions array from message (array of {input, output, timestamp})
-  // Each version contains both the user input and AI response
-  const versions = message.versions || [{ 
-    input: message.content, 
-    output: null, // Will be filled by next AI message
-    timestamp: message.createdAt 
-  }];
-  
-  const hasMultipleVersions = versions.length > 1;
-  const currentVersion = versions[currentVersionIndex] || versions[0];
-  
-  // Use current version's input for display
-  const displayContent = isUser ? currentVersion.input : message.content;
-  // Handler untuk save edited user message
-  const handleSaveUserMessage = () => {
-    if (onUpdateMessage && message.id) {
-      // Get existing versions or create initial version
-      const existingVersions = message.versions || [{ 
-        input: message.content,
-        outputMessageId: null, // Will be linked after AI responds
-        timestamp: message.createdAt 
-      }];
-      
-      // Add new version with edited input
-      const newVersion = { 
-        input: editedUserMessage, 
-        outputMessageId: null, // Will be filled after AI responds
-        timestamp: new Date(),
-        isGenerating: true // Flag to show this version is generating
-      };
-      
-      existingVersions.push(newVersion);
-      
-      const updatedMessage = {
-        ...message,
-        content: editedUserMessage,
-        versions: existingVersions,
-        currentVersionIndex: existingVersions.length - 1, // Point to new version
-        isRegenerating: true // Flag to trigger regeneration in parent
-      };
-      
-      console.log('💾 [CHAT-BUBBLE] Updating user message with new version:', {
-        messageId: message.id,
-        oldContent: message.content,
-        newContent: editedUserMessage,
-        versionsCount: existingVersions.length,
-        newVersionIndex: existingVersions.length - 1
-      });
-      
-      onUpdateMessage(updatedMessage);
-      setIsEditingUserMessage(false);
-      setCurrentVersionIndex(existingVersions.length - 1); // Set to latest version
-    }
-  };
-  
-  // Handler untuk navigate previous version (just display, no regeneration)
-  const handlePreviousVersion = () => {
-    if (currentVersionIndex > 0) {
-      const newIndex = currentVersionIndex - 1;
-      setCurrentVersionIndex(newIndex);
-      
-      // Notify parent to update displayed version
-      if (onUpdateMessage && message.id) {
-        const updatedMessage = {
-          ...message,
-          currentVersionIndex: newIndex
-        };
-        onUpdateMessage(updatedMessage);
-      }
-    }
-  };
-  
-  // Handler untuk navigate next version (just display, no regeneration)
-  const handleNextVersion = () => {
-    if (currentVersionIndex < versions.length - 1) {
-      const newIndex = currentVersionIndex + 1;
-      setCurrentVersionIndex(newIndex);
-      
-      // Notify parent to update displayed version
-      if (onUpdateMessage && message.id) {
-        const updatedMessage = {
-          ...message,
-          currentVersionIndex: newIndex
-        };
-        onUpdateMessage(updatedMessage);
-      }
-    }
-  };
+  // Use message content directly for display
+  const displayContent = message.content;
 
-  const handleCancelEditUserMessage = () => {
-    setEditedUserMessage(message.content);
-    setIsEditingUserMessage(false);
-  };
 
   // Fungsi untuk membuat data gabungan (scenario asli + tambahan) untuk JIRA export
   const createCombinedScenarioData = (originalData) => {
@@ -736,85 +636,16 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
                     ? 'bg-gradient-to-br from-red-600/20 to-red-600/20 border border-red-500/30 px-4 py-3' 
                     : 'bg-[#020203]/60 border p-6'
               }`}
-              style={isUser ? (isEditingUserMessage ? { backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' } : { backgroundColor: '#160D14', borderColor: '#44273D' }) : (!isError ? { borderColor: 'rgba(255, 255, 255, 0.05)' } : {})}
+              style={isUser ? { backgroundColor: '#160D14', borderColor: '#44273D' } : (!isError ? { borderColor: 'rgba(255, 255, 255, 0.05)' } : {})}
               >
                 {isUser ? (
-                  isEditingUserMessage ? (
-                    <div className="px-4 py-3">
-                      <textarea
-                        value={editedUserMessage}
-                        onChange={(e) => setEditedUserMessage(e.target.value)}
-                        className="w-full bg-transparent border-none rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none leading-relaxed"
-                        rows={3}
-                        autoFocus
-                      />
-                      <div className="flex justify-end gap-2 mt-3">
-                        <button
-                          onClick={handleCancelEditUserMessage}
-                          className="px-3 py-1.5 bg-[#09090A] border border-white/5 rounded-lg text-xs font-semibold text-white/70 transition-all hover:bg-[#0a0a0b]"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveUserMessage}
-                          className="px-3 py-1.5 bg-[#160D14] border border-[#44273D] rounded-lg text-xs font-semibold text-[#FF7AD0] transition-all hover:bg-[#1a1018]"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="px-4 py-3">
-                      <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{displayContent}</p>
-                    </div>
-                  )
+                  <div className="px-4 py-3">
+                    <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{displayContent}</p>
+                  </div>
                 ) : (
                   renderAIContent(message.content)
                 )}
               </div>
-              
-              {/* Previous/Next Navigation for User Messages with Multiple Versions */}
-              {isUser && hasMultipleVersions && !isEditingUserMessage && (
-                <div className="flex items-center gap-2 justify-end">
-                  <button
-                    onClick={handlePreviousVersion}
-                    disabled={currentVersionIndex === 0}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed border"
-                    style={{ 
-                      backgroundColor: currentVersionIndex === 0 ? 'transparent' : '#160D14', 
-                      borderColor: '#44273D',
-                      color: currentVersionIndex === 0 ? 'rgba(255, 122, 208, 0.3)' : '#FF7AD0'
-                    }}
-                    title="Previous version"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span>Previous</span>
-                  </button>
-                  
-                  <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                    {currentVersionIndex + 1} / {versions.length}
-                  </span>
-                  
-                  <button
-                    onClick={handleNextVersion}
-                    disabled={currentVersionIndex === versions.length - 1}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed border"
-                    style={{ 
-                      backgroundColor: currentVersionIndex === versions.length - 1 ? 'transparent' : '#160D14', 
-                      borderColor: '#44273D',
-                      color: currentVersionIndex === versions.length - 1 ? 'rgba(255, 122, 208, 0.3)' : '#FF7AD0'
-                    }}
-                    title="Next version"
-                  >
-                    <span>Next</span>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              )}
               
               {/* Timestamp - Figma Design */}
               <div className={`text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -822,31 +653,7 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
               </div>
             </div>
             
-            {/* Edit Button - Outside container on the left for user messages */}
-            {isUser && !isEditingUserMessage && (
-              <button
-                onClick={() => setIsEditingUserMessage(true)}
-                className="w-8 h-8 rounded-lg border flex items-center justify-center transition-all flex-shrink-0"
-                style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#160D14';
-                  e.currentTarget.style.borderColor = '#44273D';
-                  const svg = e.currentTarget.querySelector('svg');
-                  if (svg) svg.style.color = '#FF7AD0';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                  const svg = e.currentTarget.querySelector('svg');
-                  if (svg) svg.style.color = '#9CA3AF';
-                }}
-                title="Edit message"
-              >
-                <svg className="w-4 h-4 text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-            )}
+
           </div>
         </div>
       </div>

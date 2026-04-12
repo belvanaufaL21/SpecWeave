@@ -881,146 +881,12 @@ const ChatRefined = () => {
       // Get current messages for this chat
       const currentMessages = getChatMessages(activeChatId) || [];
       
-      // Check if this is a version navigation (Previous/Next clicked)
-      if (updatedMessage.currentVersionIndex !== undefined && !updatedMessage.isRegenerating) {
-        console.log('🔄 [CHAT-REFINED] Version navigation:', {
-          messageId: updatedMessage.id,
-          versionIndex: updatedMessage.currentVersionIndex
-        });
-        
-        // Just update the message with new currentVersionIndex
-        const updatedMessages = currentMessages.map(msg => 
-          msg.id === updatedMessage.id ? updatedMessage : msg
-        );
-        
-        await updateChatMessages(activeChatId, updatedMessages);
-        return; // Don't regenerate, just update display
-      }
+      // Simply update the message in the array
+      const updatedMessages = currentMessages.map(msg => 
+        msg.id === updatedMessage.id ? updatedMessage : msg
+      );
       
-      // Find the original message to check if it's a user message that changed
-      const originalMessage = currentMessages.find(msg => msg.id === updatedMessage.id);
-      const isUserMessageChanged = originalMessage && 
-                                   originalMessage.role === 'user' && 
-                                   originalMessage.content !== updatedMessage.content &&
-                                   updatedMessage.isRegenerating;
-      
-      if (isUserMessageChanged) {
-        console.log('✏️ [CHAT-REFINED] User message edited, regenerating AI response:', {
-          oldContent: originalMessage.content,
-          newContent: updatedMessage.content,
-          hasVersions: !!updatedMessage.versions,
-          versionsCount: updatedMessage.versions?.length
-        });
-        
-        // Find the index of the edited message
-        const messageIndex = currentMessages.findIndex(msg => msg.id === updatedMessage.id);
-        
-        // Find and save the old AI response before removing it
-        const oldAIResponse = currentMessages[messageIndex + 1];
-        
-        if (oldAIResponse && oldAIResponse.role === 'ai') {
-          // Link old AI response to previous version
-          const versions = updatedMessage.versions || [];
-          const previousVersionIndex = versions.length - 2; // Second to last (before new version)
-          
-          if (previousVersionIndex >= 0 && versions[previousVersionIndex]) {
-            versions[previousVersionIndex].outputMessageId = oldAIResponse.id;
-            versions[previousVersionIndex].outputContent = oldAIResponse.content;
-            versions[previousVersionIndex].outputData = {
-              responseType: oldAIResponse.responseType,
-              qualityMetrics: oldAIResponse.qualityMetrics,
-              performanceMetrics: oldAIResponse.performanceMetrics,
-              usedReferences: oldAIResponse.usedReferences,
-              metadata: oldAIResponse.metadata
-            };
-            
-            console.log('💾 [CHAT-REFINED] Saved old AI response to version:', {
-              versionIndex: previousVersionIndex,
-              outputMessageId: oldAIResponse.id
-            });
-          }
-        }
-        
-        // CRITICAL: Remove ALL messages after the edited user message (including old AI response)
-        const messagesBeforeEdit = currentMessages.slice(0, messageIndex);
-        
-        // Add the updated user message (with versions and saved outputs)
-        const updatedMessagesWithEdit = [...messagesBeforeEdit, updatedMessage];
-        
-        console.log('🗑️ [CHAT-REFINED] Removing old AI response:', {
-          totalMessagesBefore: currentMessages.length,
-          totalMessagesAfter: updatedMessagesWithEdit.length,
-          removedMessages: currentMessages.length - updatedMessagesWithEdit.length
-        });
-        
-        // CRITICAL: Clear hook messages to prevent duplication
-        clearMessages();
-        
-        // CRITICAL: Save updated messages to database immediately
-        await updateChatMessages(activeChatId, updatedMessagesWithEdit);
-        
-        // Small delay to ensure UI updates, then send new message
-        setTimeout(() => {
-          // Send the edited message to AI to get new response
-          console.log('🤖 [CHAT-REFINED] Sending edited message to AI for new response');
-          sendMessage(updatedMessage.content, { 
-            epicContext: epicContext,
-            chatId: activeChatId,
-            skipUserMessage: true, // CRITICAL: Don't create new user message, we're editing existing one
-            onMessageReceived: async (message, chatId) => {
-              console.log('💾 [CHAT-REFINED] Message received from edit (AI response):', {
-                chatId,
-                messageId: message.id,
-                messageRole: message.role
-              });
-              
-              // Only save AI response, not user message (user message already updated above)
-              if (message.role === 'ai') {
-                // Use updateChatMessages with a function that gets current messages
-                await updateChatMessages(chatId, (currentMessages) => {
-                  console.log('📊 [CHAT-REFINED] Current messages in edit callback:', {
-                    chatId,
-                    messageCount: currentMessages.length,
-                    messages: currentMessages.map(m => ({ id: m.id, role: m.role }))
-                  });
-                  
-                  // Check if message already exists (prevent duplicates)
-                  const messageExists = currentMessages.some(m => m.id === message.id);
-                  
-                  if (messageExists) {
-                    console.log('⚠️ [CHAT-REFINED] Message already exists, skipping:', message.id);
-                    return currentMessages; // Return unchanged
-                  }
-                  
-                  // Add new AI response
-                  const updatedMessages = [...currentMessages, message];
-                  
-                  console.log('💾 [CHAT-REFINED] Adding edited AI response to context:', {
-                    chatId,
-                    newMessageCount: updatedMessages.length,
-                    messages: updatedMessages.map(m => ({ id: m.id, role: m.role }))
-                  });
-                  
-                  return updatedMessages;
-                });
-                
-                console.log('✅ [CHAT-REFINED] Edited message AI response saved to context');
-              }
-            }
-          });
-        }, 300);
-        
-      } else {
-        // Original behavior for non-user messages or scenario updates
-        // Find and update the specific message
-        const updatedMessages = currentMessages.map(msg => 
-          msg.id === updatedMessage.id ? updatedMessage : msg
-        );
-        
-        // Save updated messages to database via ChatContext
-        await updateChatMessages(activeChatId, updatedMessages);
-      }
-      
+      await updateChatMessages(activeChatId, updatedMessages);
     } catch (error) {
       console.error('❌ [CHAT-REFINED] Failed to update message:', error);
       toast.error('Gagal menyimpan perubahan');
@@ -1474,63 +1340,9 @@ const ChatRefined = () => {
     return merged;
   }, [activeChatId, contextChats, pendingMessages]);
   
-  // Filter messages based on selected version for user messages with versions
+  // Get all messages to display
   const getDisplayedMessages = () => {
-    const displayed = [];
-    let skipNextAI = false;
-    
-    for (let i = 0; i < allMessages.length; i++) {
-      const msg = allMessages[i];
-      
-      // Skip AI message if flagged
-      if (msg.role === 'ai' && skipNextAI) {
-        skipNextAI = false;
-        continue;
-      }
-      
-      // If it's a user message with versions
-      if (msg.role === 'user' && msg.versions && msg.versions.length > 1) {
-        const currentVersionIndex = msg.currentVersionIndex ?? msg.versions.length - 1;
-        const currentVersion = msg.versions[currentVersionIndex];
-        const isLatestVersion = currentVersionIndex === msg.versions.length - 1;
-        
-        // Add user message (will display based on currentVersionIndex in ChatBubble)
-        displayed.push(msg);
-        
-        // Check if viewing an old version with saved output
-        if (!isLatestVersion && currentVersion.outputContent) {
-          // Create a virtual AI message from saved output
-          const virtualAIMessage = {
-            id: currentVersion.outputMessageId || `virtual-${msg.id}-${currentVersionIndex}`,
-            role: 'ai',
-            content: currentVersion.outputContent,
-            responseType: currentVersion.outputData?.responseType || 'gherkin',
-            qualityMetrics: currentVersion.outputData?.qualityMetrics,
-            performanceMetrics: currentVersion.outputData?.performanceMetrics,
-            usedReferences: currentVersion.outputData?.usedReferences || [],
-            metadata: currentVersion.outputData?.metadata || {},
-            timestamp: currentVersion.timestamp,
-            isVirtual: true // Flag to indicate this is a restored message
-          };
-          displayed.push(virtualAIMessage);
-          
-          // Skip the actual AI message in the array
-          skipNextAI = true;
-        } else if (isLatestVersion) {
-          // For latest version, show the actual AI response if it exists
-          if (i + 1 < allMessages.length && allMessages[i + 1].role === 'ai') {
-            displayed.push(allMessages[i + 1]);
-            i++; // Skip next iteration since we already added it
-          }
-          // If no AI response yet, loading indicator will be shown by isLoading
-        }
-      } else {
-        // Regular message without versions
-        displayed.push(msg);
-      }
-    }
-    
-    return displayed;
+    return allMessages;
   };
   
   const displayedMessages = getDisplayedMessages();
@@ -2148,7 +1960,6 @@ const ChatRefined = () => {
                     key={`${message.id || index}-${meteorPanelRefresh}`} 
                     message={message} 
                     activeChatId={activeChatId}
-                    onUpdateMessage={handleUpdateMessage}
                   />
                 ))}
                 {isChatLoading(activeChatId) && <TypingIndicator />}
