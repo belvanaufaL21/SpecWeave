@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useJira } from '../contexts/JiraContext';
 import { useChat as useChatContext } from '../contexts/ChatContext';
@@ -13,6 +13,7 @@ import JiraProjectManagementModal from '../components/modals/JiraProjectManageme
 import JiraSetupModal from '../components/modals/JiraSetupModal';
 import ReferenceLibraryWithAutoSettings from '../components/common/ReferenceLibraryWithAutoSettings';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import AvatarPicker from '../components/profile/AvatarPicker';
 
 const Profile = () => {
   const { user, profile, updateProfile, signOut } = useAuth();
@@ -29,8 +30,12 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
-    email: (user?.email && typeof user.email === 'string') ? user.email : ''
+    email: (user?.email && typeof user.email === 'string') ? user.email : '',
+    avatar: profile?.avatar || null
   });
+
+  // Avatar picker state
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
 
   // Modal states
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -80,18 +85,22 @@ const Profile = () => {
     try {
       setEditForm({
         name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
-        email: (user?.email && typeof user.email === 'string') ? user.email : ''
+        email: (user?.email && typeof user.email === 'string') ? user.email : '',
+        avatar: profile?.avatar || null
       });
       setIsEditing(true);
     } catch (error) {
-      setEditForm({ name: '', email: '' });
+      setEditForm({ name: '', email: '', avatar: null });
       setIsEditing(true);
     }
   };
 
   const handleSave = async () => {
     try {
-      const result = await updateProfile({ name: editForm.name });
+      const result = await updateProfile({ 
+        name: editForm.name,
+        avatar: editForm.avatar 
+      });
       if (result.error) {
         toast.error('Failed to update profile: ' + result.error.message);
       } else {
@@ -108,12 +117,18 @@ const Profile = () => {
       setIsEditing(false);
       setEditForm({
         name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
-        email: (user?.email && typeof user.email === 'string') ? user.email : ''
+        email: (user?.email && typeof user.email === 'string') ? user.email : '',
+        avatar: profile?.avatar || null
       });
     } catch (error) {
       setIsEditing(false);
-      setEditForm({ name: '', email: '' });
+      setEditForm({ name: '', email: '', avatar: null });
     }
+  };
+
+  const handleAvatarSelect = (emoji) => {
+    setEditForm({ ...editForm, avatar: emoji });
+    setIsAvatarPickerOpen(false);
   };
 
   const getInitials = (name, email) => {
@@ -480,154 +495,196 @@ const Profile = () => {
         `}
       >
         <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Profile</h1>
-              <p className="text-white/60">Lihat detail profile Anda disini</p>
-            </div>
-
-            {/* Profile Info Card */}
+          <div className="max-w-4xl mx-auto">
+            {/* Centered Profile Card */}
             <motion.div
-              className="bg-[#0a0a0f]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 mb-8"
+              className="bg-gradient-to-br from-[#0a0a0f]/80 via-[#0f0a14]/60 to-[#0a0a0f]/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="flex flex-col lg:flex-row gap-8">
-                {/* Profile Picture */}
-                <div className="flex flex-col items-center lg:items-start">
-                  <div className="w-32 h-32 rounded-3xl bg-[#160D14] border border-[#44273D] flex items-center justify-center text-[#FF7AD0] text-4xl font-bold shadow-xl">
-                    {getInitials(profile?.name, user?.email)}
+              {/* Decorative Header Background */}
+              <div className="relative h-32 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.15),transparent_50%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(236,72,153,0.15),transparent_50%)]" />
+              </div>
+
+              {/* Profile Content */}
+              <div className="relative px-8 pb-8 -mt-16">
+                {/* Avatar Section */}
+                <div className="flex flex-col items-center mb-8">
+                  <div className="relative group">
+                    {/* Avatar Display */}
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      className="w-32 h-32 rounded-3xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-4 border-[#0a0a0f] shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
+                      onClick={() => isEditing && setIsAvatarPickerOpen(true)}
+                    >
+                      {editForm.avatar || profile?.avatar ? (
+                        <span>{editForm.avatar || profile?.avatar}</span>
+                      ) : (
+                        <span className="text-4xl font-bold bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                          {getInitials(profile?.name, user?.email)}
+                        </span>
+                      )}
+                    </motion.div>
+
+                    {/* Edit Avatar Button (only visible when editing) */}
+                    {isEditing && (
+                      <motion.button
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        onClick={() => setIsAvatarPickerOpen(true)}
+                        className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-[#0a0a0f]"
+                      >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </motion.button>
+                    )}
                   </div>
+
+                  {/* User Role Badge */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full"
+                  >
+                    <span className="text-sm font-medium bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      Premium User
+                    </span>
+                  </motion.div>
                 </div>
 
                 {/* Form Fields */}
-                <div className="flex-1 space-y-6">
+                <div className="max-w-md mx-auto space-y-6">
                   {/* Name Field */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-white/70">Nama</label>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-2"
+                  >
+                    <label className="block text-sm font-medium text-white/70 px-1">
+                      Full Name
+                    </label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editForm.name}
                         onChange={(e) => setEditForm({...editForm, name: e.target.value})}
                         placeholder="Enter your full name"
-                        className="w-full px-4 py-3.5 bg-white/[0.05] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 transition-all"
+                        className="w-full px-5 py-4 bg-white/[0.05] border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
                       />
                     ) : (
-                      <div className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.05] rounded-xl text-white/90">
-                        {profile?.name || user?.email?.split('@')[0] || 'Nero Swallow Arthur'}
+                      <div className="w-full px-5 py-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl text-white/90 text-center text-lg font-medium">
+                        {profile?.name || user?.email?.split('@')[0] || 'User'}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
 
                   {/* Email Field */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-white/70">Email</label>
-                    <div className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.05] rounded-xl text-white/70">
-                      {user?.email || 'ner0swall0ww@gmail.com'}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="space-y-2"
+                  >
+                    <label className="block text-sm font-medium text-white/70 px-1">
+                      Email Address
+                    </label>
+                    <div className="w-full px-5 py-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl text-white/70 text-center flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      {user?.email || 'user@example.com'}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  {/* Edit/Save Buttons */}
-                  <div className="flex gap-3">
+                  {/* Action Buttons */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex gap-3 pt-4"
+                  >
                     {!isEditing ? (
                       <button
                         onClick={handleEdit}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/20 rounded-xl text-white transition-all"
+                        className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
                       >
+                        <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                         Edit Profile
                       </button>
                     ) : (
                       <>
                         <button
                           onClick={handleCancel}
-                          className="px-6 py-3 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-xl text-white/60 hover:text-white/80 transition-all"
+                          className="flex-1 px-6 py-4 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-2xl text-white/60 hover:text-white/80 font-medium transition-all"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleSave}
-                          className="px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/20 rounded-xl text-white transition-all"
+                          className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2"
                         >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
                           Save Changes
                         </button>
                       </>
                     )}
-                  </div>
+                  </motion.div>
                 </div>
+
+                {/* Stats Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-8 pt-8 border-t border-white/10"
+                >
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                        {contextHistory.length}
+                      </div>
+                      <div className="text-sm text-white/50 mt-1">Chats</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                        {Math.floor(Math.random() * 50) + 10}
+                      </div>
+                      <div className="text-sm text-white/50 mt-1">Projects</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                        {Math.floor(Math.random() * 100) + 50}
+                      </div>
+                      <div className="text-sm text-white/50 mt-1">Tasks</div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             </motion.div>
-
-            {/* Three Main Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Reference Library */}
-              <motion.div
-                onClick={() => setIsReferenceLibraryOpen(true)}
-                className="group bg-[#0a0a0f]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:border-blue-400/30 transition-all"
-                whileHover={{ scale: 1.02, y: -4 }}
-              >
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Reference Library</h3>
-                  <p className="text-sm text-gray-400">
-                    Kelola referensi scenario dan konfigurasi auto reference system
-                  </p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm text-blue-400">Konfigurasi & Telurusi</span>
-                    <svg className="w-5 h-5 text-blue-400 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Template */}
-              <motion.div
-                onClick={() => setIsTemplateModalOpen(true)}
-                className="group bg-[#0a0a0f]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:border-emerald-400/30 transition-all"
-                whileHover={{ scale: 1.02, y: -4 }}
-              >
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Template</h3>
-                  <p className="text-sm text-gray-400">
-                    Kelola referensi scenario dan konfigurasi auto reference system
-                  </p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm text-emerald-400">Telurusi Template</span>
-                    <svg className="w-5 h-5 text-emerald-400 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* JIRA Connection */}
-              <motion.div
-                onClick={handleJiraProjects}
-                className="group bg-[#0a0a0f]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:border-amber-400/30 transition-all"
-                whileHover={{ scale: 1.02, y: -4 }}
-              >
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">JIRA Connection</h3>
-                  <p className="text-sm text-gray-400">
-                    Kelola referensi scenario dan konfigurasi auto reference system
-                  </p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm text-amber-400">
-                      {hasJiraConnection ? 'TA-Belvanaufal' : 'Setup Connection'}
-                    </span>
-                    <svg className="w-5 h-5 text-amber-400 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
           </div>
         </div>
       </main>
 
       {/* MODALS */}
+      <AnimatePresence>
+        {isAvatarPickerOpen && (
+          <AvatarPicker
+            currentAvatar={editForm.avatar || profile?.avatar}
+            onSelect={handleAvatarSelect}
+            onClose={() => setIsAvatarPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <TemplateModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
