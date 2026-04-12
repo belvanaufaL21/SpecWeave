@@ -145,46 +145,30 @@ const Profile = () => {
   const getTotalScenarios = () => {
     let totalScenarios = 0;
     
-    console.log('🔍 [PROFILE] Calculating scenarios...');
-    
     // Iterate through all chats
     Object.entries(contextChats).forEach(([chatId, messages]) => {
       if (!Array.isArray(messages)) return;
       
-      // Log all messages in first chat to see what we have
-      if (chatId === '1776006327568') {
-        console.log(`🔍 [PROFILE] All messages in chat ${chatId}:`, messages);
-        messages.forEach((msg, idx) => {
-          console.log(`🔍 [PROFILE] Message ${idx} - role: ${msg.role}, content length: ${msg.content?.length || 0}`);
-        });
-      }
-      
-      // Count scenarios in assistant messages
-      messages.forEach((message, idx) => {
-        if (message.role === 'assistant' && message.content) {
-          console.log(`🔍 [PROFILE] Found assistant message in chat ${chatId}`);
-          
+      // Count scenarios in AI messages (role: 'ai')
+      messages.forEach((message) => {
+        if (message.role === 'ai' && message.content) {
           try {
             // Try to parse JSON content
             const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
-              console.log('🔍 [PROFILE] Found JSON match');
               const parsed = JSON.parse(jsonMatch[1]);
-              console.log('🔍 [PROFILE] Parsed JSON:', parsed);
               
               if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
-                console.log(`🔍 [PROFILE] Found ${parsed.scenarios.length} scenarios`);
                 totalScenarios += parsed.scenarios.length;
               }
             }
           } catch (e) {
-            console.log('🔍 [PROFILE] Parse error:', e.message);
+            // Not JSON or parsing failed, skip
           }
         }
       });
     });
     
-    console.log('🔍 [PROFILE] Total scenarios:', totalScenarios);
     return totalScenarios;
   };
 
