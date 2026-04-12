@@ -531,7 +531,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
 
           <div className="flex h-[65vh]">
             {/* Categories Sidebar */}
-            <div className="w-72 border-r border-white/5 p-6 flex flex-col max-h-full">
+            <div className="w-72 border-r border-white/5 p-6 flex flex-col max-h-full overflow-x-hidden">
               
               {/* Search */}
               <div className="relative mb-6 flex-shrink-0">
