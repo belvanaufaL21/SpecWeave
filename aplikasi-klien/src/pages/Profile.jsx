@@ -152,23 +152,36 @@ const Profile = () => {
       // Count scenarios in AI messages (role: 'ai')
       messages.forEach((message) => {
         if (message.role === 'ai' && message.content) {
+          // Log first AI message to see content format
+          if (totalScenarios === 0) {
+            console.log('🔍 [PROFILE] First AI message content:', message.content);
+          }
+          
           try {
             // Try to parse JSON content
             const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
+              console.log('🔍 [PROFILE] Found JSON match, parsing...');
               const parsed = JSON.parse(jsonMatch[1]);
+              console.log('🔍 [PROFILE] Parsed:', parsed);
               
               if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
+                console.log(`🔍 [PROFILE] Found ${parsed.scenarios.length} scenarios`);
                 totalScenarios += parsed.scenarios.length;
+              } else {
+                console.log('🔍 [PROFILE] No scenarios array found in parsed JSON');
               }
+            } else {
+              console.log('🔍 [PROFILE] No JSON match found in AI message');
             }
           } catch (e) {
-            // Not JSON or parsing failed, skip
+            console.log('🔍 [PROFILE] Parse error:', e.message);
           }
         }
       });
     });
     
+    console.log('🔍 [PROFILE] Total scenarios:', totalScenarios);
     return totalScenarios;
   };
 
