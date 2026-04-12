@@ -531,7 +531,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
 
           <div className="flex h-[65vh]">
             {/* Categories Sidebar */}
-            <div className="w-72 border-r border-white/5 p-6 flex flex-col max-h-full overflow-x-hidden">
+            <div className="w-80 border-r border-white/5 p-6 flex flex-col max-h-full overflow-x-hidden">
               
               {/* Search */}
               <div className="relative mb-6 flex-shrink-0">
@@ -648,7 +648,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   {filteredTemplates.map((template, index) => (
                     <motion.div
                       key={template.id}
