@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useJira } from '../contexts/JiraContext';
 import { useChat as useChatContext } from '../contexts/ChatContext';
@@ -562,10 +562,8 @@ const Profile = () => {
         <div className="flex-1 overflow-y-auto px-6 py-8 flex items-center justify-center">
           <div className="max-w-4xl mx-auto w-full">
             {/* Centered Profile Card */}
-            <motion.div
+            <div
               className="bg-transparent border border-white/5 rounded-3xl shadow-2xl overflow-hidden"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
             >
               {/* Decorative Header Background */}
               <div className="relative h-32 bg-[#09090A] overflow-hidden">
@@ -577,8 +575,7 @@ const Profile = () => {
                 <div className="flex flex-col items-center mb-8">
                   <div className="relative group">
                     {/* Avatar Display */}
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
+                    <div
                       className="w-32 h-32 rounded-3xl bg-[#160D14] border-4 border-white/5 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
                       onClick={() => isEditing && setIsAvatarPickerOpen(true)}
                     >
@@ -589,20 +586,18 @@ const Profile = () => {
                           {getInitials(profile?.name, user?.email)}
                         </span>
                       )}
-                    </motion.div>
+                    </div>
 
                     {/* Edit Avatar Button (only visible when editing) */}
                     {isEditing && (
-                      <motion.button
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
+                      <button
                         onClick={() => setIsAvatarPickerOpen(true)}
                         className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#09090A] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-white/5"
                       >
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
-                      </motion.button>
+                      </button>
                     )}
                   </div>
 
@@ -612,10 +607,7 @@ const Profile = () => {
                 {/* Form Fields */}
                 <div className="max-w-md mx-auto space-y-6">
                   {/* Name Field */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                  <div
                     className="space-y-2"
                   >
                     <label className="block text-sm font-medium text-white/70 px-1">
@@ -634,13 +626,10 @@ const Profile = () => {
                         {profile?.name || user?.email?.split('@')[0] || 'User'}
                       </div>
                     )}
-                  </motion.div>
+                  </div>
 
                   {/* Email Field */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
+                  <div
                     className="space-y-2"
                   >
                     <label className="block text-sm font-medium text-white/70 px-1">
@@ -652,13 +641,10 @@ const Profile = () => {
                       </svg>
                       {user?.email || 'user@example.com'}
                     </div>
-                  </motion.div>
+                  </div>
 
                   {/* Action Buttons */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                  <div
                     className="flex gap-3 pt-4"
                   >
                     {!isEditing ? (
@@ -690,14 +676,11 @@ const Profile = () => {
                         </button>
                       </>
                     )}
-                  </motion.div>
+                  </div>
                 </div>
 
                 {/* Stats Section */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
+                <div
                   className="mt-8 pt-8 border-t border-white/5"
                 >
                   <div className="grid grid-cols-3 gap-4">
@@ -720,9 +703,9 @@ const Profile = () => {
                       <div className="text-sm text-white/50 mt-1">Scenarios</div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </main>
