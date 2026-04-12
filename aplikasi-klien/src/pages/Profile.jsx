@@ -503,8 +503,7 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Decorative Header Background */}
-              <div className="relative h-32 bg-transparent overflow-hidden">
-                {/* Gradient effects removed for clean transparent look */}
+              <div className="relative h-32 bg-[#09090A] overflow-hidden">
               </div>
 
               {/* Profile Content */}
