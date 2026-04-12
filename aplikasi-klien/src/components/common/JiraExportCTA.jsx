@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { jiraService } from '../../services/jiraService';
 import { useJira } from '../../contexts/JiraContext';
@@ -9,9 +9,15 @@ import cleanLogger from '../../config/cleanLogging.js';
 const JiraExportCTA = ({ scenarioData }) => {
   const { epicContext, hasEpic, openEpicModal } = useJira();
   const [isExporting, setIsExporting] = useState(false);
+  const exportInProgressRef = useRef(false);
 
   // Handle export to JIRA
   const handleExportToJira = async () => {
+    // Prevent double-click and React StrictMode double render
+    if (exportInProgressRef.current || isExporting) {
+      console.log('🛑 [JIRA-EXPORT] Export already in progress, ignoring duplicate request');
+      return;
+    }
 
     if (!hasEpic || !epicContext) {
       toast.error('No Epic selected. Please select an Epic first.', {
@@ -55,7 +61,9 @@ const JiraExportCTA = ({ scenarioData }) => {
     const chatId = getCurrentChatId();
 
     try {
+      // Set both state and ref to prevent concurrent exports
       setIsExporting(true);
+      exportInProgressRef.current = true;
 
       const { epic, connection } = epicContext.epicData;
 
@@ -260,6 +268,10 @@ const JiraExportCTA = ({ scenarioData }) => {
       );
     } finally {
       setIsExporting(false);
+      // Add small delay before allowing next export to prevent rapid double-clicks
+      setTimeout(() => {
+        exportInProgressRef.current = false;
+      }, 1000);
     }
   };
 
