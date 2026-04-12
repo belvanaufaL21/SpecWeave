@@ -84,7 +84,7 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
   return (
     <div className="space-y-4">
       {/* Feature & User Story Header */}
-      <div className="border rounded-xl p-4" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+      <div className="border rounded-xl p-4" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
         <h4 className="text-sm font-semibold text-white mb-2">{currentUserStoryData.feature}</h4>
         <p className="text-xs text-gray-400 leading-relaxed">{currentUserStoryData.userStory}</p>
       </div>
@@ -121,12 +121,12 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
               className="border rounded-xl p-3 transition-all"
               style={{ 
                 borderColor: 'rgba(255, 255, 255, 0.05)',
-                backgroundColor: '#09090A'
+                backgroundColor: 'transparent'
               }}
             >
               <div className="flex items-center gap-3">
                 {/* Number Badge */}
-                <div className="w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center border flex-shrink-0" style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#C27AFF' }}>
+                <div className="w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center border flex-shrink-0" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#C27AFF' }}>
                   {index + 1}
                 </div>
 

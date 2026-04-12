@@ -25,13 +25,13 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
         <div
           className={`
             fixed inset-y-0 right-0 w-full z-50 flex flex-col
-            bg-[#09090A]
             transition-transform duration-300 cubic-bezier(0.2, 0, 0, 1)
             ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           `}
+          style={{ backgroundColor: '#09090A' }}
         >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: '#09090A' }}>
+              <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}>
                 <h3 className="text-sm font-semibold text-white">Testing Scenario</h3>
                 <button
                   onClick={toggleMinimize}
@@ -45,7 +45,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: '#09090A' }}>
+              <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: 'transparent' }}>
                 <TestedScenariosOverview activeChatId={activeChatId} chatMessages={chatMessages} />
               </div>
             </div>
@@ -64,7 +64,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
       style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: '#09090A' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: '#09090A' }}>
+      <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}>
         <h3 className="text-sm font-semibold text-white">Testing Scenario</h3>
         <button
           onClick={toggleMinimize}
@@ -79,7 +79,7 @@ const MinimizableTestingPanel = ({ activeChatId, chatMessages, isOpen, onToggle 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: '#09090A' }}>
+      <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: 'transparent' }}>
         <TestedScenariosOverview activeChatId={activeChatId} chatMessages={chatMessages} />
       </div>
     </div>
