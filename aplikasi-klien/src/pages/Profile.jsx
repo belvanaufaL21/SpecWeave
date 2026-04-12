@@ -141,6 +141,36 @@ const Profile = () => {
     setIsAvatarPickerOpen(false);
   };
 
+  // Calculate total scenarios from all chats
+  const getTotalScenarios = () => {
+    let totalScenarios = 0;
+    
+    // Iterate through all chats
+    Object.values(contextChats).forEach(messages => {
+      if (!Array.isArray(messages)) return;
+      
+      // Count scenarios in assistant messages
+      messages.forEach(message => {
+        if (message.role === 'assistant' && message.content) {
+          try {
+            // Try to parse JSON content
+            const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[1]);
+              if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
+                totalScenarios += parsed.scenarios.length;
+              }
+            }
+          } catch (e) {
+            // Not JSON or parsing failed, skip
+          }
+        }
+      });
+    });
+    
+    return totalScenarios;
+  };
+
   const getInitials = (name, email) => {
     try {
       if (name && typeof name === 'string' && name.trim()) {
@@ -675,7 +705,7 @@ const Profile = () => {
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-[#FF7AD0]">
-                        {Object.keys(testResults || {}).length}
+                        {getTotalScenarios()}
                       </div>
                       <div className="text-sm text-white/50 mt-1">Scenarios</div>
                     </div>
