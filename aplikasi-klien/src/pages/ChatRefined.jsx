@@ -1637,7 +1637,7 @@ const ChatRefined = () => {
                   onClick={handleToggleSidebar} 
                   className="text-gray-300 hover:text-white transition-colors p-2.5 rounded-xl border" 
                   style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#160D14'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   title="Open Sidebar"
                 >
@@ -1652,7 +1652,7 @@ const ChatRefined = () => {
                 onClick={handleTemplates}
                 className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 title={isMobile ? "Pilih Template" : undefined}
               >
@@ -1671,7 +1671,7 @@ const ChatRefined = () => {
                 onClick={handleJiraProjects}
                 className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#160D14'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 title={isMobile ? (hasConnection 
                   ? (() => {
@@ -1704,7 +1704,7 @@ const ChatRefined = () => {
                 onClick={handleEpicChange}
                 className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 title={isMobile ? (hasEpic && epicContext 
                   ? (epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Select Epic')
@@ -1732,7 +1732,7 @@ const ChatRefined = () => {
                   onClick={() => setIsTestingScenarioPanelOpen(!isTestingScenarioPanelOpen)}
                   className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
                   style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   title="Testing Scenario"
                 >
