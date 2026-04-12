@@ -145,29 +145,42 @@ const Profile = () => {
   const getTotalScenarios = () => {
     let totalScenarios = 0;
     
+    console.log('🔍 [PROFILE] Calculating scenarios...');
+    console.log('🔍 [PROFILE] contextChats:', contextChats);
+    console.log('🔍 [PROFILE] contextHistory:', contextHistory);
+    
     // Iterate through all chats
-    Object.values(contextChats).forEach(messages => {
+    Object.entries(contextChats).forEach(([chatId, messages]) => {
+      console.log(`🔍 [PROFILE] Chat ${chatId}:`, messages);
+      
       if (!Array.isArray(messages)) return;
       
       // Count scenarios in assistant messages
-      messages.forEach(message => {
+      messages.forEach((message, idx) => {
         if (message.role === 'assistant' && message.content) {
+          console.log(`🔍 [PROFILE] Assistant message ${idx}:`, message.content.substring(0, 200));
+          
           try {
             // Try to parse JSON content
             const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
+              console.log('🔍 [PROFILE] Found JSON match');
               const parsed = JSON.parse(jsonMatch[1]);
+              console.log('🔍 [PROFILE] Parsed JSON:', parsed);
+              
               if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
+                console.log(`🔍 [PROFILE] Found ${parsed.scenarios.length} scenarios`);
                 totalScenarios += parsed.scenarios.length;
               }
             }
           } catch (e) {
-            // Not JSON or parsing failed, skip
+            console.log('🔍 [PROFILE] Parse error:', e.message);
           }
         }
       });
     });
     
+    console.log('🔍 [PROFILE] Total scenarios:', totalScenarios);
     return totalScenarios;
   };
 
