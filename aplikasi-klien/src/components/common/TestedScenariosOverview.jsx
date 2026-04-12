@@ -84,7 +84,7 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
   return (
     <div className="space-y-4">
       {/* Feature & User Story Header */}
-      <div className="border rounded-xl p-4" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+      <div className="border rounded-xl p-4" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.05)', backgroundImage: 'none' }}>
         <h4 className="text-sm font-semibold text-white mb-2">{currentUserStoryData.feature}</h4>
         <p className="text-xs text-gray-400 leading-relaxed">{currentUserStoryData.userStory}</p>
       </div>
@@ -121,7 +121,8 @@ const TestedScenariosOverview = ({ activeChatId, chatMessages }) => {
               className="border rounded-xl p-3 transition-all"
               style={{ 
                 borderColor: 'rgba(255, 255, 255, 0.05)',
-                backgroundColor: 'transparent'
+                backgroundColor: 'transparent',
+                backgroundImage: 'none'
               }}
             >
               <div className="flex items-center gap-3">
