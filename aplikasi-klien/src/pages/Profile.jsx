@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useJira } from '../contexts/JiraContext';
 import { useChat as useChatContext } from '../contexts/ChatContext';
+import { useTestResults } from '../contexts/TestResultsContext';
 import toast from 'react-hot-toast';
 import Logo from '../components/common/Logo';
 import CompactChatItem from '../components/chat/CompactChatItem';
@@ -58,8 +59,12 @@ const Profile = () => {
     hasConnection: hasJiraConnection,
     isJiraSetupModalOpen,
     openJiraSetupModal,
-    closeJiraSetupModal
+    closeJiraSetupModal,
+    connections: jiraConnections
   } = useJira();
+
+  // Test Results Context
+  const { testResults } = useTestResults();
 
   // Sidebar state
   const [isHovered, setIsHovered] = useState(false);
@@ -664,15 +669,15 @@ const Profile = () => {
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-[#C27AFF]">
-                        {Math.floor(Math.random() * 50) + 10}
+                        {jiraConnections?.length || 0}
                       </div>
                       <div className="text-sm text-white/50 mt-1">Projects</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-[#FF7AD0]">
-                        {Math.floor(Math.random() * 100) + 50}
+                        {Object.keys(testResults || {}).length}
                       </div>
-                      <div className="text-sm text-white/50 mt-1">Tasks</div>
+                      <div className="text-sm text-white/50 mt-1">Scenarios</div>
                     </div>
                   </div>
                 </motion.div>
