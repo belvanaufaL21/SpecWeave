@@ -43,6 +43,9 @@ const Profile = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
 
+  // Logout confirmation state
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   // Modal states
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isReferenceLibraryOpen, setIsReferenceLibraryOpen] = useState(false);
@@ -196,12 +199,18 @@ const Profile = () => {
   };
 
   const handleSignOut = async () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await signOut();
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Sign out error:', error);
       navigate('/', { replace: true });
+    } finally {
+      setIsLogoutModalOpen(false);
     }
   };
 
@@ -648,15 +657,26 @@ const Profile = () => {
                     className="flex gap-3 pt-4"
                   >
                     {!isEditing ? (
-                      <button
-                        onClick={handleEdit}
-                        className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
-                      >
-                        <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                        Edit Profile
-                      </button>
+                      <>
+                        <button
+                          onClick={handleEdit}
+                          className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
+                        >
+                          <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          Edit Profile
+                        </button>
+                        <button
+                          onClick={handleSignOut}
+                          className="px-4 py-4 bg-transparent hover:bg-white/[0.03] border border-white/5 rounded-2xl text-white/60 hover:text-red-400 transition-all flex items-center justify-center"
+                          title="Logout"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
@@ -733,6 +753,17 @@ const Profile = () => {
         message="Apakah Anda yakin ingin menghapus chat ini? Semua pesan dan riwayat percakapan akan dihapus secara permanen."
         itemName={chatToDelete?.title}
         confirmText="Hapus"
+        cancelText="Batal"
+      />
+
+      {/* Logout Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={confirmLogout}
+        title="Logout"
+        message="Apakah Anda yakin ingin keluar dari aplikasi?"
+        confirmText="Logout"
         cancelText="Batal"
       />
 
