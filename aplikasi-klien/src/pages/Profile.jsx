@@ -498,12 +498,12 @@ const Profile = () => {
           <div className="max-w-4xl mx-auto">
             {/* Centered Profile Card */}
             <motion.div
-              className="bg-gradient-to-br from-[#0a0a0f]/80 via-[#0f0a14]/60 to-[#0a0a0f]/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+              className="bg-transparent border border-white/5 rounded-3xl shadow-2xl overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Decorative Header Background */}
-              <div className="relative h-32 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 overflow-hidden">
+              <div className="relative h-32 bg-transparent overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.15),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(236,72,153,0.15),transparent_50%)]" />
               </div>
@@ -516,7 +516,7 @@ const Profile = () => {
                     {/* Avatar Display */}
                     <motion.div
                       whileHover={{ scale: 1.05 }}
-                      className="w-32 h-32 rounded-3xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-4 border-[#0a0a0f] shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
+                      className="w-32 h-32 rounded-3xl bg-transparent border-4 border-white/5 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
                       onClick={() => isEditing && setIsAvatarPickerOpen(true)}
                     >
                       {editForm.avatar || profile?.avatar ? (
@@ -534,7 +534,7 @@ const Profile = () => {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         onClick={() => setIsAvatarPickerOpen(true)}
-                        className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-[#0a0a0f]"
+                        className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-white/5"
                       >
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -548,7 +548,7 @@ const Profile = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full"
+                    className="mt-4 px-4 py-1.5 bg-transparent border border-white/5 rounded-full"
                   >
                     <span className="text-sm font-medium bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                       Premium User
@@ -574,10 +574,10 @@ const Profile = () => {
                         value={editForm.name}
                         onChange={(e) => setEditForm({...editForm, name: e.target.value})}
                         placeholder="Enter your full name"
-                        className="w-full px-5 py-4 bg-white/[0.05] border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.08] transition-all"
+                        className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 transition-all"
                       />
                     ) : (
-                      <div className="w-full px-5 py-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl text-white/90 text-center text-lg font-medium">
+                      <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/90 text-center text-lg font-medium">
                         {profile?.name || user?.email?.split('@')[0] || 'User'}
                       </div>
                     )}
@@ -593,7 +593,7 @@ const Profile = () => {
                     <label className="block text-sm font-medium text-white/70 px-1">
                       Email Address
                     </label>
-                    <div className="w-full px-5 py-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl text-white/70 text-center flex items-center justify-center gap-2">
+                    <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/70 text-center flex items-center justify-center gap-2">
                       <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -622,7 +622,7 @@ const Profile = () => {
                       <>
                         <button
                           onClick={handleCancel}
-                          className="flex-1 px-6 py-4 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-2xl text-white/60 hover:text-white/80 font-medium transition-all"
+                          className="flex-1 px-6 py-4 bg-transparent hover:bg-white/[0.03] border border-white/5 rounded-2xl text-white/60 hover:text-white/80 font-medium transition-all"
                         >
                           Cancel
                         </button>
@@ -645,7 +645,7 @@ const Profile = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-8 pt-8 border-t border-white/10"
+                  className="mt-8 pt-8 border-t border-white/5"
                 >
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
