@@ -503,7 +503,7 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Decorative Header Background */}
-              <div className="relative h-32 bg-transparent overflow-hidden">
+              <div className="relative h-32 bg-[#09090A] overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.15),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(236,72,153,0.15),transparent_50%)]" />
               </div>
@@ -516,7 +516,7 @@ const Profile = () => {
                     {/* Avatar Display */}
                     <motion.div
                       whileHover={{ scale: 1.05 }}
-                      className="w-32 h-32 rounded-3xl bg-transparent border-4 border-white/5 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
+                      className="w-32 h-32 rounded-3xl bg-[#160D14] border-4 border-white/5 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
                       onClick={() => isEditing && setIsAvatarPickerOpen(true)}
                     >
                       {editForm.avatar || profile?.avatar ? (
@@ -611,7 +611,7 @@ const Profile = () => {
                     {!isEditing ? (
                       <button
                         onClick={handleEdit}
-                        className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
+                        className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#FF7AD0] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
                       >
                         <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
