@@ -14,7 +14,7 @@ import JiraSetupModal from '../components/modals/JiraSetupModal';
 import ReferenceLibraryWithAutoSettings from '../components/common/ReferenceLibraryWithAutoSettings';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import AvatarPicker from '../components/profile/AvatarPicker';
-import ConfirmationModal from '../components/common/ConfirmationModal';
+import DeleteConfirmationModal from '../components/modals/DeleteConfirmationModal';
 
 const Profile = () => {
   const { user, profile, updateProfile, signOut } = useAuth();
@@ -39,11 +39,8 @@ const Profile = () => {
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
 
   // Delete confirmation state
-  const [deleteConfirmation, setDeleteConfirmation] = useState({
-    isOpen: false,
-    chatId: null,
-    chatTitle: ''
-  });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState(null);
 
   // Modal states
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -206,23 +203,22 @@ const Profile = () => {
 
   const handleDeleteChat = async (chatId) => {
     const chat = contextHistory.find(c => c.id.toString() === chatId.toString());
-    setDeleteConfirmation({
-      isOpen: true,
-      chatId: chatId,
-      chatTitle: chat?.title || 'this chat'
-    });
-    setDropdownChatId(null);
+    setChatToDelete({ id: chatId, title: chat?.title || 'Untitled Chat' });
+    setIsDeleteModalOpen(true);
   };
 
   const confirmDeleteChat = async () => {
-    if (deleteConfirmation.chatId) {
-      await contextDeleteChat(deleteConfirmation.chatId);
-      setDeleteConfirmation({ isOpen: false, chatId: null, chatTitle: '' });
+    if (!chatToDelete) return;
+    
+    try {
+      const chatIdStr = chatToDelete.id.toString();
+      await contextDeleteChat(chatIdStr);
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setChatToDelete(null);
     }
-  };
-
-  const cancelDeleteChat = () => {
-    setDeleteConfirmation({ isOpen: false, chatId: null, chatTitle: '' });
   };
 
   // Close dropdown when sidebar is closed or user clicks outside
@@ -698,16 +694,18 @@ const Profile = () => {
       </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={cancelDeleteChat}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setChatToDelete(null);
+        }}
         onConfirm={confirmDeleteChat}
         title="Delete Chat"
-        message={`Are you sure you want to delete "${deleteConfirmation.chatTitle}"?`}
-        details="This action cannot be undone. All messages in this chat will be permanently deleted."
+        itemName={chatToDelete?.title}
+        message="Are you sure you want to delete this chat? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
-        type="danger"
       />
 
       <TemplateModal
