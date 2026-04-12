@@ -151,15 +151,18 @@ const Profile = () => {
     Object.entries(contextChats).forEach(([chatId, messages]) => {
       if (!Array.isArray(messages)) return;
       
+      // Log all messages in first chat to see what we have
+      if (chatId === '1776006327568') {
+        console.log(`🔍 [PROFILE] All messages in chat ${chatId}:`, messages);
+        messages.forEach((msg, idx) => {
+          console.log(`🔍 [PROFILE] Message ${idx} - role: ${msg.role}, content length: ${msg.content?.length || 0}`);
+        });
+      }
+      
       // Count scenarios in assistant messages
       messages.forEach((message, idx) => {
-        // Log first message of first chat to see structure
-        if (chatId === '1776006327568' && idx === 0) {
-          console.log('🔍 [PROFILE] Sample message structure:', message);
-        }
-        
         if (message.role === 'assistant' && message.content) {
-          console.log(`🔍 [PROFILE] Assistant message in chat ${chatId}:`, message.content.substring(0, 200));
+          console.log(`🔍 [PROFILE] Found assistant message in chat ${chatId}`);
           
           try {
             // Try to parse JSON content
