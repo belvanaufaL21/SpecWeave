@@ -1726,23 +1726,22 @@ const ChatRefined = () => {
                 {!isMobile && <div className={`w-2 h-2 rounded-full ${hasEpic && epicContext ? 'bg-purple-500' : 'bg-red-500'}`}></div>}
               </button>
 
-              {/* Testing Scenario Button */}
-              <button
-                onClick={() => setIsTestingScenarioPanelOpen(!isTestingScenarioPanelOpen)}
-                className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
-                style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                title={isMobile ? "Testing Scenario" : undefined}
-              >
-                {isTestingScenarioPanelOpen && !isMobile ? (
-                  <span className="text-sm">Testing Scenario</span>
-                ) : (
+              {/* Testing Scenario Button - Show only when panel is closed on desktop */}
+              {(isMobile || !isTestingScenarioPanelOpen) && (
+                <button
+                  onClick={() => setIsTestingScenarioPanelOpen(!isTestingScenarioPanelOpen)}
+                  className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  title={isMobile ? "Testing Scenario" : undefined}
+                >
                   <svg className="w-4 h-4" style={{ color: '#C27AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
-                )}
-              </button>
+                  {!isMobile && <span className="text-sm">Testing Scenario</span>}
+                </button>
+              )}
             </div>
           </div>
         </div>
