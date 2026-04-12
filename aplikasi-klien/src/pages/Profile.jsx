@@ -504,8 +504,7 @@ const Profile = () => {
             >
               {/* Decorative Header Background */}
               <div className="relative h-32 bg-transparent overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.15),transparent_50%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(236,72,153,0.15),transparent_50%)]" />
+                {/* Gradient effects removed for clean transparent look */}
               </div>
 
               {/* Profile Content */}
