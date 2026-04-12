@@ -549,7 +549,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
 
               {/* Category List */}
               <div 
-                className="space-y-2 overflow-y-auto flex-1 custom-scrollbar"
+                className="space-y-2 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar"
               >
                 {templatesLoading ? (
                   // Loading skeleton for categories
@@ -575,7 +575,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                           : 'text-white/30 hover:text-white/50 border border-transparent'
                       }`}
                       style={{ WebkitTapHighlightColor: 'transparent' }}
-                      whileHover={{ x: 2 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="flex items-center gap-3 min-w-0">
