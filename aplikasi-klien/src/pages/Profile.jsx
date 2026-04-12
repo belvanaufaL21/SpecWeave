@@ -701,11 +701,11 @@ const Profile = () => {
           setChatToDelete(null);
         }}
         onConfirm={confirmDeleteChat}
-        title="Delete Chat"
+        title="Hapus chat"
+        message="Apakah Anda yakin ingin menghapus chat ini? Semua pesan dan riwayat percakapan akan dihapus secara permanen."
         itemName={chatToDelete?.title}
-        message="Are you sure you want to delete this chat? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmText="Hapus"
+        cancelText="Batal"
       />
 
       <TemplateModal
