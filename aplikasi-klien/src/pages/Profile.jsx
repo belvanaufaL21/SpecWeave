@@ -565,7 +565,7 @@ const Profile = () => {
                         className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 transition-all"
                       />
                     ) : (
-                      <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/90 text-center text-lg font-medium">
+                      <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/90 text-lg font-medium">
                         {profile?.name || user?.email?.split('@')[0] || 'User'}
                       </div>
                     )}
@@ -581,7 +581,7 @@ const Profile = () => {
                     <label className="block text-sm font-medium text-white/70 px-1">
                       Email Address
                     </label>
-                    <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/70 text-center flex items-center justify-center gap-2">
+                    <div className="w-full px-5 py-4 bg-transparent border border-white/5 rounded-2xl text-white/70 flex items-center gap-2">
                       <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -599,7 +599,7 @@ const Profile = () => {
                     {!isEditing ? (
                       <button
                         onClick={handleEdit}
-                        className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#FF7AD0] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
+                        className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2 group"
                       >
                         <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -616,7 +616,7 @@ const Profile = () => {
                         </button>
                         <button
                           onClick={handleSave}
-                          className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2"
+                          className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
