@@ -152,36 +152,32 @@ const Profile = () => {
       // Count scenarios in AI messages (role: 'ai')
       messages.forEach((message) => {
         if (message.role === 'ai' && message.content) {
-          // Log first AI message to see content format
-          if (totalScenarios === 0) {
-            console.log('🔍 [PROFILE] First AI message content:', message.content);
-          }
-          
           try {
-            // Try to parse JSON content
-            const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch) {
-              console.log('🔍 [PROFILE] Found JSON match, parsing...');
-              const parsed = JSON.parse(jsonMatch[1]);
-              console.log('🔍 [PROFILE] Parsed:', parsed);
-              
-              if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
-                console.log(`🔍 [PROFILE] Found ${parsed.scenarios.length} scenarios`);
-                totalScenarios += parsed.scenarios.length;
-              } else {
-                console.log('🔍 [PROFILE] No scenarios array found in parsed JSON');
-              }
-            } else {
-              console.log('🔍 [PROFILE] No JSON match found in AI message');
+            // Try to parse as direct JSON first
+            const parsed = JSON.parse(message.content);
+            
+            if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
+              totalScenarios += parsed.scenarios.length;
             }
           } catch (e) {
-            console.log('🔍 [PROFILE] Parse error:', e.message);
+            // If direct parse fails, try to find JSON in markdown code block
+            try {
+              const jsonMatch = message.content.match(/```json\s*([\s\S]*?)\s*```/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[1]);
+                
+                if (parsed.scenarios && Array.isArray(parsed.scenarios)) {
+                  totalScenarios += parsed.scenarios.length;
+                }
+              }
+            } catch (e2) {
+              // Not JSON or parsing failed, skip
+            }
           }
         }
       });
     });
     
-    console.log('🔍 [PROFILE] Total scenarios:', totalScenarios);
     return totalScenarios;
   };
 
