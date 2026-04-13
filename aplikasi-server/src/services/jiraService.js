@@ -1256,12 +1256,15 @@ class JiraService {
    * Create complete JIRA story with scenarios and development tasks
    */
   async createCompleteStory(connectionId, userId, epicId, storyData, scenarios, developmentTasks) {
+    const requestId = `complete-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
-      cleanLogger.info('JIRA-SERVICE', 'Creating complete story', {
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Creating complete story`, {
         connectionId,
         epicId,
         scenarioCount: scenarios?.length || 0,
-        taskCount: developmentTasks?.length || 0
+        taskCount: developmentTasks?.length || 0,
+        storyTitle: storyData?.title || storyData?.feature
       });
 
       // Get connection details
@@ -1283,9 +1286,10 @@ class JiraService {
       };
 
       // Create the user story
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Calling createUserStory`);
       const userStoryResult = await this.createUserStory(connectionId, epicId, completeStoryData);
 
-      cleanLogger.info('JIRA-SERVICE', 'User story created', {
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] User story created`, {
         userStoryId: userStoryResult.id,
         userStoryKey: userStoryResult.key
       });
@@ -1294,14 +1298,15 @@ class JiraService {
       let subtasks = [];
       if (developmentTasks && developmentTasks.length > 0) {
         try {
+          cleanLogger.info('JIRA-SERVICE', `[${requestId}] Creating ${developmentTasks.length} subtasks`);
           const subtasksResult = await this.createSubtasks(connectionId, userStoryResult.id, developmentTasks);
           subtasks = subtasksResult || [];
           
-          cleanLogger.info('JIRA-SERVICE', 'Subtasks created', {
+          cleanLogger.info('JIRA-SERVICE', `[${requestId}] Subtasks created`, {
             count: subtasks.length
           });
         } catch (error) {
-          cleanLogger.error('JIRA-SERVICE', 'Failed to create subtasks', {
+          cleanLogger.error('JIRA-SERVICE', `[${requestId}] Failed to create subtasks`, {
             error: error.message
           });
           // Continue even if subtasks fail
@@ -1311,6 +1316,8 @@ class JiraService {
       // Build JIRA URL for the created story
       const issueUrl = `${connection.jira_url}/browse/${userStoryResult.key}`;
 
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Complete story creation finished successfully`);
+      
       return {
         success: true,
         data: {
@@ -1324,7 +1331,7 @@ class JiraService {
         }
       };
     } catch (error) {
-      cleanLogger.error('JIRA-SERVICE', 'Failed to create complete story', {
+      cleanLogger.error('JIRA-SERVICE', `[${requestId}] Failed to create complete story`, {
         error: error.message,
         connectionId,
         epicId

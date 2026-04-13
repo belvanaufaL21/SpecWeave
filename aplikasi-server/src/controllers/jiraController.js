@@ -528,7 +528,11 @@ export const createSubtasks = async (req, res) => {
  * POST /api/jira/connections/:connectionId/epics/:epicId/complete-story
  */
 export const createCompleteStory = async (req, res) => {
+  const requestId = `ctrl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
+    cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Received createCompleteStory request`);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -549,9 +553,10 @@ export const createCompleteStory = async (req, res) => {
     const { connectionId, epicId } = req.params;
     const { storyData, scenarios, developmentTasks } = req.body;
 
-    cleanLogger.info('JIRA-CONTROLLER', 'Creating complete story', {
+    cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Creating complete story`, {
       connectionId,
       epicId,
+      storyTitle: storyData?.title || storyData?.feature,
       scenarioCount: scenarios?.length || 0,
       taskCount: developmentTasks?.length || 0
     });
@@ -567,19 +572,27 @@ export const createCompleteStory = async (req, res) => {
     );
 
     if (result.success) {
+      cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Story created successfully`, {
+        issueKey: result.data?.userStory?.key
+      });
+      
       return res.status(201).json({
         success: true,
         data: result.data,
         message: `User story created successfully with ${scenarios?.length || 0} scenarios and ${developmentTasks?.length || 0} development tasks`
       });
     } else {
+      cleanLogger.error('JIRA-CONTROLLER', `[${requestId}] Story creation failed`, {
+        error: result.error
+      });
+      
       return res.status(400).json({
         success: false,
         error: result.error
       });
     }
   } catch (error) {
-    cleanLogger.error('JIRA-CONTROLLER', 'Create complete story error', { error: error.message });
+    cleanLogger.error('JIRA-CONTROLLER', `[${requestId}] Create complete story error`, { error: error.message });
     return res.status(500).json({
       success: false,
       error: 'Failed to create complete story'
