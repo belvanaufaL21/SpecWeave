@@ -10,15 +10,32 @@ const JiraExportCTA = ({ scenarioData }) => {
   const { epicContext, hasEpic, openEpicModal } = useJira();
   const [isExporting, setIsExporting] = useState(false);
   const exportInProgressRef = useRef(false);
+  const scenarioDataRef = useRef(null);
+
+  // Snapshot scenarioData on mount/update to prevent closure issues
+  scenarioDataRef.current = scenarioData;
 
   // Handle export to JIRA
   const handleExportToJira = async () => {
+    // Generate unique export ID for tracking
+    const exportId = `export-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     // Prevent double-click and React StrictMode double render
     if (exportInProgressRef.current || isExporting) {
-      console.log('🛑 [JIRA-EXPORT] Export already in progress, ignoring duplicate request');
+      console.log(`🛑 [JIRA-EXPORT][${exportId}] Export already in progress, ignoring duplicate request`);
       return;
     }
 
+    // Use snapshot of scenarioData to prevent closure issues
+    const dataToExport = scenarioDataRef.current;
+    
+    // Log data being exported for debugging
+    console.log(`📤 [JIRA-EXPORT][${exportId}] Starting export with data:`, {
+      feature: dataToExport?.feature,
+      userStory: dataToExport?.userStory?.substring(0, 50),
+      scenarioCount: dataToExport?.scenarios?.length,
+      timestamp: new Date().toISOString()
+    });
     if (!hasEpic || !epicContext) {
       toast.error('No Epic selected. Please select an Epic first.', {
         duration: 4000,
@@ -57,14 +74,16 @@ const JiraExportCTA = ({ scenarioData }) => {
       return;
     }
 
-    let exportId = null;
-    const chatId = getCurrentChatId();
+    let chatId = null;
 
     try {
       // Set both state and ref to prevent concurrent exports
       setIsExporting(true);
       exportInProgressRef.current = true;
+      
+      console.log(`🔒 [JIRA-EXPORT][${exportId}] Export locked`);
 
+      chatId = getCurrentChatId();
       const { epic, connection } = epicContext.epicData;
 
       // Validate required data
@@ -76,13 +95,13 @@ const JiraExportCTA = ({ scenarioData }) => {
         throw new Error('Invalid connection data: Connection ID is missing');
       }
       
-      // Validate scenario data
-      if (!scenarioData.feature && !scenarioData.userStory) {
+      // Validate scenario data - use snapshot
+      if (!dataToExport.feature && !dataToExport.userStory) {
         throw new Error('Story title is required (feature or userStory)');
       }
 
       // Prepare scenarios for acceptance criteria table
-      const scenarios = scenarioData.scenarios ? scenarioData.scenarios.map((scenario, index) => {
+      const scenarios = dataToExport.scenarios ? dataToExport.scenarios.map((scenario, index) => {
         
         // Ensure each step is an array and filter out empty steps
         const given = scenario.given ? 
@@ -101,24 +120,25 @@ const JiraExportCTA = ({ scenarioData }) => {
       }) : [];
 
       // Prepare development tasks
-      const developmentTasks = scenarioData.developmentTasks || [];
+      const developmentTasks = dataToExport.developmentTasks || [];
       
       // Prepare story data for JIRA (include scenarios for acceptance criteria table)
       const storyData = {
-        title: scenarioData.feature || scenarioData.userStory || 'Generated User Story',
-        userStory: scenarioData.userStory || scenarioData.feature || 'User Story',
-        description: scenarioData.description || scenarioData.feature || 'Generated from scenario data',
-        featureName: scenarioData.feature || 'Feature',
+        title: dataToExport.feature || dataToExport.userStory || 'Generated User Story',
+        userStory: dataToExport.userStory || dataToExport.feature || 'User Story',
+        description: dataToExport.description || dataToExport.feature || 'Generated from scenario data',
+        featureName: dataToExport.feature || 'Feature',
         scenarios: scenarios, // Include scenarios in storyData for the acceptance criteria table
         epic: epic,
         connection: connection
       };
       
       // Debug: Log export data
-      console.log('📋 [JIRA-EXPORT] Exporting to JIRA:', {
+      console.log(`📋 [JIRA-EXPORT][${exportId}] Sending to API:`, {
         scenarioCount: scenarios.length,
         taskCount: developmentTasks.length,
-        storyTitle: storyData.title
+        storyTitle: storyData.title,
+        chatId: chatId
       });
       
       // Create user story with scenarios and development tasks
@@ -131,6 +151,7 @@ const JiraExportCTA = ({ scenarioData }) => {
       );
 
       if (result.success) {
+        console.log(`✅ [JIRA-EXPORT][${exportId}] Export successful`);
         const issueKey = result.data.userStory?.key || result.data.issueKey || 'Story';
         const issueUrl = result.data.userStory?.url || result.data.issueUrl;
         const epicName = epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Epic';
@@ -211,7 +232,7 @@ const JiraExportCTA = ({ scenarioData }) => {
         }
       }
     } catch (error) {
-      console.error('Export error:', error);
+      console.error(`❌ [JIRA-EXPORT][${exportId}] Export error:`, error);
       
       let errorMessage = 'Failed to export to JIRA';
       
@@ -267,10 +288,12 @@ const JiraExportCTA = ({ scenarioData }) => {
         }
       );
     } finally {
+      console.log(`🔓 [JIRA-EXPORT][${exportId}] Export unlocking`);
       setIsExporting(false);
       // Add small delay before allowing next export to prevent rapid double-clicks
       setTimeout(() => {
         exportInProgressRef.current = false;
+        console.log(`✓ [JIRA-EXPORT][${exportId}] Export fully unlocked`);
       }, 1000);
     }
   };
