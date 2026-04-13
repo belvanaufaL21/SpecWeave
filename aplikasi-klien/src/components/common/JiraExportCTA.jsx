@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { jiraService } from '../../services/jiraService';
 import { useJira } from '../../contexts/JiraContext';
@@ -12,9 +12,22 @@ const JiraExportCTA = ({ scenarioData }) => {
   const exportInProgressRef = useRef(false);
   const scenarioDataRef = useRef(null);
   const componentIdRef = useRef(`cta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const isMountedRef = useRef(false);
 
   // Snapshot scenarioData on mount/update to prevent closure issues
   scenarioDataRef.current = scenarioData;
+  
+  // Track mount state to prevent StrictMode double execution
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      console.log(`🟦 [JIRA-CTA][${componentIdRef.current}] Component mounted`);
+    }
+    
+    return () => {
+      console.log(`🟥 [JIRA-CTA][${componentIdRef.current}] Component unmounting`);
+    };
+  }, []);
   
   // Log component render for debugging
   console.log(`🔵 [JIRA-CTA][${componentIdRef.current}] Component rendered with:`, {
@@ -22,7 +35,8 @@ const JiraExportCTA = ({ scenarioData }) => {
     feature: scenarioData?.feature?.substring(0, 30),
     userStory: scenarioData?.userStory?.substring(0, 30),
     scenarioCount: scenarioData?.scenarios?.length,
-    hasDevelopmentTasks: !!scenarioData?.developmentTasks
+    hasDevelopmentTasks: !!scenarioData?.developmentTasks,
+    isMounted: isMountedRef.current
   });
 
   // Handle export to JIRA
@@ -30,11 +44,28 @@ const JiraExportCTA = ({ scenarioData }) => {
     // Generate unique export ID for tracking
     const exportId = `export-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Prevent double-click and React StrictMode double render
-    if (exportInProgressRef.current || isExporting) {
-      console.log(`🛑 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Export already in progress, ignoring duplicate request`);
+    console.log(`🔷 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Export button clicked`);
+    console.log(`🔷 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Current state:`, {
+      isExporting,
+      exportInProgress: exportInProgressRef.current,
+      isMounted: isMountedRef.current
+    });
+    
+    // CRITICAL: Prevent double-click and React StrictMode double render
+    // Check BOTH state and ref to catch all cases
+    if (exportInProgressRef.current) {
+      console.log(`🛑 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] BLOCKED: exportInProgressRef is true`);
       return;
     }
+    
+    if (isExporting) {
+      console.log(`🛑 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] BLOCKED: isExporting is true`);
+      return;
+    }
+    
+    // Set lock IMMEDIATELY before any async operations
+    exportInProgressRef.current = true;
+    console.log(`🔒 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Lock acquired IMMEDIATELY`);
 
     // Use snapshot of scenarioData to prevent closure issues
     const dataToExport = scenarioDataRef.current;
@@ -87,11 +118,10 @@ const JiraExportCTA = ({ scenarioData }) => {
     let chatId = null;
 
     try {
-      // Set both state and ref to prevent concurrent exports
+      // Set state AFTER ref lock to ensure ref is checked first
       setIsExporting(true);
-      exportInProgressRef.current = true;
       
-      console.log(`🔒 [JIRA-EXPORT][${exportId}] Export locked`);
+      console.log(`🔒 [JIRA-EXPORT][${exportId}] State set to exporting`);
 
       chatId = getCurrentChatId();
       const { epic, connection } = epicContext.epicData;
@@ -300,11 +330,11 @@ const JiraExportCTA = ({ scenarioData }) => {
     } finally {
       console.log(`🔓 [JIRA-EXPORT][${exportId}] Export unlocking`);
       setIsExporting(false);
-      // Add small delay before allowing next export to prevent rapid double-clicks
+      // Keep ref locked for longer to prevent rapid re-exports
       setTimeout(() => {
         exportInProgressRef.current = false;
-        console.log(`✓ [JIRA-EXPORT][${exportId}] Export fully unlocked`);
-      }, 1000);
+        console.log(`✓ [JIRA-EXPORT][${exportId}] Export fully unlocked after delay`);
+      }, 2000); // Increased from 1000ms to 2000ms
     }
   };
 

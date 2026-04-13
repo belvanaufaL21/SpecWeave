@@ -530,6 +530,10 @@ export const createSubtasks = async (req, res) => {
 export const createCompleteStory = async (req, res) => {
   const requestId = `ctrl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
+  // Force console log for production debugging
+  console.log(`🔴 [JIRA-CONTROLLER][${requestId}] ===== RECEIVED REQUEST =====`);
+  console.log(`🔴 [JIRA-CONTROLLER][${requestId}] Timestamp: ${new Date().toISOString()}`);
+  
   try {
     cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Received createCompleteStory request`);
     
@@ -553,6 +557,10 @@ export const createCompleteStory = async (req, res) => {
     const { connectionId, epicId } = req.params;
     const { storyData, scenarios, developmentTasks } = req.body;
 
+    console.log(`🔴 [JIRA-CONTROLLER][${requestId}] Story Title: ${storyData?.title || storyData?.feature}`);
+    console.log(`🔴 [JIRA-CONTROLLER][${requestId}] Scenarios: ${scenarios?.length || 0}`);
+    console.log(`🔴 [JIRA-CONTROLLER][${requestId}] Tasks: ${developmentTasks?.length || 0}`);
+
     cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Creating complete story`, {
       connectionId,
       epicId,
@@ -572,6 +580,9 @@ export const createCompleteStory = async (req, res) => {
     );
 
     if (result.success) {
+      console.log(`🔴 [JIRA-CONTROLLER][${requestId}] ===== SUCCESS =====`);
+      console.log(`🔴 [JIRA-CONTROLLER][${requestId}] Issue Key: ${result.data?.userStory?.key}`);
+      
       cleanLogger.info('JIRA-CONTROLLER', `[${requestId}] Story created successfully`, {
         issueKey: result.data?.userStory?.key
       });

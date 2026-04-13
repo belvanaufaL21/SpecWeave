@@ -536,6 +536,10 @@ class JiraService {
     // Generate unique request ID for tracking
     const requestId = `story-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // Force console log for production debugging
+    console.log(`🟢 [JIRA-SERVICE][${requestId}] ===== CREATE USER STORY =====`);
+    console.log(`🟢 [JIRA-SERVICE][${requestId}] Title: ${storyData.title || storyData.feature || 'N/A'}`);
+    
     try {
       cleanLogger.info('JIRA-SERVICE', `[${requestId}] Starting createUserStory`, {
         connectionId,
@@ -584,6 +588,8 @@ class JiraService {
 
       cleanLogger.info('JIRA-SERVICE', `[${requestId}] Sending POST request to JIRA API`);
       
+      console.log(`🟢 [JIRA-SERVICE][${requestId}] Posting to JIRA API...`);
+      
       const response = await axios.post(
         `${connection.jira_url}/rest/api/3/issue`,
         issueData,
@@ -597,6 +603,8 @@ class JiraService {
         }
       );
 
+      console.log(`🟢 [JIRA-SERVICE][${requestId}] JIRA Response: ${response.data.key}`);
+      
       cleanLogger.info('JIRA-SERVICE', `[${requestId}] Story created successfully`, {
         issueId: response.data.id,
         issueKey: response.data.key
