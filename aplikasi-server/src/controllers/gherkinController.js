@@ -177,6 +177,10 @@ export const generateGherkin = async (req, res, next) => {
 
             // DISABLED: Auto-export to JIRA removed - users should use manual export button
             // This was causing duplicate stories (one auto, one manual)
+            
+            // JIRA integration disabled - users should use manual export button
+            // The following code is commented out to prevent auto-export
+            
             /*
             // Create user story in JIRA
             jiraUserStory = await jiraService.createUserStory(
@@ -201,11 +205,6 @@ export const generateGherkin = async (req, res, next) => {
               );
 
               // Log each scenario creation
-            */
-
-            // JIRA integration disabled - users should use manual export button
-            // The following code is commented out to prevent auto-export
-            /*
               jiraSubtasks.forEach((subtask, index) => {
                 cleanLogger.info('GHERKIN-SCENARIO', `Scenario ${index + 1} created`, {
                   key: subtask.key,
@@ -219,6 +218,7 @@ export const generateGherkin = async (req, res, next) => {
               jira_user_story_id: jiraUserStory.id,
               jira_subtask_ids: jiraSubtasks.map(task => task.id)
             });
+            */
 
           } catch (jiraError) {
             cleanLogger.warn('JIRA-INTEGRATION', 'Failed to create JIRA items', {
@@ -227,7 +227,6 @@ export const generateGherkin = async (req, res, next) => {
             // Continue without failing the request - JIRA integration is optional
           }
         }
-        */
 
         // Log evaluation metrics if METEOR was used
         if (meteorMetrics && savedScenario) {
