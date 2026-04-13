@@ -11,9 +11,19 @@ const JiraExportCTA = ({ scenarioData }) => {
   const [isExporting, setIsExporting] = useState(false);
   const exportInProgressRef = useRef(false);
   const scenarioDataRef = useRef(null);
+  const componentIdRef = useRef(`cta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   // Snapshot scenarioData on mount/update to prevent closure issues
   scenarioDataRef.current = scenarioData;
+  
+  // Log component render for debugging
+  console.log(`🔵 [JIRA-CTA][${componentIdRef.current}] Component rendered with:`, {
+    hasScenarioData: !!scenarioData,
+    feature: scenarioData?.feature?.substring(0, 30),
+    userStory: scenarioData?.userStory?.substring(0, 30),
+    scenarioCount: scenarioData?.scenarios?.length,
+    hasDevelopmentTasks: !!scenarioData?.developmentTasks
+  });
 
   // Handle export to JIRA
   const handleExportToJira = async () => {
@@ -22,7 +32,7 @@ const JiraExportCTA = ({ scenarioData }) => {
     
     // Prevent double-click and React StrictMode double render
     if (exportInProgressRef.current || isExporting) {
-      console.log(`🛑 [JIRA-EXPORT][${exportId}] Export already in progress, ignoring duplicate request`);
+      console.log(`🛑 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Export already in progress, ignoring duplicate request`);
       return;
     }
 
@@ -30,7 +40,7 @@ const JiraExportCTA = ({ scenarioData }) => {
     const dataToExport = scenarioDataRef.current;
     
     // Log data being exported for debugging
-    console.log(`📤 [JIRA-EXPORT][${exportId}] Starting export with data:`, {
+    console.log(`📤 [JIRA-EXPORT][${componentIdRef.current}][${exportId}] Starting export with data:`, {
       feature: dataToExport?.feature,
       userStory: dataToExport?.userStory?.substring(0, 50),
       scenarioCount: dataToExport?.scenarios?.length,
@@ -300,6 +310,16 @@ const JiraExportCTA = ({ scenarioData }) => {
 
   // Don't show if no scenario data
   if (!scenarioData || !scenarioData.scenarios) {
+    return null;
+  }
+  
+  // Don't show for user messages or messages without proper feature/userStory
+  if (!scenarioData.feature && !scenarioData.userStory) {
+    return null;
+  }
+  
+  // Don't show if scenarios is empty
+  if (!Array.isArray(scenarioData.scenarios) || scenarioData.scenarios.length === 0) {
     return null;
   }
 

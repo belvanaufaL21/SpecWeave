@@ -533,7 +533,16 @@ class JiraService {
    * Create user story in JIRA
    */
   async createUserStory(connectionId, epicId, storyData) {
+    // Generate unique request ID for tracking
+    const requestId = `story-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Starting createUserStory`, {
+        connectionId,
+        epicId,
+        storyTitle: storyData.title || storyData.feature
+      });
+      
       // Get connection details from database
       const connection = await supabaseService.getJiraConnection(connectionId);
       
@@ -564,7 +573,7 @@ class JiraService {
       // The Epic link will be set using a separate API call after story creation
 
       // Log the payload being sent to JIRA
-      cleanLogger.info('JIRA-SERVICE', 'Creating user story with payload', {
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Creating user story with payload`, {
         projectKey: connection.project_key,
         summary: issueData.fields.summary,
         hasDescription: !!issueData.fields.description,
@@ -573,6 +582,8 @@ class JiraService {
         issueType: issueData.fields.issuetype.name
       });
 
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Sending POST request to JIRA API`);
+      
       const response = await axios.post(
         `${connection.jira_url}/rest/api/3/issue`,
         issueData,
@@ -586,6 +597,11 @@ class JiraService {
         }
       );
 
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] Story created successfully`, {
+        issueId: response.data.id,
+        issueKey: response.data.key
+      });
+
       const createdIssue = {
         id: response.data.id,
         key: response.data.key,
@@ -595,13 +611,14 @@ class JiraService {
       // Link to Epic if provided
       if (epicId) {
         try {
+          cleanLogger.info('JIRA-SERVICE', `[${requestId}] Linking story to Epic`);
           await this._linkStoryToEpic(connection, createdIssue.id, epicId, auth);
-          cleanLogger.info('JIRA-SERVICE', 'Story linked to Epic successfully', {
+          cleanLogger.info('JIRA-SERVICE', `[${requestId}] Story linked to Epic successfully`, {
             storyId: createdIssue.id,
             epicId: epicId
           });
         } catch (linkError) {
-          cleanLogger.warn('JIRA-SERVICE', 'Failed to link story to Epic (story created successfully)', {
+          cleanLogger.warn('JIRA-SERVICE', `[${requestId}] Failed to link story to Epic (story created successfully)`, {
             storyId: createdIssue.id,
             epicId: epicId,
             error: linkError.message
@@ -610,8 +627,10 @@ class JiraService {
         }
       }
 
+      cleanLogger.info('JIRA-SERVICE', `[${requestId}] createUserStory completed successfully`);
       return createdIssue;
     } catch (error) {
+      cleanLogger.error('JIRA-SERVICE', `[${requestId}] createUserStory failed`);
       // Log detailed error response from JIRA
       const errorDetails = {
         message: error.message,
