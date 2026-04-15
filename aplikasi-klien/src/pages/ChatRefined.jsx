@@ -635,8 +635,7 @@ const ChatRefined = () => {
         if (message.role === 'ai' && message.usage) {
           console.log('≡ƒôê [CHAT-REFINED] Updating usage info:', message.usage);
           setUsageInfo(message.usage);
-          // Trigger ModelSelector refresh
-          setModelSelectorRefresh(prev => prev + 1);
+          // Don't trigger full refresh - usage info will be updated via onUsageUpdate prop
         }
         
         // CRITICAL FIX: Use updateChatMessages with a function that gets current messages
@@ -2035,6 +2034,7 @@ const ChatRefined = () => {
                         onUsageUpdate={setUsageInfo}
                         refreshTrigger={modelSelectorRefresh}
                         dropdownDirection="down"
+                        externalUsageInfo={usageInfo}
                       />
                       
                       <button
@@ -2202,6 +2202,7 @@ const ChatRefined = () => {
                       onUsageUpdate={setUsageInfo}
                       refreshTrigger={modelSelectorRefresh}
                       dropdownDirection="up"
+                      externalUsageInfo={usageInfo}
                     />
                     
                     <button

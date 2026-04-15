@@ -44,7 +44,7 @@ const RollingNumber = ({ value, className = '' }) => {
   );
 };
 
-const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '', refreshTrigger = 0 }) => {
+const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '', refreshTrigger = 0, externalUsageInfo = null }) => {
   const [models, setModels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
@@ -61,6 +61,24 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       fetchModels();
     }
   }, [refreshTrigger]);
+  
+  // Update models with external usage info without fetching
+  useEffect(() => {
+    if (externalUsageInfo && models.length > 0) {
+      setModels(prevModels => 
+        prevModels.map(model => 
+          model.name === externalUsageInfo.model
+            ? {
+                ...model,
+                used: externalUsageInfo.used,
+                remaining: externalUsageInfo.remaining,
+                limit: externalUsageInfo.limit
+              }
+            : model
+        )
+      );
+    }
+  }, [externalUsageInfo]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
