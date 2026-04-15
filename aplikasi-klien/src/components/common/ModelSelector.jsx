@@ -82,7 +82,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       {/* Minimalist Selector Button - Match height with other buttons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group"
+        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer"
         style={{ 
           borderColor: 'rgba(255, 255, 255, 0.05)', 
           backgroundColor: 'transparent' 
