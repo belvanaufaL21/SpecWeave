@@ -188,15 +188,15 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                   `}
                   style={{ 
                     borderColor: 'rgba(255, 255, 255, 0.05)',
-                    backgroundColor: isSelected ? '#120C18' : 'transparent'
+                    backgroundColor: 'transparent'
                   }}
                   onMouseEnter={(e) => {
-                    if (!isDisabled && !isSelected) {
+                    if (!isDisabled) {
                       e.currentTarget.style.backgroundColor = '#120C18';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isDisabled && !isSelected) {
+                    if (!isDisabled) {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }
                   }}
