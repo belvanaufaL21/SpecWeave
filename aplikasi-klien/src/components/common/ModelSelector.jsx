@@ -104,7 +104,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       {/* Minimalist Selector Button - Match height with other buttons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="model-selector-button flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer relative z-50"
+        className="model-selector-button flex items-center gap-2 px-4 py-2 border rounded-lg transition-all group cursor-pointer relative z-50"
         style={{ 
           borderColor: 'rgba(255, 255, 255, 0.05)', 
           backgroundColor: 'transparent' 
@@ -116,17 +116,17 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
         {selectedModelData ? (
           <>
             {/* Model name - subtle */}
-            <span className="text-xs text-white transition-colors">
+            <span className="text-sm text-white transition-colors">
               {selectedModelData.displayName}
             </span>
             
             {/* Quota - minimal indicator */}
-            <span className="text-xs text-gray-600">
+            <span className="text-sm text-gray-600">
               {selectedModelData.remaining}/{selectedModelData.limit}
             </span>
           </>
         ) : (
-          <span className="text-xs text-gray-500">Select model</span>
+          <span className="text-sm text-gray-500">Select model</span>
         )}
         
         {/* Subtle dropdown arrow */}
@@ -181,7 +181,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                   }}
                   disabled={isDisabled}
                   className={`
-                    w-full px-3 py-2.5 text-left transition-colors
+                    w-full px-4 py-2 text-left transition-colors
                     ${!isLast ? 'border-b' : ''}
                     ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
                     ${isSelected ? '' : ''}
@@ -204,12 +204,12 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {/* Model name */}
-                      <div className="text-xs text-white mb-0.5">
+                      <div className="text-sm text-white mb-0.5">
                         {model.displayName}
                       </div>
                       
                       {/* Quota - subtle */}
-                      <div className="text-xs text-gray-600">
+                      <div className="text-sm text-gray-600">
                         {model.remaining}/{model.limit} remaining
                       </div>
                     </div>
