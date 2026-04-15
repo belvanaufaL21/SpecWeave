@@ -41,3 +41,7 @@ export { default as ComparisonTable } from './ComparisonTable';
 
 // METEOR Detail Components
 export { default as CosineSimilarityTabs } from './CosineSimilarityTabs';
+
+// Usage Components
+export { default as ModelSelector } from './ModelSelector';
+export { default as UsageIndicator } from './UsageIndicator';

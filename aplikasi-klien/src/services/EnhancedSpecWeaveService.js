@@ -78,6 +78,7 @@ class EnhancedSpecWeaveService {
         userStory: enhancedPrompt,
         originalUserStory: userStory, // Keep original for tracking
         epicContext: options.epicContext, // Pass epic context to server
+        model: options.model, // Pass selected model to server
         options: {
           ...options,
           useAutoReference: this.useAutoReference,

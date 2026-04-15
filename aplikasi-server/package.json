@@ -22,7 +22,8 @@
     "check:python": "node check-python-deps.cjs",
     "install:sbert": "node install-sentence-bert.cjs",
     "setup:sbert": "npm run check:python || npm run install:sbert",
-    "migrate:scenario-titles": "node scripts/run-scenario-title-migration.js"
+    "migrate:scenario-titles": "node scripts/run-scenario-title-migration.js",
+    "check:llm-system": "node scripts/check-llm-system-readiness.js"
   },
   "keywords": [
     "gherkin",
@@ -37,6 +38,7 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.87.1",
     "axios": "^1.13.6",
     "better-sqlite3": "^12.5.0",

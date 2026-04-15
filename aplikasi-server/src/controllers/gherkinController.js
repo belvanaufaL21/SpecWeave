@@ -7,6 +7,8 @@ import epicService from '../services/epicService.js';
 import { AppError } from '../middlewares/errorHandler.js'; 
 import { v4 as uuidv4 } from 'uuid';
 import cleanLogger from '../config/cleanLogging.js';
+import llmProviderService from '../services/llmProviderService.js';
+import usageLimitService from '../services/usageLimitService.js';
 
 const meteorService = new MeteorService();
 const performanceService = new PerformanceService();
@@ -56,10 +58,23 @@ export const generateGherkin = async (req, res, next) => {
     });
     
     // IMPORTANT: Use originalUserStory for format detection, not the enhanced prompt
-    const aiResponse = await convertToGherkin(userStory.trim(), {
-      references: patterns,
-      originalInput: inputForDetection.trim() // Pass original for format detection
-    });
+    // Use provider abstraction if usage limit is set (authenticated user with model selection)
+    let aiResponse;
+    if (req.usageLimit) {
+      // Authenticated user with usage limit - use provider service
+      aiResponse = await convertToGherkin(userStory.trim(), {
+        references: patterns,
+        originalInput: inputForDetection.trim(),
+        provider: req.usageLimit.provider,
+        modelName: req.usageLimit.modelName
+      });
+    } else {
+      // Anonymous user or no usage limit - use default behavior
+      aiResponse = await convertToGherkin(userStory.trim(), {
+        references: patterns,
+        originalInput: inputForDetection.trim()
+      });
+    }
 
     // Handle different response types
     if (aiResponse.type === 'general') {
@@ -114,6 +129,49 @@ export const generateGherkin = async (req, res, next) => {
     // Log performance metrics if user is authenticated
     if (req.user?.id) {
       await performanceService.logPerformanceMetrics(performanceMetrics, req.user.id);
+    }
+
+    // 5.5. Increment usage counter and record request for authenticated users with usage limits
+    let usageInfo = null;
+    if (req.user?.id && req.usageLimit) {
+      try {
+        // Increment usage counter after successful LLM response
+        const incrementResult = await usageLimitService.incrementUsage(
+          req.user.id,
+          req.usageLimit.modelName,
+          requestId
+        );
+
+        // Record request in history for analytics
+        await usageLimitService.recordRequest(
+          req.user.id,
+          req.usageLimit.modelName,
+          requestId,
+          true, // success
+          null  // no error
+        );
+
+        // Prepare usage info for response
+        usageInfo = {
+          model: req.usageLimit.modelName,
+          displayName: req.usageLimit.displayName,
+          provider: req.usageLimit.provider,
+          tier: req.usageLimit.tier,
+          remaining: incrementResult.remaining,
+          limit: req.usageLimit.limit
+        };
+
+        cleanLogger.debug('USAGE-LIMIT', 'Usage incremented', {
+          model: req.usageLimit.modelName,
+          newCount: incrementResult.newCount,
+          remaining: incrementResult.remaining
+        });
+      } catch (usageError) {
+        cleanLogger.warn('USAGE-LIMIT', 'Failed to update usage', {
+          error: usageError.message
+        });
+        // Continue without failing the request - user got their result
+      }
     }
 
     // 6. Save scenario to database and create JIRA user story if user is authenticated
@@ -268,6 +326,7 @@ export const generateGherkin = async (req, res, next) => {
           promptingMethod: usedReferences.length > 0 ? 'few-shot' : 'zero-shot',
           referenceCount: usedReferences.length
         },
+        usage: usageInfo, // Include usage information (model, displayName, provider, tier, remaining, limit)
         quality_metrics: meteorMetrics ? {
           meteor_score: meteorMetrics.meteor_score,
           quality_level: qualityAssessment.level,
@@ -305,6 +364,23 @@ export const generateGherkin = async (req, res, next) => {
     
     if (req.user?.id) {
       await performanceService.logPerformanceMetrics(errorMetrics, req.user.id);
+    }
+
+    // Record failed request in usage history if user is authenticated with usage limit
+    if (req.user?.id && req.usageLimit) {
+      try {
+        await usageLimitService.recordRequest(
+          req.user.id,
+          req.usageLimit.modelName,
+          requestId,
+          false, // failed
+          error.message
+        );
+      } catch (recordError) {
+        cleanLogger.warn('USAGE-LIMIT', 'Failed to record error in history', {
+          error: recordError.message
+        });
+      }
     }
     
     next(error);

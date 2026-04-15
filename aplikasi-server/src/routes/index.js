@@ -14,6 +14,7 @@ import systemHealthRoutes from './systemHealth.js';
 import epicRoutes from './epicRoutes.js';
 import subtaskRoutes from './subtaskRoutes.js';
 import referenceRoutes from './referenceRoutes.js';
+import usageRoutes from './usageRoutes.js';
 
 
 
@@ -50,6 +51,7 @@ router.use('/system', systemHealthRoutes);
 router.use('/epics', epicRoutes);
 router.use('/subtasks', subtaskRoutes);
 router.use('/references', referenceRoutes);
+router.use('/usage', usageRoutes);
 
 
 router.use('/test', testRoutes);

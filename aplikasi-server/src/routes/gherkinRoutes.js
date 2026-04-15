@@ -8,13 +8,15 @@ import {
 } from '../controllers/gherkinController.js';
 import { optionalAuth, authenticate } from '../middlewares/auth.js';
 import { validateSearch } from '../middlewares/validation.js';
+import { checkUsageLimit } from '../middleware/usageLimitMiddleware.js';
 import { body, param } from 'express-validator';
 
 const router = Router();
 
 // POST /api/gherkin/generate - Generate Gherkin from User Story
 // Optional auth - works for both authenticated and anonymous users
-router.post('/generate', optionalAuth, generateGherkin);
+// Usage limit middleware checks limits for authenticated users
+router.post('/generate', optionalAuth, checkUsageLimit, generateGherkin);
 
 // GET /api/gherkin/history - Get conversion history (requires authentication)
 router.get('/history', authenticate, validateSearch, getHistory);

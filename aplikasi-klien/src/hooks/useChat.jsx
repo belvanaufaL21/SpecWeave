@@ -116,6 +116,7 @@ export const useChat = () => {
             isConnextra: false,
             formatDetection: response.data.formatDetection,
             message: response.data.message,
+            usage: response.data.usage, // Include usage information
             timestamp: new Date().toISOString(),
             chatId: chatId
           };
@@ -134,6 +135,7 @@ export const useChat = () => {
             referenceInfo: response.data.referenceInfo,
             usedReferences: response.data.usedReferences || [],
             metadata: response.data.metadata || {},
+            usage: response.data.usage, // Include usage information
             timestamp: new Date().toISOString(),
             chatId: chatId
           };
@@ -166,24 +168,61 @@ export const useChat = () => {
         return;
       }
 
-      const errorMessage = err.response?.data?.error || 'Failed to generate Gherkin. Please try again.';
-      setError(errorMessage);
-      
-      // Add error message to chat
-      const errorMessageId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const errorMsg = {
-        id: errorMessageId,
-        role: 'error',
-        content: errorMessage,
-        timestamp: new Date().toISOString(),
-        chatId: chatId
-      };
+      // Handle 429 (rate limit) errors specially
+      if (err.response?.status === 429) {
+        const errorData = err.response?.data?.error;
+        const alternatives = errorData?.alternatives || [];
+        
+        let errorMessage = errorData?.message || 'Usage limit exceeded for this model.';
+        
+        if (alternatives.length > 0) {
+          errorMessage += '\n\nAlternative models available:\n';
+          alternatives.forEach(alt => {
+            errorMessage += `• ${alt.displayName} (${alt.tier}): ${alt.remaining} requests remaining\n`;
+          });
+        }
+        
+        setError(errorMessage);
+        
+        // Add error message to chat with alternatives
+        const errorMessageId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const errorMsg = {
+          id: errorMessageId,
+          role: 'error',
+          content: errorMessage,
+          errorCode: 'USAGE_LIMIT_EXCEEDED',
+          alternatives: alternatives,
+          timestamp: new Date().toISOString(),
+          chatId: chatId
+        };
 
-      // Save error to state first
-      if (onMessageReceived) {
-        await onMessageReceived(errorMsg, chatId);
+        // Save error to state first
+        if (onMessageReceived) {
+          await onMessageReceived(errorMsg, chatId);
+        } else {
+          setMessages(prev => [...prev, errorMsg]);
+        }
       } else {
-        setMessages(prev => [...prev, errorMsg]);
+        // Handle other errors
+        const errorMessage = err.response?.data?.error || 'Failed to generate Gherkin. Please try again.';
+        setError(errorMessage);
+        
+        // Add error message to chat
+        const errorMessageId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const errorMsg = {
+          id: errorMessageId,
+          role: 'error',
+          content: errorMessage,
+          timestamp: new Date().toISOString(),
+          chatId: chatId
+        };
+
+        // Save error to state first
+        if (onMessageReceived) {
+          await onMessageReceived(errorMsg, chatId);
+        } else {
+          setMessages(prev => [...prev, errorMsg]);
+        }
       }
       
       // Stop loading after error message is in state
