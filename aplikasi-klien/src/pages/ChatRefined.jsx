@@ -1929,21 +1929,32 @@ const ChatRefined = () => {
                 {!isMobile && <div className={`w-2 h-2 rounded-full ${hasEpic && epicContext ? 'bg-purple-500' : 'bg-red-500'}`}></div>}
               </button>
 
-              {/* Testing Scenario Button - Mobile Only */}
-              {isMobile && (
-                <button
-                  onClick={() => setIsTestingScenarioPanelOpen(true)}
-                  className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
-                  style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  title="Testing Scenario"
+              {/* Testing Scenario Button - For both Mobile and Desktop */}
+              <button
+                onClick={() => setIsTestingScenarioPanelOpen(!isTestingScenarioPanelOpen)}
+                className="flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all"
+                style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#120C18'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title={isMobile ? "Testing Scenario" : undefined}
+              >
+                {/* Testing Icon - Green when panel open, White when closed */}
+                <svg 
+                  className={`w-4 h-4 ${isTestingScenarioPanelOpen ? 'text-green-500' : 'text-white'}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
                 >
-                  <svg className="w-4 h-4" style={{ color: '#FFFFFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                </button>
-              )}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                {!isMobile && (
+                  <span className="text-sm text-white">
+                    Testing Scenario
+                  </span>
+                )}
+                {/* Connection Indicator - Green when open, Gray when closed */}
+                {!isMobile && <div className={`w-2 h-2 rounded-full ${isTestingScenarioPanelOpen ? 'bg-green-500' : 'bg-gray-500'}`}></div>}
+              </button>
             </div>
           </div>
         </div>
