@@ -146,10 +146,8 @@ const ModelSelector = ({
       >
         {selectedModelData ? (
           <>
+            {/* Only show model name - no usage info */}
             <span className="text-sm text-white">{selectedModelData.displayName}</span>
-            <span className="text-sm text-gray-600">
-              <RollingNumber value={selectedModelData.remaining} />/{selectedModelData.limit}
-            </span>
           </>
         ) : (
           <span className="text-sm text-gray-500">Select model</span>
