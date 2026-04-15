@@ -210,7 +210,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
               );
             })}
           </div>
-        
+        )}
     </div>
   );
 };
