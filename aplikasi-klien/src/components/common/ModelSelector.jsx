@@ -123,16 +123,16 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       {/* Clean Dropdown Menu - Direction based on prop */}
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - Click outside to close */}
           <div 
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Menu - positioned based on dropdownDirection prop */}
+          {/* Menu - positioned based on dropdownDirection prop with larger gap */}
           <div 
             className={`absolute left-0 right-0 border rounded-lg shadow-2xl z-50 overflow-hidden ${
-              dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+              dropdownDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
             }`}
             style={{ 
               borderColor: 'rgba(255, 255, 255, 0.05)', 
