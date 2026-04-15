@@ -47,7 +47,6 @@ const ModelSelector = ({
   externalUsageInfo = null
 }) => {
   const [models, setModels] = useState([]);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false - no loading state
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -116,6 +115,22 @@ const ModelSelector = ({
   };
 
   const selectedModelData = models.find(m => m.name === selectedModel);
+  
+  // Helper to get display name from model name
+  const getDisplayName = (modelName) => {
+    if (selectedModelData) return selectedModelData.displayName;
+    
+    // Fallback display names when models not loaded yet
+    const displayNames = {
+      'llama-3.1-8b-instant': 'Llama 3.1 8B',
+      'llama-3.1-70b-versatile': 'Llama 3.1 70B',
+      'llama-3.3-70b-versatile': 'Llama 3.3 70B',
+      'gemma2-9b-it': 'Gemma 2 9B',
+      'mixtral-8x7b-32768': 'Mixtral 8x7B'
+    };
+    
+    return displayNames[modelName] || modelName;
+  };
 
   // No loading state - show selector immediately
   // If error, show error state but still functional
@@ -141,13 +156,13 @@ const ModelSelector = ({
         title={
           selectedModelData
             ? `${selectedModelData.displayName} • ${selectedModelData.remaining}/${selectedModelData.limit} remaining`
-            : 'Select model'
+            : selectedModel ? getDisplayName(selectedModel) : 'Select model'
         }
       >
-        {selectedModelData ? (
+        {selectedModel ? (
           <>
             {/* Only show model name - no usage info */}
-            <span className="text-sm text-white">{selectedModelData.displayName}</span>
+            <span className="text-sm text-white">{getDisplayName(selectedModel)}</span>
           </>
         ) : (
           <span className="text-sm text-gray-500">Select model</span>
