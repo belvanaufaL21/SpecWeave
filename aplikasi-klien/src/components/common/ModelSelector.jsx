@@ -116,7 +116,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
         {selectedModelData ? (
           <>
             {/* Model name - subtle */}
-            <span className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
+            <span className="text-xs text-white transition-colors">
               {selectedModelData.displayName}
             </span>
             
@@ -183,10 +183,23 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                   className={`
                     w-full px-3 py-2.5 text-left transition-colors
                     ${!isLast ? 'border-b' : ''}
-                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}
-                    ${isSelected ? 'bg-white/5' : ''}
+                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+                    ${isSelected ? '' : ''}
                   `}
-                  style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                  style={{ 
+                    borderColor: 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: isSelected ? '#120C18' : 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isDisabled && !isSelected) {
+                      e.currentTarget.style.backgroundColor = '#120C18';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isDisabled && !isSelected) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -203,7 +216,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                     
                     {/* Selected indicator - minimal */}
                     {isSelected && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C27AFF' }} />
                     )}
                   </div>
                 </button>
