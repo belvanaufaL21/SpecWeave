@@ -2025,11 +2025,12 @@ const ChatRefined = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      {/* Model Selector - Now includes usage info */}
+                      {/* Model Selector - Dropdown goes down (centered mode) */}
                       <ModelSelector
                         selectedModel={selectedModel}
                         onModelChange={setSelectedModel}
                         onUsageUpdate={setUsageInfo}
+                        dropdownDirection="down"
                       />
                       
                       <button
@@ -2190,11 +2191,12 @@ const ChatRefined = () => {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    {/* Model Selector */}
+                    {/* Model Selector - Dropdown goes up (bottom mode) */}
                     <ModelSelector
                       selectedModel={selectedModel}
                       onModelChange={setSelectedModel}
                       onUsageUpdate={setUsageInfo}
+                      dropdownDirection="up"
                     />
                     
                     <button

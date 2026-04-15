@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className = '' }) => {
+const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '' }) => {
   const [models, setModels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -118,7 +118,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className 
         </svg>
       </button>
 
-      {/* Clean Dropdown Menu - Opens upward to avoid being cut off */}
+      {/* Clean Dropdown Menu - Direction based on prop */}
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -127,9 +127,11 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Menu - positioned above the button */}
+          {/* Menu - positioned based on dropdownDirection prop */}
           <div 
-            className="absolute bottom-full left-0 right-0 mb-1 border rounded-lg shadow-2xl z-50 overflow-hidden"
+            className={`absolute left-0 right-0 border rounded-lg shadow-2xl z-50 overflow-hidden ${
+              dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+            }`}
             style={{ 
               borderColor: 'rgba(255, 255, 255, 0.05)', 
               backgroundColor: '#09090A',
