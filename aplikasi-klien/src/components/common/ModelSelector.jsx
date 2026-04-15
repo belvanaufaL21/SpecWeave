@@ -12,6 +12,26 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
     fetchModels();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event) => {
+      // Check if click is outside the dropdown and button
+      const dropdown = event.target.closest('.model-selector-dropdown');
+      const button = event.target.closest('.model-selector-button');
+      
+      if (!dropdown && !button) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const fetchModels = async () => {
     try {
       setIsLoading(true);
@@ -84,7 +104,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       {/* Minimalist Selector Button - Match height with other buttons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer relative z-50"
+        className="model-selector-button flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer relative z-50"
         style={{ 
           borderColor: 'rgba(255, 255, 255, 0.05)', 
           backgroundColor: 'transparent' 
@@ -122,24 +142,16 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
 
       {/* Clean Dropdown Menu - Direction based on prop */}
       {isOpen && (
-        <>
-          {/* Backdrop - Click outside to close */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
-          />
-          
-          {/* Menu - positioned based on dropdownDirection prop with larger gap */}
-          <div 
-            className={`absolute left-0 right-0 border rounded-lg shadow-2xl z-50 overflow-hidden ${
-              dropdownDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
-            }`}
-            style={{ 
-              borderColor: 'rgba(255, 255, 255, 0.05)', 
-              backgroundColor: '#09090A',
-              minWidth: '200px'
-            }}
-          >
+        <div 
+          className={`model-selector-dropdown absolute left-0 right-0 border rounded-lg shadow-2xl z-50 overflow-hidden ${
+            dropdownDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
+          style={{ 
+            borderColor: 'rgba(255, 255, 255, 0.05)', 
+            backgroundColor: '#09090A',
+            minWidth: '200px'
+          }}
+        >
             {models.map((model, index) => {
               const isDisabled = model.remaining === 0;
               const isSelected = model.name === selectedModel;
@@ -198,8 +210,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
               );
             })}
           </div>
-        </>
-      )}
+        
     </div>
   );
 };
