@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import toast from 'react-hot-toast';
 
 const RollingNumber = ({ value, className = '' }) => {
   const [displayValue, setDisplayValue] = useState(value);
@@ -48,7 +47,7 @@ const ModelSelector = ({
   externalUsageInfo = null
 }) => {
   const [models, setModels] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed to false - no loading state
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -81,7 +80,7 @@ const ModelSelector = ({
 
   const fetchModels = async () => {
     try {
-      setIsLoading(true);
+      // Fetch in background - no loading state
       setError(null);
       const response = await api.get('/usage/limits');
       if (response.data.success) {
@@ -112,27 +111,15 @@ const ModelSelector = ({
     } catch (err) {
       console.error('Error fetching models:', err);
       setError(err.message);
-      toast.error('Failed to load available models');
-    } finally {
-      setIsLoading(false);
+      // Silent error - no toast, just log
     }
   };
 
   const selectedModelData = models.find(m => m.name === selectedModel);
 
-  if (isLoading) {
-    return (
-      <div
-        className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`}
-        style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}
-      >
-        <div className="w-3 h-3 border border-gray-600 border-t-gray-400 rounded-full animate-spin" />
-        <span className="text-xs text-gray-500">Loading...</span>
-      </div>
-    );
-  }
-
-  if (error) {
+  // No loading state - show selector immediately
+  // If error, show error state but still functional
+  if (error && models.length === 0) {
     return (
       <div
         className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`}
