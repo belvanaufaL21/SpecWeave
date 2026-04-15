@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Rolling counter animation component
 const RollingNumber = ({ value, className = '' }) => {
   const [displayValue, setDisplayValue] = useState(value);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -11,14 +10,11 @@ const RollingNumber = ({ value, className = '' }) => {
   useEffect(() => {
     if (prevValueRef.current !== value) {
       setIsAnimating(true);
-      
-      // Animate the number change
-      const duration = 500; // ms
+      const duration = 500;
       const steps = 20;
       const stepDuration = duration / steps;
       const diff = value - prevValueRef.current;
       const stepValue = diff / steps;
-      
       let currentStep = 0;
       const interval = setInterval(() => {
         currentStep++;
@@ -27,12 +23,10 @@ const RollingNumber = ({ value, className = '' }) => {
           setIsAnimating(false);
           clearInterval(interval);
         } else {
-          setDisplayValue(Math.round(prevValueRef.current + (stepValue * currentStep)));
+          setDisplayValue(Math.round(prevValueRef.current + stepValue * currentStep));
         }
       }, stepDuration);
-      
       prevValueRef.current = value;
-      
       return () => clearInterval(interval);
     }
   }, [value]);
@@ -44,10 +38,17 @@ const RollingNumber = ({ value, className = '' }) => {
   );
 };
 
-const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '', refreshTrigger = 0, externalUsageInfo = null }) => {
+const ModelSelector = ({
+  selectedModel,
+  onModelChange,
+  onUsageUpdate,
+  dropdownDirection = 'down',
+  className = '',
+  // refreshTrigger removed — use externalUsageInfo to push remaining updates without API call
+  externalUsageInfo = null
+}) => {
   const [models, setModels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -55,70 +56,42 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
     fetchModels();
   }, []);
 
-  // Refresh when refreshTrigger changes
+  // Update remaining count in-place from parent — no API call, no loading flash
   useEffect(() => {
-    if (refreshTrigger > 0) {
-      fetchModels();
-    }
-  }, [refreshTrigger]);
-  
-  // Update models with external usage info without fetching
-  useEffect(() => {
-    if (externalUsageInfo && models.length > 0) {
-      setModels(prevModels => 
-        prevModels.map(model => 
-          model.name === externalUsageInfo.model
-            ? {
-                ...model,
-                used: externalUsageInfo.used,
-                remaining: externalUsageInfo.remaining,
-                limit: externalUsageInfo.limit
-              }
-            : model
-        )
-      );
-    }
+    if (!externalUsageInfo || models.length === 0) return;
+    setModels(prev =>
+      prev.map(model =>
+        model.name === externalUsageInfo.model
+          ? { ...model, used: externalUsageInfo.used, remaining: externalUsageInfo.remaining, limit: externalUsageInfo.limit }
+          : model
+      )
+    );
   }, [externalUsageInfo]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!isOpen) return;
-
     const handleClickOutside = (event) => {
-      // Check if click is outside the dropdown and button
       const dropdown = event.target.closest('.model-selector-dropdown');
       const button = event.target.closest('.model-selector-button');
-      
-      if (!dropdown && !button) {
-        setIsOpen(false);
-      }
+      if (!dropdown && !button) setIsOpen(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
   const fetchModels = async () => {
     try {
-      // Only show loading on initial load
-      if (isInitialLoad) {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       setError(null);
-
       const response = await api.get('/usage/limits');
-
       if (response.data.success) {
         setModels(response.data.data.models);
-
         if (!selectedModel && response.data.data.models.length > 0) {
-          const defaultModel = response.data.data.models.find(m => m.name === 'llama-3.1-8b-instant')
-            || response.data.data.models[0];
+          const defaultModel =
+            response.data.data.models.find(m => m.name === 'llama-3.1-8b-instant') ||
+            response.data.data.models[0];
           onModelChange(defaultModel.name);
         }
-
         if (selectedModel && onUsageUpdate) {
           const currentModel = response.data.data.models.find(m => m.name === selectedModel);
           if (currentModel) {
@@ -139,13 +112,9 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
     } catch (err) {
       console.error('Error fetching models:', err);
       setError(err.message);
-      // Only show toast on initial load failure
-      if (isInitialLoad) {
-        toast.error('Failed to load available models');
-      }
+      toast.error('Failed to load available models');
     } finally {
       setIsLoading(false);
-      setIsInitialLoad(false);
     }
   };
 
@@ -175,27 +144,22 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
   }
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Minimalist Selector Button - Match height with other buttons */}
+    <div className={`relative z-50 ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="model-selector-button flex items-center gap-2 px-4 py-2 border rounded-lg transition-all group cursor-pointer relative z-50"
-        style={{ 
-          borderColor: 'rgba(255, 255, 255, 0.05)', 
-          backgroundColor: 'transparent' 
-        }}
+        className="model-selector-button flex items-center gap-2 px-4 py-2 border rounded-lg transition-all group cursor-pointer"
+        style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}
         onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
         onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
-        title={selectedModelData ? `${selectedModelData.displayName} • ${selectedModelData.remaining}/${selectedModelData.limit} remaining` : 'Select model'}
+        title={
+          selectedModelData
+            ? `${selectedModelData.displayName} • ${selectedModelData.remaining}/${selectedModelData.limit} remaining`
+            : 'Select model'
+        }
       >
         {selectedModelData ? (
           <>
-            {/* Model name - subtle */}
-            <span className="text-sm text-white transition-colors">
-              {selectedModelData.displayName}
-            </span>
-            
-            {/* Quota - minimal indicator with rolling animation */}
+            <span className="text-sm text-white">{selectedModelData.displayName}</span>
             <span className="text-sm text-gray-600">
               <RollingNumber value={selectedModelData.remaining} />/{selectedModelData.limit}
             </span>
@@ -203,102 +167,78 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
         ) : (
           <span className="text-sm text-gray-500">Select model</span>
         )}
-        
-        {/* Subtle dropdown arrow */}
-        <svg 
-          className={`w-3 h-3 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
-          fill="none" 
-          stroke="currentColor" 
+        <svg
+          className={`w-3 h-3 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {/* Clean Dropdown Menu - Direction based on prop */}
       {isOpen && (
-        <div 
+        <div
           className={`model-selector-dropdown absolute left-0 right-0 border rounded-lg shadow-2xl z-50 overflow-hidden ${
             dropdownDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
-          style={{ 
-            borderColor: 'rgba(255, 255, 255, 0.05)', 
+          style={{
+            borderColor: 'rgba(255, 255, 255, 0.05)',
             backgroundColor: '#09090A',
             minWidth: '200px'
           }}
         >
-            {models.map((model, index) => {
-              const isDisabled = model.remaining === 0;
-              const isSelected = model.name === selectedModel;
-              const isLast = index === models.length - 1;
-              
-              return (
-                <button
-                  key={model.id}
-                  onClick={() => {
-                    if (!isDisabled) {
-                      onModelChange(model.name);
-                      setIsOpen(false);
-                      
-                      // Update usage info when model changes
-                      if (onUsageUpdate) {
-                        onUsageUpdate({
-                          model: model.name,
-                          displayName: model.displayName,
-                          provider: model.provider,
-                          tier: model.tier,
-                          used: model.used,
-                          remaining: model.remaining,
-                          limit: model.limit
-                        });
-                      }
+          {models.map((model, index) => {
+            const isDisabled = model.remaining === 0;
+            const isSelected = model.name === selectedModel;
+            const isLast = index === models.length - 1;
+
+            return (
+              <button
+                key={model.id}
+                onClick={() => {
+                  if (!isDisabled) {
+                    onModelChange(model.name);
+                    setIsOpen(false);
+                    if (onUsageUpdate) {
+                      onUsageUpdate({
+                        model: model.name,
+                        displayName: model.displayName,
+                        provider: model.provider,
+                        tier: model.tier,
+                        used: model.used,
+                        remaining: model.remaining,
+                        limit: model.limit
+                      });
                     }
-                  }}
-                  disabled={isDisabled}
-                  className={`
-                    w-full px-4 py-2 text-left transition-colors
-                    ${!isLast ? 'border-b' : ''}
-                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-                    ${isSelected ? '' : ''}
-                  `}
-                  style={{ 
-                    borderColor: 'rgba(255, 255, 255, 0.05)',
-                    backgroundColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isDisabled) {
-                      e.currentTarget.style.backgroundColor = '#120C18';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isDisabled) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      {/* Model name */}
-                      <div className="text-sm text-white mb-0.5">
-                        {model.displayName}
-                      </div>
-                      
-                      {/* Quota - subtle with rolling animation */}
-                      <div className="text-sm text-gray-600">
-                        <RollingNumber value={model.remaining} />/{model.limit} remaining
-                      </div>
+                  }
+                }}
+                disabled={isDisabled}
+                className={`
+                  w-full px-4 py-2 text-left transition-colors
+                  ${!isLast ? 'border-b' : ''}
+                  ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}
+                onMouseEnter={(e) => { if (!isDisabled) e.currentTarget.style.backgroundColor = '#120C18'; }}
+                onMouseLeave={(e) => { if (!isDisabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white mb-0.5">{model.displayName}</div>
+                    <div className="text-sm text-gray-600">
+                      <RollingNumber value={model.remaining} />/{model.limit} remaining
                     </div>
-                    
-                    {/* Selected indicator - minimal */}
-                    {isSelected && (
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C27AFF' }} />
-                    )}
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                  {isSelected && (
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C27AFF' }} />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
