@@ -16,20 +16,18 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await api.get('/usage/limits');
-      
+
       if (response.data.success) {
         setModels(response.data.data.models);
-        
-        // Set default model if none selected
+
         if (!selectedModel && response.data.data.models.length > 0) {
-          const defaultModel = response.data.data.models.find(m => m.name === 'llama-3.1-8b-instant') 
+          const defaultModel = response.data.data.models.find(m => m.name === 'llama-3.1-8b-instant')
             || response.data.data.models[0];
           onModelChange(defaultModel.name);
         }
-        
-        // Update usage info for currently selected model
+
         if (selectedModel && onUsageUpdate) {
           const currentModel = response.data.data.models.find(m => m.name === selectedModel);
           if (currentModel) {
@@ -60,9 +58,11 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
 
   if (isLoading) {
     return (
-      <div className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`} 
-           style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}>
-        <div className="w-3 h-3 border border-gray-600 border-t-gray-400 rounded-full animate-spin"></div>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`}
+        style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}
+      >
+        <div className="w-3 h-3 border border-gray-600 border-t-gray-400 rounded-full animate-spin" />
         <span className="text-xs text-gray-500">Loading...</span>
       </div>
     );
@@ -70,8 +70,10 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
 
   if (error) {
     return (
-      <div className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`}
-           style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 border rounded-lg ${className}`}
+        style={{ borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'transparent' }}
+      >
         <span className="text-xs text-gray-500">Error loading models</span>
       </div>
     );
@@ -82,7 +84,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
       {/* Minimalist Selector Button - Match height with other buttons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer"
+        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group cursor-pointer relative z-50"
         style={{ 
           borderColor: 'rgba(255, 255, 255, 0.05)', 
           backgroundColor: 'transparent' 
