@@ -284,9 +284,7 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
 
           {/* Response AI - In the middle */}
           <div className="border rounded-lg p-2.5" style={{ backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.05)' }}>
-            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              {content}
-            </p>
+            <GeneralResponseFormatter content={content} />
           </div>
 
           {/* Format and Example - At bottom */}
@@ -681,10 +679,21 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
         );
       }
     } catch (e) {
-      // Jika gagal parse JSON, tampilkan text biasa
-      return <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-200">{content}</p>;
+      // Jika gagal parse JSON, tampilkan sebagai general response dengan formatter
+      console.log('Failed to parse JSON, rendering as general response:', e);
+      return (
+        <div className="space-y-3 w-full">
+          <GeneralResponseFormatter content={content} />
+        </div>
+      );
     }
-    return <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-200">{content}</p>;
+    
+    // Fallback untuk content yang tidak ter-handle
+    return (
+      <div className="space-y-3 w-full">
+        <GeneralResponseFormatter content={content} />
+      </div>
+    );
   };
 
   return (
