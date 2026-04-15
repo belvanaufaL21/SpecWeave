@@ -79,10 +79,10 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className 
 
   return (
     <div className={`relative ${className}`}>
-      {/* Minimalist Selector Button */}
+      {/* Minimalist Selector Button - Match height with other buttons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 border rounded-lg transition-all group"
+        className="flex items-center gap-2 px-3 py-2.5 border rounded-lg transition-all group"
         style={{ 
           borderColor: 'rgba(255, 255, 255, 0.05)', 
           backgroundColor: 'transparent' 
@@ -118,7 +118,7 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className 
         </svg>
       </button>
 
-      {/* Clean Dropdown Menu */}
+      {/* Clean Dropdown Menu - Opens upward to avoid being cut off */}
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -127,9 +127,9 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, className 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Menu */}
+          {/* Menu - positioned above the button */}
           <div 
-            className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-2xl z-50 overflow-hidden"
+            className="absolute bottom-full left-0 right-0 mb-1 border rounded-lg shadow-2xl z-50 overflow-hidden"
             style={{ 
               borderColor: 'rgba(255, 255, 255, 0.05)', 
               backgroundColor: '#09090A',
