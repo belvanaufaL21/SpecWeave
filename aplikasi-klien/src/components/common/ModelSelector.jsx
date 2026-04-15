@@ -127,8 +127,8 @@ const ModelSelector = ({
       'llama-3.3-70b-versatile': 'Llama 3.3 70B',
       'gemma2-9b-it': 'Gemma 2 9B',
       'mixtral-8x7b-32768': 'Mixtral 8x7B',
-      'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-      'gemini-exp-1206': 'Gemini 2.0 Pro'
+      'gemini-2.5-flash': 'Gemini 2.5 Flash',
+      'gemini-2.5-pro': 'Gemini 2.5 Pro'
     };
     
     return displayNames[modelName] || modelName;
