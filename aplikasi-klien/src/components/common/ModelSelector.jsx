@@ -1,10 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+
+// Rolling counter animation component
+const RollingNumber = ({ value, className = '' }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      setIsAnimating(true);
+      
+      // Animate the number change
+      const duration = 500; // ms
+      const steps = 20;
+      const stepDuration = duration / steps;
+      const diff = value - prevValueRef.current;
+      const stepValue = diff / steps;
+      
+      let currentStep = 0;
+      const interval = setInterval(() => {
+        currentStep++;
+        if (currentStep >= steps) {
+          setDisplayValue(value);
+          setIsAnimating(false);
+          clearInterval(interval);
+        } else {
+          setDisplayValue(Math.round(prevValueRef.current + (stepValue * currentStep)));
+        }
+      }, stepDuration);
+      
+      prevValueRef.current = value;
+      
+      return () => clearInterval(interval);
+    }
+  }, [value]);
+
+  return (
+    <span className={`${className} ${isAnimating ? 'animate-pulse' : ''}`}>
+      {displayValue}
+    </span>
+  );
+};
 
 const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '', refreshTrigger = 0 }) => {
   const [models, setModels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -41,7 +84,10 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
 
   const fetchModels = async () => {
     try {
-      setIsLoading(true);
+      // Only show loading on initial load
+      if (isInitialLoad) {
+        setIsLoading(true);
+      }
       setError(null);
 
       const response = await api.get('/usage/limits');
@@ -75,9 +121,13 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
     } catch (err) {
       console.error('Error fetching models:', err);
       setError(err.message);
-      toast.error('Failed to load available models');
+      // Only show toast on initial load failure
+      if (isInitialLoad) {
+        toast.error('Failed to load available models');
+      }
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -127,9 +177,9 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
               {selectedModelData.displayName}
             </span>
             
-            {/* Quota - minimal indicator */}
+            {/* Quota - minimal indicator with rolling animation */}
             <span className="text-sm text-gray-600">
-              {selectedModelData.remaining}/{selectedModelData.limit}
+              <RollingNumber value={selectedModelData.remaining} />/{selectedModelData.limit}
             </span>
           </>
         ) : (
@@ -215,9 +265,9 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
                         {model.displayName}
                       </div>
                       
-                      {/* Quota - subtle */}
+                      {/* Quota - subtle with rolling animation */}
                       <div className="text-sm text-gray-600">
-                        {model.remaining}/{model.limit} remaining
+                        <RollingNumber value={model.remaining} />/{model.limit} remaining
                       </div>
                     </div>
                     
