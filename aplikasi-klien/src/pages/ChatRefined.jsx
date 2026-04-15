@@ -24,7 +24,6 @@ import MinimizableTestingPanel from '../components/common/MinimizableTestingPane
 import Logo from '../components/common/Logo';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import ModelSelector from '../components/common/ModelSelector';
-import UsageIndicator from '../components/common/UsageIndicator';
 
 import useChat from '../hooks/useChat';
 import { useAuth } from '../contexts/AuthContext';
@@ -2026,21 +2025,12 @@ const ChatRefined = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      {/* Model Selector */}
+                      {/* Model Selector - Now includes usage info */}
                       <ModelSelector
                         selectedModel={selectedModel}
                         onModelChange={setSelectedModel}
                         onUsageUpdate={setUsageInfo}
-                        className="min-w-[200px]"
                       />
-                      
-                      {/* Usage Indicator */}
-                      {usageInfo && (
-                        <UsageIndicator
-                          usageInfo={usageInfo}
-                          className="min-w-[180px]"
-                        />
-                      )}
                       
                       <button
                         onClick={() => {
@@ -2205,16 +2195,7 @@ const ChatRefined = () => {
                       selectedModel={selectedModel}
                       onModelChange={setSelectedModel}
                       onUsageUpdate={setUsageInfo}
-                      className="min-w-[200px]"
                     />
-                    
-                    {/* Usage Indicator */}
-                    {usageInfo && (
-                      <UsageIndicator
-                        usageInfo={usageInfo}
-                        className="min-w-[180px]"
-                      />
-                    )}
                     
                     <button
                       onClick={() => {
