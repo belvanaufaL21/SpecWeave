@@ -91,6 +91,7 @@ const ChatRefined = () => {
   const [showAIDropdown, setShowAIDropdown] = useState(false); // For AI model dropdown
   const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant'); // Selected LLM model
   const [usageInfo, setUsageInfo] = useState(null); // Usage information from last API response
+  const [modelSelectorRefresh, setModelSelectorRefresh] = useState(0); // Trigger to refresh ModelSelector
   
   // CRITICAL FIX: Track pending messages per chat to prevent loss during navigation
   const [pendingMessages, setPendingMessages] = useState({}); // { chatId: [messages] }
@@ -634,6 +635,8 @@ const ChatRefined = () => {
         if (message.role === 'ai' && message.usage) {
           console.log('≡ƒôê [CHAT-REFINED] Updating usage info:', message.usage);
           setUsageInfo(message.usage);
+          // Trigger ModelSelector refresh
+          setModelSelectorRefresh(prev => prev + 1);
         }
         
         // CRITICAL FIX: Use updateChatMessages with a function that gets current messages
@@ -2030,6 +2033,7 @@ const ChatRefined = () => {
                         selectedModel={selectedModel}
                         onModelChange={setSelectedModel}
                         onUsageUpdate={setUsageInfo}
+                        refreshTrigger={modelSelectorRefresh}
                         dropdownDirection="down"
                       />
                       
@@ -2196,6 +2200,7 @@ const ChatRefined = () => {
                       selectedModel={selectedModel}
                       onModelChange={setSelectedModel}
                       onUsageUpdate={setUsageInfo}
+                      refreshTrigger={modelSelectorRefresh}
                       dropdownDirection="up"
                     />
                     

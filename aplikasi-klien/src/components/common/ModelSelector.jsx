@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '' }) => {
+const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDirection = 'down', className = '', refreshTrigger = 0 }) => {
   const [models, setModels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,6 +11,13 @@ const ModelSelector = ({ selectedModel, onModelChange, onUsageUpdate, dropdownDi
   useEffect(() => {
     fetchModels();
   }, []);
+
+  // Refresh when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchModels();
+    }
+  }, [refreshTrigger]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
