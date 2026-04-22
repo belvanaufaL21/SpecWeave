@@ -153,118 +153,9 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
   const createCombinedScenarioData = (originalData) => {
     if (!originalData || !originalData.scenarios) return originalData;
     
-    // Generate development tasks based on scenarios
-    const generateDevelopmentTasks = (scenarios, feature, userStory) => {
-      const tasks = [];
-      
-      // Clean feature name (remove "Feature" word)
-      const cleanFeature = feature.replace(/feature|fitur/gi, '').trim();
-      
-      // Extract main subject/entity from user story
-      const extractMainSubject = (story) => {
-        const match = story.match(/ingin\s+(.+?)\s+agar|want\s+to\s+(.+?)\s+so/i);
-        if (match) {
-          return (match[1] || match[2]).trim();
-        }
-        return cleanFeature.toLowerCase();
-      };
-      
-      const mainSubject = extractMainSubject(userStory);
-      
-      // Extract key actions from scenarios
-      const extractKeyActions = (scenarios) => {
-        const actions = [];
-        scenarios.forEach(s => {
-          const whenText = Array.isArray(s.when) ? s.when.join(' ') : s.when || '';
-          const thenText = Array.isArray(s.then) ? s.then.join(' ') : s.then || '';
-          const words = (whenText + ' ' + thenText).toLowerCase().split(/\s+/);
-          words.forEach(word => {
-            if (word.length > 5 && !['system', 'pengguna', 'aplikasi'].includes(word)) {
-              actions.push(word);
-            }
-          });
-        });
-        return [...new Set(actions)].slice(0, 3);
-      };
-      
-      const keyActions = extractKeyActions(scenarios);
-      
-      // Backend tasks
-      tasks.push({
-        role: 'BE',
-        description: `Create function untuk ${mainSubject}`,
-        priority: 'High',
-        status: 'To Do'
-      });
-      
-      if (keyActions.length > 0) {
-        tasks.push({
-          role: 'BE',
-          description: `Implement logic ${keyActions[0]} untuk ${cleanFeature}`,
-          priority: 'High',
-          status: 'To Do'
-        });
-      }
-      
-      tasks.push({
-        role: 'BE',
-        description: `Add validation dan error handling untuk ${mainSubject}`,
-        priority: 'Medium',
-        status: 'To Do'
-      });
-      
-      // Frontend tasks
-      tasks.push({
-        role: 'FE',
-        description: `Development UI untuk ${cleanFeature}`,
-        priority: 'High',
-        status: 'To Do'
-      });
-      
-      tasks.push({
-        role: 'FE',
-        description: `Integrasi ${cleanFeature} dengan backend`,
-        priority: 'Medium',
-        status: 'To Do'
-      });
-      
-      // UI/UX task
-      tasks.push({
-        role: 'UI/UX',
-        description: `Desain UI dan UX untuk ${mainSubject}`,
-        priority: 'Medium',
-        status: 'To Do'
-      });
-      
-      // QA tasks
-      tasks.push({
-        role: 'QA',
-        description: `Testing ${mainSubject} di environment development`,
-        priority: 'Low',
-        status: 'To Do'
-      });
-      
-      tasks.push({
-        role: 'QA',
-        description: `Testing integrasi ${cleanFeature} di staging`,
-        priority: 'Low',
-        status: 'To Do'
-      });
-      
-      return tasks;
-    };
-    
-    // Add development tasks to the data
-    const developmentTasks = generateDevelopmentTasks(
-      originalData.scenarios, 
-      originalData.feature, 
-      originalData.userStory
-    );
-    
-    return {
-      ...originalData,
-      developmentTasks
-    };
+    // Use development tasks from LLM response directly
+    // No need to generate them on client side anymore
+    return originalData;
   };
 
   // Fungsi render konten AI
@@ -509,156 +400,47 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
               })}
             </div>
 
-            {/* Development Tasklist - Figma Design */}
-            {data.scenarios && data.scenarios.length > 0 && (
+            {/* Development Tasklist - From LLM */}
+            {data.developmentTasks && data.developmentTasks.length > 0 && (
               <div className="mt-6">
                 <div className="mb-4">
                   <h4 className="text-sm font-semibold text-white">Development Tasklist</h4>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  {(() => {
-                    // Generate highly specific development tasks based on feature context
-                    const generateSpecificTasks = (scenarios, feature, userStory) => {
-                      const tasks = [];
-                      
-                      // Clean feature name (remove "Feature" word)
-                      const cleanFeature = feature.replace(/feature|fitur/gi, '').trim();
-                      
-                      // Extract main subject/entity from user story
-                      // Example: "Sebagai admin, saya ingin reset password" -> "reset password"
-                      const extractMainSubject = (story) => {
-                        const match = story.match(/ingin\s+(.+?)\s+agar|want\s+to\s+(.+?)\s+so/i);
-                        if (match) {
-                          return (match[1] || match[2]).trim();
-                        }
-                        // Fallback: use feature name
-                        return cleanFeature.toLowerCase();
-                      };
-                      
-                      const mainSubject = extractMainSubject(userStory);
-                      
-                      // Extract key actions from scenarios for more specific tasks
-                      const extractKeyActions = (scenarios) => {
-                        const actions = [];
-                        scenarios.forEach(s => {
-                          const whenText = Array.isArray(s.when) ? s.when.join(' ') : s.when || '';
-                          const thenText = Array.isArray(s.then) ? s.then.join(' ') : s.then || '';
-                          
-                          // Extract verbs and objects
-                          const words = (whenText + ' ' + thenText).toLowerCase().split(/\s+/);
-                          words.forEach(word => {
-                            if (word.length > 5 && !['system', 'pengguna', 'aplikasi'].includes(word)) {
-                              actions.push(word);
-                            }
-                          });
-                        });
-                        return [...new Set(actions)].slice(0, 3); // Get unique top 3
-                      };
-                      
-                      const keyActions = extractKeyActions(scenarios);
-                      
-                      // Backend tasks - SPECIFIC to the feature
-                      tasks.push({
-                        role: 'BE',
-                        description: `Create function untuk ${mainSubject}`,
-                        priority: 'High',
-                        status: 'To Do'
-                      });
-                      
-                      if (keyActions.length > 0) {
-                        tasks.push({
-                          role: 'BE',
-                          description: `Implement logic ${keyActions[0]} untuk ${cleanFeature}`,
-                          priority: 'High',
-                          status: 'To Do'
-                        });
-                      }
-                      
-                      tasks.push({
-                        role: 'BE',
-                        description: `Add validation dan error handling untuk ${mainSubject}`,
-                        priority: 'Medium',
-                        status: 'To Do'
-                      });
-                      
-                      // Frontend tasks - SPECIFIC to the feature
-                      tasks.push({
-                        role: 'FE',
-                        description: `Development UI untuk ${cleanFeature}`,
-                        priority: 'High',
-                        status: 'To Do'
-                      });
-                      
-                      tasks.push({
-                        role: 'FE',
-                        description: `Integrasi ${cleanFeature} dengan backend`,
-                        priority: 'Medium',
-                        status: 'To Do'
-                      });
-                      
-                      // UI/UX task - SPECIFIC to the feature
-                      tasks.push({
-                        role: 'UI/UX',
-                        description: `Desain UI dan UX untuk ${mainSubject}`,
-                        priority: 'Medium',
-                        status: 'To Do'
-                      });
-                      
-                      // QA tasks - SPECIFIC to the feature
-                      tasks.push({
-                        role: 'QA',
-                        description: `Testing ${mainSubject} di environment development`,
-                        priority: 'Low',
-                        status: 'To Do'
-                      });
-                      
-                      tasks.push({
-                        role: 'QA',
-                        description: `Testing integrasi ${cleanFeature} di staging`,
-                        priority: 'Low',
-                        status: 'To Do'
-                      });
-                      
-                      return tasks;
-                    };
-                    
-                    const tasks = generateSpecificTasks(data.scenarios, data.feature, data.userStory);
-                    
-                    return tasks.map((task, taskIndex) => (
-                      <div
-                        key={taskIndex}
-                        className="bg-gradient-to-br from-[#020203]/80 to-black/90 border rounded-xl p-4 transition-all"
-                        style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2C1A43'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
-                      >
-                        {/* Task Header */}
-                        <div className="flex items-center gap-2 flex-wrap mb-3">
-                          {/* Priority Badge */}
-                          <div className={`px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r ${
-                            task.priority === 'High' 
-                              ? 'from-red-500/20 to-red-600/20 border-red-500/30 text-red-400'
-                              : task.priority === 'Medium'
-                                ? 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30 text-yellow-400'
-                                : 'from-green-500/20 to-green-600/20 border-green-500/30 text-green-400'
-                          }`}>
-                            {task.priority}
-                          </div>
-
-                          {/* Status Badge */}
-                          <div className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-500/30 text-gray-400">
-                            {task.status}
-                          </div>
+                  {data.developmentTasks.map((task, taskIndex) => (
+                    <div
+                      key={taskIndex}
+                      className="bg-gradient-to-br from-[#020203]/80 to-black/90 border rounded-xl p-4 transition-all"
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2C1A43'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
+                    >
+                      {/* Task Header */}
+                      <div className="flex items-center gap-2 flex-wrap mb-3">
+                        {/* Priority Badge */}
+                        <div className={`px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r ${
+                          task.priority === 'High' 
+                            ? 'from-red-500/20 to-red-600/20 border-red-500/30 text-red-400'
+                            : task.priority === 'Medium'
+                              ? 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30 text-yellow-400'
+                              : 'from-green-500/20 to-green-600/20 border-green-500/30 text-green-400'
+                        }`}>
+                          {task.priority}
                         </div>
 
-                        {/* Task Description with Role */}
-                        <p className="text-sm text-gray-300 leading-relaxed">
-                          <span className="font-semibold text-purple-400">[{task.role}]</span> {task.description}
-                        </p>
+                        {/* Status Badge */}
+                        <div className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-500/30 text-gray-400">
+                          {task.status}
+                        </div>
                       </div>
-                    ));
-                  })()}
+
+                      {/* Task Description with Role */}
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        <span className="font-semibold text-purple-400">[{task.role}]</span> {task.description}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

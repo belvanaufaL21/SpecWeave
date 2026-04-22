@@ -188,6 +188,13 @@ PERSYARATAN KRITIS:
    - Scenario 3: HARUS bertipe "Alternative Flow" (alur alternatif)
 8. Field "type" HARUS diisi dengan salah satu dari: "Happy Path", "Edge Case", atau "Alternative Flow"
 9. Field "title" adalah deskripsi singkat yang spesifik untuk scenario tersebut (contoh: "Login Berhasil", "Password Salah", "Lupa Password")
+10. WAJIB: Buat 6-8 development tasks yang realistis dan spesifik berdasarkan user story:
+    - role: "BE" (Backend), "FE" (Frontend), "UI/UX" (Design), atau "QA" (Testing)
+    - description: Deskripsi task yang spesifik dan actionable sesuai konteks user story
+    - priority: "High", "Medium", atau "Low"
+    - status: selalu "To Do"
+11. Development tasks harus mencakup minimal: 2-3 BE tasks, 2 FE tasks, 1 UI/UX task, dan 2 QA tasks
+12. Description harus spesifik sesuai konteks user story, bukan template generik
 ${fewShotExamples}
 Struktur JSON yang Diperlukan:
 {
@@ -215,6 +222,14 @@ Struktur JSON yang Diperlukan:
       "given": "Kondisi awal yang spesifik dan jelas dalam bahasa Indonesia",
       "when": "Aksi yang dilakukan user/sistem dalam bahasa Indonesia",
       "then": "Hasil yang diharapkan secara detail dalam bahasa Indonesia"
+    }
+  ],
+  "developmentTasks": [
+    {
+      "role": "BE|FE|UI/UX|QA",
+      "description": "Deskripsi task yang spesifik sesuai konteks user story",
+      "priority": "High|Medium|Low",
+      "status": "To Do"
     }
   ]
 }
@@ -245,6 +260,56 @@ CONTOH FORMAT YANG BENAR (sesuai standar profesional):
       "given": "Data GPS agen tidak tersedia atau terputus",
       "when": "User membuka laporan Agent Route Summary",
       "then": "Sistem menampilkan peringatan tentang data yang tidak lengkap dan menampilkan data yang tersedia"
+    }
+  ],
+  "developmentTasks": [
+    {
+      "role": "BE",
+      "description": "Implementasi API endpoint untuk mengambil data rute agen dari database dengan filter tanggal",
+      "priority": "High",
+      "status": "To Do"
+    },
+    {
+      "role": "BE",
+      "description": "Buat service layer untuk menghitung urutan kunjungan dan waktu tiba di setiap lokasi",
+      "priority": "High",
+      "status": "To Do"
+    },
+    {
+      "role": "BE",
+      "description": "Implementasi error handling untuk data GPS yang tidak lengkap atau terputus",
+      "priority": "Medium",
+      "status": "To Do"
+    },
+    {
+      "role": "FE",
+      "description": "Buat komponen React untuk menampilkan daftar urutan kunjungan dengan timeline",
+      "priority": "High",
+      "status": "To Do"
+    },
+    {
+      "role": "FE",
+      "description": "Integrasi library peta (Google Maps/Leaflet) untuk visualisasi rute agen",
+      "priority": "High",
+      "status": "To Do"
+    },
+    {
+      "role": "UI/UX",
+      "description": "Desain interface untuk laporan Agent Route Summary dengan visualisasi map dan timeline",
+      "priority": "Medium",
+      "status": "To Do"
+    },
+    {
+      "role": "QA",
+      "description": "Testing skenario happy path untuk tampilan rute harian dengan data lengkap",
+      "priority": "Low",
+      "status": "To Do"
+    },
+    {
+      "role": "QA",
+      "description": "Testing edge case untuk kondisi tidak ada data kunjungan dan data GPS tidak lengkap",
+      "priority": "Low",
+      "status": "To Do"
     }
   ]
 }

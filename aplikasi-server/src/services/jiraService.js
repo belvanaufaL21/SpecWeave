@@ -693,8 +693,6 @@ class JiraService {
           taskSummary = task;
         } else if (task.summary) {
           taskSummary = task.summary;
-        } else if (task.title) {
-          taskSummary = task.title;
         } else if (task.description) {
           const role = task.role ? `[${task.role}] ` : '';
           taskSummary = `${role}${task.description}`;
