@@ -15,7 +15,6 @@ const TemplateLibrary = ({ onSelectTemplate, onCreateTemplate, showActions = tru
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
   const [showSystemOnly, setShowSystemOnly] = useState(false);
   const [showUserOnly, setShowUserOnly] = useState(false);
   
@@ -27,7 +26,7 @@ const TemplateLibrary = ({ onSelectTemplate, onCreateTemplate, showActions = tru
   useEffect(() => {
     loadTemplates();
     loadCategories();
-  }, [searchQuery, selectedCategory, selectedTags, showSystemOnly, showUserOnly]);
+  }, [searchQuery, selectedCategory, showSystemOnly, showUserOnly]);
 
   const loadTemplates = async () => {
     try {
@@ -37,7 +36,6 @@ const TemplateLibrary = ({ onSelectTemplate, onCreateTemplate, showActions = tru
       const filters = {
         query: searchQuery,
         category: selectedCategory,
-        tags: selectedTags,
         isSystem: showSystemOnly ? true : (showUserOnly ? false : null)
       };
 
@@ -103,23 +101,11 @@ const TemplateLibrary = ({ onSelectTemplate, onCreateTemplate, showActions = tru
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('');
-    setSelectedTags([]);
     setShowSystemOnly(false);
     setShowUserOnly(false);
   };
 
-  const getUniqueTagsFromTemplates = () => {
-    const allTags = templates.flatMap(template => template.tags || []);
-    return [...new Set(allTags)].sort();
-  };
 
-  const toggleTag = (tag) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
 
   if (loading) {
     return (
@@ -242,30 +228,6 @@ const TemplateLibrary = ({ onSelectTemplate, onCreateTemplate, showActions = tru
               </div>
             </div>
 
-            {/* Tags Filter */}
-            {getUniqueTagsFromTemplates().length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {getUniqueTagsFromTemplates().map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                        selectedTags.includes(tag)
-                          ? 'bg-blue-100 border-blue-300 text-blue-700'
-                          : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Tag className="w-3 h-3 inline mr-1" />
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -386,25 +348,6 @@ const TemplateCard = ({
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
           {template.description}
         </p>
-      )}
-
-      {/* Tags */}
-      {template.tags && template.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {template.tags.slice(0, 3).map(tag => (
-            <span
-              key={tag}
-              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded"
-            >
-              {tag}
-            </span>
-          ))}
-          {template.tags.length > 3 && (
-            <span className="text-xs text-gray-500">
-              +{template.tags.length - 3} more
-            </span>
-          )}
-        </div>
       )}
 
       {/* Footer */}

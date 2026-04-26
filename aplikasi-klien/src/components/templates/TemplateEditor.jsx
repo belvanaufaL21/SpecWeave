@@ -11,8 +11,7 @@ const TemplateEditor = ({ template = null, onSave, onCancel, onDelete }) => {
     category: '',
     description: '',
     template_content: '',
-    variables: [],
-    tags: []
+    variables: []
   });
   
   const [validation, setValidation] = useState({
@@ -24,7 +23,6 @@ const TemplateEditor = ({ template = null, onSave, onCancel, onDelete }) => {
   const [previewVariables, setPreviewVariables] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [newTag, setNewTag] = useState('');
 
   // Common categories for suggestions
   const commonCategories = [
@@ -47,8 +45,7 @@ const TemplateEditor = ({ template = null, onSave, onCancel, onDelete }) => {
         category: template.category || '',
         description: template.description || '',
         template_content: template.template_content || '',
-        variables: template.variables || [],
-        tags: template.tags || []
+        variables: template.variables || []
       });
     }
   }, [template]);
@@ -124,22 +121,7 @@ const TemplateEditor = ({ template = null, onSave, onCancel, onDelete }) => {
     }));
   };
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
-      setNewTag('');
-    }
-  };
 
-  const handleRemoveTag = (tagToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
-  };
 
   const handlePreviewVariableChange = (varName, value) => {
     setPreviewVariables(prev => ({
@@ -417,50 +399,7 @@ const TemplateEditor = ({ template = null, onSave, onCancel, onDelete }) => {
             )}
           </div>
 
-          {/* Tags */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags
-            </label>
-            
-            <div className="flex gap-2 mb-2">
-              <Input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Add a tag"
-                className="flex-1"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddTag}
-                disabled={!newTag.trim()}
-              >
-                Add
-              </Button>
-            </div>
 
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-gray-500 hover:text-red-500 ml-1"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Preview Panel */}

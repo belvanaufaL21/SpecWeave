@@ -12,8 +12,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     title: '',
     description: '',
     template: '',
-    category: 'custom',
-    tags: []
+    category: 'custom'
   });
   const [newTemplateErrors, setNewTemplateErrors] = useState({});
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -403,10 +402,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
       errors.template = 'User story harus menggunakan format "Sebagai... saya ingin... agar..."';
     }
     
-    if (newTemplate.tags.length === 0) {
-      errors.tags = 'Minimal satu tag harus ditambahkan';
-    }
-    
     setNewTemplateErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -423,6 +418,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
         id: Date.now(), // Temporary ID for fallback
         isSystem: false,
         usageCount: 0,
+        tags: [], // Empty tags array
         preview: {
           given: 'Kondisi awal sistem',
           when: 'Aksi yang dilakukan user',
@@ -443,8 +439,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
         title: '',
         description: '',
         template: '',
-        category: 'custom',
-        tags: []
+        category: 'custom'
       });
       setNewTemplateErrors({});
       setShowCreateForm(false);
@@ -464,28 +459,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     }
   };
 
-  // Handle tag input
-  const handleTagInput = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const tag = e.target.value.trim().toLowerCase();
-      if (tag && !newTemplate.tags.includes(tag)) {
-        setNewTemplate(prev => ({
-          ...prev,
-          tags: [...prev.tags, tag]
-        }));
-        e.target.value = '';
-      }
-    }
-  };
 
-  // Remove tag
-  const removeTag = (tagToRemove) => {
-    setNewTemplate(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
-  };
 
   const retryLoadTemplates = async () => {
     try {
@@ -697,18 +671,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                           )}
                         </div>
                         
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {template.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-1 bg-[#0D0D0D] text-white/70 text-xs rounded-full border border-white/5 group-hover:bg-[#1A1A1A] transition-colors"
-                            >
-                              {highlightKeywords(tag, searchQuery)}
-                            </span>
-                          ))}
-                        </div>
-                        
                         {/* Click to use indicator */}
                         <div className="mt-auto pt-3 border-t border-white/10">
                           <p className="text-xs text-gray-500 group-hover:text-white/70 transition-colors text-center flex items-center justify-center gap-2">
@@ -883,36 +845,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Tags *
                       </label>
-                      <input
-                        type="text"
-                        onKeyDown={handleTagInput}
-                        placeholder="Ketik tag dan tekan Enter atau koma..."
-                        className="w-full px-4 py-3 bg-gradient-to-br from-[#020203]/80 to-black/90 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
-                      />
-                      {newTemplate.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {newTemplate.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full border border-purple-500/30 flex items-center gap-2"
-                            >
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                className="text-purple-400 hover:text-purple-200 transition-colors"
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {newTemplateErrors.tags && (
-                        <p className="text-red-400 text-sm mt-1">{newTemplateErrors.tags}</p>
-                      )}
                     </div>
                   </form>
                 </div>
