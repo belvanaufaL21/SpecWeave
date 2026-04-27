@@ -84,8 +84,15 @@ const LoginSignup = () => {
         <div className="w-full max-w-2xl text-center">
           {/* Integration badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-8 border" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#FFFFFF' }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#FFFFFF' }}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11.53 2C11.53 2 10.07 3.45 10.07 5.46C10.07 7.47 11.53 8.93 11.53 8.93L15.07 12.47C15.07 12.47 16.53 11.02 16.53 9C16.53 6.99 15.07 5.54 15.07 5.54L11.53 2Z" fill="#2684FF"/>
+              <path d="M8.47 8.93C8.47 8.93 7.01 10.38 7.01 12.4C7.01 14.41 8.47 15.87 8.47 15.87L12 19.4C12 19.4 13.46 17.95 13.46 15.93C13.46 13.92 12 12.47 12 12.47L8.47 8.93Z" fill="url(#jira-gradient)"/>
+              <defs>
+                <linearGradient id="jira-gradient" x1="7.01" y1="8.93" x2="13.46" y2="19.4" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#2684FF"/>
+                  <stop offset="1" stopColor="#0052CC"/>
+                </linearGradient>
+              </defs>
             </svg>
             Integration with JIRA
           </div>
