@@ -84,15 +84,8 @@ const LoginSignup = () => {
         <div className="w-full max-w-2xl text-center">
           {/* Integration badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-8 border" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#FFFFFF' }}>
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11.53 2C11.53 2 10.07 3.45 10.07 5.46C10.07 7.47 11.53 8.93 11.53 8.93L15.07 12.47C15.07 12.47 16.53 11.02 16.53 9C16.53 6.99 15.07 5.54 15.07 5.54L11.53 2Z" fill="#2684FF"/>
-              <path d="M8.47 8.93C8.47 8.93 7.01 10.38 7.01 12.4C7.01 14.41 8.47 15.87 8.47 15.87L12 19.4C12 19.4 13.46 17.95 13.46 15.93C13.46 13.92 12 12.47 12 12.47L8.47 8.93Z" fill="url(#jira-gradient)"/>
-              <defs>
-                <linearGradient id="jira-gradient" x1="7.01" y1="8.93" x2="13.46" y2="19.4" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#2684FF"/>
-                  <stop offset="1" stopColor="#0052CC"/>
-                </linearGradient>
-              </defs>
+            <svg className="w-4 h-4 text-[#2684FF]" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
             </svg>
             Integration with JIRA
           </div>
