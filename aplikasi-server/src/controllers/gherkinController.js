@@ -50,6 +50,19 @@ export const generateGherkin = async (req, res, next) => {
           usedReferences = usedReferences.concat(pattern.examples.slice(0, 3));
         }
       });
+      
+      // Remove duplicates based on title
+      const uniqueReferences = [];
+      const seenTitles = new Set();
+      
+      usedReferences.forEach(ref => {
+        if (!seenTitles.has(ref.title)) {
+          seenTitles.add(ref.title);
+          uniqueReferences.push(ref);
+        }
+      });
+      
+      usedReferences = uniqueReferences;
     }
     
     console.log('📚 [GHERKIN-CONTROLLER] Extracted references:', {

@@ -154,6 +154,24 @@ function constructGherkinPrompt(userStory, patterns = []) {
     referencesTitles: references.map(r => r.title)
   });
   
+  // Remove duplicates based on title
+  const uniqueReferences = [];
+  const seenTitles = new Set();
+  
+  references.forEach(ref => {
+    if (!seenTitles.has(ref.title)) {
+      seenTitles.add(ref.title);
+      uniqueReferences.push(ref);
+    }
+  });
+  
+  references = uniqueReferences;
+  
+  console.log('🔍 [AI-SERVICE] After deduplication:', {
+    uniqueReferencesCount: references.length,
+    uniqueTitles: references.map(r => r.title)
+  });
+  
   // Build few-shot examples from references
   let fewShotExamples = '';
   
