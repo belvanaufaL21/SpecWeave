@@ -2,7 +2,7 @@
 # This file tells Railway how to build and run the backend server
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python311Full"]
+nixPkgs = ["nodejs_20", "python311"]
 
 [phases.install]
 cmds = [
