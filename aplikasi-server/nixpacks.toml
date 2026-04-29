@@ -2,7 +2,7 @@
 # This file tells Railway how to build and run the backend server
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+nixPkgs = ["nodejs_20", "python311Full"]
 
 [phases.install]
 cmds = [
@@ -11,7 +11,7 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "python3 -m pip install --user sentence-transformers nltk scikit-learn",
+  "pip3 install --user sentence-transformers nltk scikit-learn",
   "python3 -c \"import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')\""
 ]
 
