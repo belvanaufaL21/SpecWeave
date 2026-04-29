@@ -31,8 +31,8 @@ export const REFERENCE_CONSTANTS = {
 
   // Default limits
   DEFAULT_LIMITS: {
-    BEST_REFERENCES: 5,
-    FORMATTED_REFERENCES: 3,
+    BEST_REFERENCES: 5, // Jumlah references yang diambil dari database
+    FORMATTED_REFERENCES: 5, // Jumlah references yang digunakan untuk few-shot prompting (diubah dari 3 ke 5)
     SEARCH_RESULTS: 50
   },
 

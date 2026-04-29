@@ -160,15 +160,16 @@ function constructGherkinPrompt(userStory, patterns = []) {
   if (references.length > 0) {
     fewShotExamples = '\n\nCONTOH REFERENSI (gunakan sebagai panduan format dan kualitas):\n\n';
     
-    // Use up to 3 most relevant references
-    references.slice(0, 3).forEach((ref, index) => {
+    // Use up to 5 most relevant references (all available references)
+    const maxReferences = Math.min(references.length, 5);
+    references.slice(0, maxReferences).forEach((ref, index) => {
       fewShotExamples += `Contoh ${index + 1}: ${ref.title}\n`;
       fewShotExamples += `${ref.gherkinContent}\n\n`;
     });
     
     fewShotExamples += 'PENTING: Gunakan contoh di atas sebagai panduan untuk membuat scenario yang berkualitas dan konsisten dengan standar perusahaan. Ikuti pola dan struktur yang sama.\n';
     
-    console.log('✅ [AI-SERVICE] Few-shot examples added to prompt');
+    console.log(`✅ [AI-SERVICE] Few-shot examples added to prompt (${maxReferences} references)`);
   } else {
     console.log('⚠️ [AI-SERVICE] No references available for few-shot prompting');
   }
