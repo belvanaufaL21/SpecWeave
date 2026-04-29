@@ -57,17 +57,17 @@ const PatternUsedModal = ({ isOpen, onClose, patternInfo }) => {
           className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         />
 
-        {/* Modal */}
+        {/* Modal - Fixed height */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-4xl max-h-[85vh] bg-[#09090A] border border-white/5 rounded-3xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-4xl h-[600px] bg-[#09090A] border border-white/5 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Content */}
-          <div className="relative z-10 flex flex-col max-h-[85vh]">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="relative z-10 flex flex-col h-full">
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#120C18] border border-[#2C1A43] flex items-center justify-center">
                   <svg className="w-5 h-5 text-[#C27AFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,8 +90,8 @@ const PatternUsedModal = ({ isOpen, onClose, patternInfo }) => {
               </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Scrollable Content - Fixed height with internal scroll */}
+            <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: 0 }}>
               <div className="space-y-6">
                 {/* References List */}
                 {references.length > 0 ? (
@@ -225,13 +225,15 @@ const PatternUsedModal = ({ isOpen, onClose, patternInfo }) => {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <svg className="w-12 h-12 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                      Generasi tidak dapat menggunakan few-shot prompting dengan reference library kosong
-                    </p>
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <svg className="w-12 h-12 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="text-sm max-w-xs mx-auto leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                        Generasi tidak dapat menggunakan few-shot prompting<br />dengan reference library kosong
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
