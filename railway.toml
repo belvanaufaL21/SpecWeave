@@ -1,8 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd aplikasi-klien && npm ci && npm run build"
+buildCommand = "npm ci && npm run build"
 
 [deploy]
-startCommand = "cd aplikasi-klien && npm start"
+startCommand = "npm start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
