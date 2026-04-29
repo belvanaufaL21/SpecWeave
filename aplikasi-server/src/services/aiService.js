@@ -154,13 +154,15 @@ function constructGherkinPrompt(userStory, patterns = []) {
     referencesTitles: references.map(r => r.title)
   });
   
-  // Remove duplicates based on title
+  // Remove duplicates based on title AND gherkinContent (more strict)
   const uniqueReferences = [];
-  const seenTitles = new Set();
+  const seenKeys = new Set();
   
   references.forEach(ref => {
-    if (!seenTitles.has(ref.title)) {
-      seenTitles.add(ref.title);
+    // Create unique key from title + first 100 chars of content
+    const uniqueKey = `${ref.title}_${ref.gherkinContent.substring(0, 100)}`;
+    if (!seenKeys.has(uniqueKey)) {
+      seenKeys.add(uniqueKey);
       uniqueReferences.push(ref);
     }
   });
@@ -172,22 +174,25 @@ function constructGherkinPrompt(userStory, patterns = []) {
     uniqueTitles: references.map(r => r.title)
   });
   
+  // References sudah di-shuffle di frontend, langsung gunakan
+  // Maksimal 5 references, atau semua jika kurang dari 5
+  const maxReferences = Math.min(references.length, 5);
+  const selectedReferences = references.slice(0, maxReferences);
+  
   // Build few-shot examples from references
   let fewShotExamples = '';
   
-  if (references.length > 0) {
+  if (selectedReferences.length > 0) {
     fewShotExamples = '\n\nCONTOH REFERENSI (gunakan sebagai panduan format dan kualitas):\n\n';
     
-    // Use up to 5 most relevant references (all available references)
-    const maxReferences = Math.min(references.length, 5);
-    references.slice(0, maxReferences).forEach((ref, index) => {
+    selectedReferences.forEach((ref, index) => {
       fewShotExamples += `Contoh ${index + 1}: ${ref.title}\n`;
       fewShotExamples += `${ref.gherkinContent}\n\n`;
     });
     
-    fewShotExamples += 'PENTING: Gunakan contoh di atas sebagai panduan untuk membuat scenario yang berkualitas dan konsisten dengan standar perusahaan. Ikuti pola dan struktur yang sama.\n';
+    fewShotExamples += 'PENTING: Gunakan contoh di atas sebagai panduan untuk membuat scenario yang berkualitas dan konsisten dengan standar perusahaan. Ikuti pola dan struktur yang sama, tetapi sesuaikan dengan konteks user story yang diberikan.\n';
     
-    console.log(`✅ [AI-SERVICE] Few-shot examples added to prompt (${maxReferences} references)`);
+    console.log(`✅ [AI-SERVICE] Few-shot examples added to prompt (${selectedReferences.length} references)`);
   } else {
     console.log('⚠️ [AI-SERVICE] No references available for few-shot prompting');
   }

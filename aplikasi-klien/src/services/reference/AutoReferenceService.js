@@ -60,9 +60,13 @@ class AutoReferenceService {
     const patterns = [];
     const categoryGroups = {};
     const structureGroups = {};
+    const usedReferenceIds = new Set(); // Track which references have been used
+
+    // Shuffle references untuk diversifikasi
+    const shuffledReferences = this.shuffleArray([...references]);
 
     // Group by category
-    references.forEach(ref => {
+    shuffledReferences.forEach(ref => {
       const category = ref.category || 'general';
       if (!categoryGroups[category]) {
         categoryGroups[category] = [];
@@ -73,7 +77,7 @@ class AutoReferenceService {
     // Extract category-based patterns
     Object.entries(categoryGroups).forEach(([category, refs]) => {
       if (refs.length > 0) {
-        const pattern = this.extractCategoryPattern(category, refs);
+        const pattern = this.extractCategoryPattern(category, refs, usedReferenceIds);
         if (pattern) {
           patterns.push(pattern);
         }
@@ -81,7 +85,7 @@ class AutoReferenceService {
     });
 
     // Extract structure-based patterns
-    references.forEach(ref => {
+    shuffledReferences.forEach(ref => {
       const structure = this.analyzeGherkinStructure(ref.gherkinContent);
       const structureKey = this.getStructureKey(structure);
       
@@ -94,7 +98,7 @@ class AutoReferenceService {
     // Add structure patterns
     Object.entries(structureGroups).forEach(([structureKey, refs]) => {
       if (refs.length >= 2) { // Only if pattern appears multiple times
-        const pattern = this.extractStructurePattern(structureKey, refs);
+        const pattern = this.extractStructurePattern(structureKey, refs, usedReferenceIds);
         if (pattern) {
           patterns.push(pattern);
         }
@@ -105,12 +109,37 @@ class AutoReferenceService {
   }
 
   /**
+   * Shuffle array untuk randomisasi
+   */
+  shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  /**
    * Extract pattern berdasarkan kategori
    */
-  extractCategoryPattern(category, references) {
+  extractCategoryPattern(category, references, usedReferenceIds = new Set()) {
     const commonGivenSteps = this.findCommonSteps(references, 'given');
     const commonWhenSteps = this.findCommonSteps(references, 'when');
     const commonThenSteps = this.findCommonSteps(references, 'then');
+
+    // Pilih references yang belum digunakan, atau gunakan semua jika semua sudah digunakan
+    const availableRefs = references.filter(ref => !usedReferenceIds.has(ref.id));
+    const refsToUse = availableRefs.length > 0 ? availableRefs : references;
+    
+    // Ambil maksimal 2 examples per pattern untuk menghindari duplikasi
+    const selectedExamples = refsToUse.slice(0, 2).map(ref => {
+      usedReferenceIds.add(ref.id); // Mark as used
+      return {
+        title: ref.title,
+        gherkinContent: ref.gherkinContent
+      };
+    });
 
     return {
       type: 'category',
@@ -121,10 +150,7 @@ class AutoReferenceService {
         when: commonWhenSteps,
         then: commonThenSteps
       },
-      examples: references.slice(0, 3).map(ref => ({
-        title: ref.title,
-        gherkinContent: ref.gherkinContent
-      })),
+      examples: selectedExamples,
       usage: {
         totalUsage: references.reduce((sum, ref) => sum + (ref.usageCount || 0), 0),
         averageScore: this.calculateAverageScore(references)
@@ -135,18 +161,28 @@ class AutoReferenceService {
   /**
    * Extract pattern berdasarkan struktur
    */
-  extractStructurePattern(structureKey, references) {
+  extractStructurePattern(structureKey, references, usedReferenceIds = new Set()) {
     const structure = this.parseStructureKey(structureKey);
+    
+    // Pilih references yang belum digunakan
+    const availableRefs = references.filter(ref => !usedReferenceIds.has(ref.id));
+    const refsToUse = availableRefs.length > 0 ? availableRefs : references;
+    
+    // Ambil maksimal 1 example per structure pattern
+    const selectedExamples = refsToUse.slice(0, 1).map(ref => {
+      usedReferenceIds.add(ref.id); // Mark as used
+      return {
+        title: ref.title,
+        gherkinContent: ref.gherkinContent,
+        category: ref.category
+      };
+    });
     
     return {
       type: 'structure',
       structure: structure,
       weight: references.length,
-      examples: references.slice(0, 2).map(ref => ({
-        title: ref.title,
-        gherkinContent: ref.gherkinContent,
-        category: ref.category
-      })),
+      examples: selectedExamples,
       usage: {
         totalUsage: references.reduce((sum, ref) => sum + (ref.usageCount || 0), 0),
         averageScore: this.calculateAverageScore(references)
@@ -278,34 +314,50 @@ class AutoReferenceService {
   async generateScenarioFromUserStory(userStory, options = {}) {
     try {
       
-      // Analyze patterns
-      const patterns = await this.analyzeReferencePatterns();
+      // Get all references directly
+      const result = await referenceService.getReferences();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch references');
+      }
+
+      const allReferences = result.data || [];
       
-      if (patterns.length === 0) {
-        console.warn('⚠️ [AUTO-REFERENCE] No patterns found, using basic generation');
+      if (allReferences.length === 0) {
+        console.warn('⚠️ [AUTO-REFERENCE] No references found, using basic generation');
         return this.generateBasicScenario(userStory);
       }
 
-      // Select most relevant patterns
-      const relevantPatterns = this.selectRelevantPatterns(userStory, patterns);
+      // Shuffle all references untuk randomisasi
+      const shuffledReferences = this.shuffleArray([...allReferences]);
       
-      // Create prompt with patterns
-      const prompt = this.createPromptWithPatterns(userStory, relevantPatterns, options);
+      // Ambil maksimal 5 references, atau semua jika kurang dari 5
+      const maxReferences = Math.min(shuffledReferences.length, 5);
+      const selectedReferences = shuffledReferences.slice(0, maxReferences);
       
-      console.log('📝 [AUTO-REFERENCE] Generated prompt with patterns:', {
-        userStory: userStory.substring(0, 50) + '...',
-        patternCount: relevantPatterns.length,
-        promptLength: prompt.length
+      // Buat pattern sederhana dengan selected references
+      const patterns = [{
+        type: 'random-selection',
+        examples: selectedReferences.map(ref => ({
+          title: ref.title,
+          gherkinContent: ref.gherkinContent
+        })),
+        weight: selectedReferences.length
+      }];
+      
+      console.log('📝 [AUTO-REFERENCE] Selected references for few-shot:', {
+        totalAvailable: allReferences.length,
+        selected: selectedReferences.length,
+        selectedTitles: selectedReferences.map(r => r.title)
       });
 
       return {
         success: true,
-        prompt: prompt,
-        patterns: relevantPatterns,
+        prompt: userStory, // Return original user story, backend will handle few-shot
+        patterns: patterns,
         meta: {
-          patternCount: patterns.length,
-          relevantPatternCount: relevantPatterns.length,
-          generationType: 'pattern-based'
+          totalReferences: allReferences.length,
+          selectedReferences: selectedReferences.length,
+          generationType: 'random-few-shot'
         }
       };
 

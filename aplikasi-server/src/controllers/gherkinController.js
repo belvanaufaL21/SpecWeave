@@ -47,25 +47,38 @@ export const generateGherkin = async (req, res, next) => {
     if (patterns.length > 0) {
       patterns.forEach(pattern => {
         if (pattern.examples && Array.isArray(pattern.examples)) {
-          usedReferences = usedReferences.concat(pattern.examples.slice(0, 3));
+          usedReferences = usedReferences.concat(pattern.examples);
         }
       });
       
-      // Remove duplicates based on title
+      // Remove duplicates based on title AND content
       const uniqueReferences = [];
-      const seenTitles = new Set();
+      const seenKeys = new Set();
       
       usedReferences.forEach(ref => {
-        if (!seenTitles.has(ref.title)) {
-          seenTitles.add(ref.title);
+        const uniqueKey = `${ref.title}_${ref.gherkinContent?.substring(0, 100) || ''}`;
+        if (!seenKeys.has(uniqueKey)) {
+          seenKeys.add(uniqueKey);
           uniqueReferences.push(ref);
         }
       });
       
       usedReferences = uniqueReferences;
+      
+      console.log('📚 [GHERKIN-CONTROLLER] Reference extraction:', {
+        patternsReceived: patterns.length,
+        totalReferencesExtracted: usedReferences.length,
+        patternDetails: patterns.map(p => ({
+          type: p.type,
+          category: p.category,
+          examplesCount: p.examples?.length || 0,
+          exampleTitles: p.examples?.map(e => e.title) || []
+        })),
+        uniqueReferenceTitles: usedReferences.map(r => r.title)
+      });
     }
     
-    console.log('📚 [GHERKIN-CONTROLLER] Extracted references:', {
+    console.log('📚 [GHERKIN-CONTROLLER] Final references for response:', {
       usedReferencesCount: usedReferences.length,
       titles: usedReferences.map(r => r.title)
     });
