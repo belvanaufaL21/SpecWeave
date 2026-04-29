@@ -12,7 +12,7 @@ cmds = [
 [phases.build]
 cmds = [
   "pip3 install --user --break-system-packages torch --index-url https://download.pytorch.org/whl/cpu",
-  "pip3 install --user --break-system-packages sentence-transformers nltk scikit-learn",
+  "pip3 install --user --break-system-packages sentence-transformers nltk scikit-learn --extra-index-url https://download.pytorch.org/whl/cpu",
   "python3 -c \"import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')\""
 ]
 
