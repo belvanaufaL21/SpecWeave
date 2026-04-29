@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "SpecWeave Client Application",
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
