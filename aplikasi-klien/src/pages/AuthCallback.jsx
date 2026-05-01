@@ -128,7 +128,7 @@ const AuthCallback = () => {
             // Try to find existing profile first
             const { data: existingProfile } = await supabase
               .from('profiles')
-              .select('id, email')
+              .select('id, email, name')
               .eq('id', user.id)
               .maybeSingle();
             
@@ -166,7 +166,7 @@ const AuthCallback = () => {
                     // Unique violation - profile might have been created by trigger
                     const { data: triggerProfile } = await supabase
                       .from('profiles')
-                      .select('id, email')
+                      .select('id, email, name')
                       .eq('id', user.id)
                       .maybeSingle();
                     
@@ -204,7 +204,8 @@ const AuthCallback = () => {
           
           // Show success notification with user name - ONLY ONCE
           if (!notificationShown) {
-            const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+            // Get user name from profile (database) first, fallback to Google metadata
+            const userName = profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
             showAuthSuccessToast(userName);
             setNotificationShown(true);
           }
