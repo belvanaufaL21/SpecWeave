@@ -17,8 +17,8 @@ const baseStyle = {
   padding: '10px 8px',
   border: '1px solid #44273D',
   boxShadow: '0 10px 40px rgba(255, 122, 208, 0.2)',
-  width: 'fit-content',
-  maxWidth: '400px'
+  width: '320px',
+  height: 'fit-content'
 };
 
 /**
@@ -138,7 +138,7 @@ export const showAuthSuccessToast = (userName) => {
         <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
-            <div className="text-xs leading-tight mt-0.5" style={{ color: '#FF7AD0' }}>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#FF7AD0' }}>
               SpecWeave siap!
             </div>
           </div>
@@ -199,7 +199,7 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
         <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Export Berhasil!</div>
-            <div className="flex items-center gap-1.5 text-xs leading-tight mt-0.5">
+            <div className="flex items-center gap-1.5 text-xs leading-tight mt-2">
               <span style={{ color: '#FF7AD0' }}>{epicName}:</span>
               <span className="font-mono font-semibold" style={{ color: '#FFFFFF' }}>{issueKey}</span>
             </div>
