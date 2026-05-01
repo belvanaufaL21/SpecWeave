@@ -17,7 +17,8 @@ const baseStyle = {
   padding: '10px 8px',
   border: '1px solid #44273D',
   width: '250px',
-  height: 'fit-content'
+  height: 'fit-content',
+  boxShadow: 'none'
 };
 
 /**
@@ -171,6 +172,7 @@ export const showAuthSuccessToast = (userName) => {
       style: {
         ...baseStyle
       },
+      className: '',
       icon: null
     }
   );
@@ -259,6 +261,7 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
       style: {
         ...baseStyle
       },
+      className: '',
       icon: null
     }
   );
