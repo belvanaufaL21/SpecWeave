@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { registerUser } from '../utils/userValidation';
 import { supabase } from '../config/supabase';
 import AppLoader from '../components/common/AppLoader';
-import { showAuthSuccessToast } from '../utils/toastNotifications';
+import { showAuthSuccessToast } from '../utils/toastNotifications.jsx';
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();

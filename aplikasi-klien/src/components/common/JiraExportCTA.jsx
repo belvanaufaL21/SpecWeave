@@ -5,7 +5,7 @@ import { useJira } from '../../contexts/JiraContext';
 import { getCurrentChatId } from '../../utils/helpers/jiraServiceHelpers';
 import UserDataService from '../../services/UserDataService';
 import cleanLogger from '../../config/cleanLogging.js';
-import { showErrorToast, showJiraExportSuccessToast } from '../../utils/toastNotifications';
+import { showErrorToast, showJiraExportSuccessToast } from '../../utils/toastNotifications.jsx';
 
 const JiraExportCTA = ({ scenarioData }) => {
   const { epicContext, hasEpic, openEpicModal } = useJira();
