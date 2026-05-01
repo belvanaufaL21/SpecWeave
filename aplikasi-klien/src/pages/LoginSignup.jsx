@@ -19,13 +19,51 @@ const LoginSignup = () => {
     }
   }, [user, navigate]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Reset loading state when component unmounts
+      setIsLoading(false);
+    };
+  }, []);
+
   const handleGoogleAuth = async () => {
     setIsLoading(true);
     setError(null);
 
+    // Track if authentication completed
+    let authCompleted = false;
+    
+    // Setup timeout to detect if popup was closed without completing auth
+    // This handles the case when user presses browser back button
+    const authTimeout = setTimeout(() => {
+      if (!authCompleted) {
+        console.log('Authentication timeout - popup likely closed by user');
+        setIsLoading(false);
+      }
+    }, 3000); // 3 seconds timeout to detect popup closure
+
+    // Setup focus listener to detect when popup closes
+    const handleWindowFocus = () => {
+      // Small delay to allow auth to complete if it was successful
+      setTimeout(() => {
+        if (!authCompleted) {
+          console.log('Window regained focus - popup likely closed by user');
+          setIsLoading(false);
+          window.removeEventListener('focus', handleWindowFocus);
+        }
+      }, 500);
+    };
+    
+    window.addEventListener('focus', handleWindowFocus);
+
     try {
       // Always use 'signup' mode - this allows both new and existing users
       const { error: authError } = await signInWithGoogle('signup');
+      
+      authCompleted = true;
+      clearTimeout(authTimeout);
+      window.removeEventListener('focus', handleWindowFocus);
       
       if (authError) {
         // Check if user cancelled the popup/flow
@@ -52,6 +90,10 @@ const LoginSignup = () => {
       }
       // If successful, user will be redirected via AuthCallback
     } catch (err) {
+      authCompleted = true;
+      clearTimeout(authTimeout);
+      window.removeEventListener('focus', handleWindowFocus);
+      
       // Check if it's a cancellation
       const isCancelled = 
         err.message?.includes('popup_closed_by_user') ||
