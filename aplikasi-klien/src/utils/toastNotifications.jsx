@@ -2,20 +2,20 @@ import toast from 'react-hot-toast';
 
 /**
  * Toast notification utilities with consistent styling
- * All notifications follow the same design system with pink theme
+ * All notifications follow the same design system with purple theme
  * 
  * Colors:
- * - Background: #160D14
- * - Text: #FF7AD0 (pink)
- * - Border: #44273D (pink border)
+ * - Background: #120C18
+ * - Text: #C27AFF (purple)
+ * - Border: #2C1A43 (purple border)
  */
 
 const baseStyle = {
-  background: '#160D14',
-  color: '#FF7AD0',
+  background: '#120C18',
+  color: '#C27AFF',
   borderRadius: '12px',
   padding: '10px 8px',
-  border: '1px solid #44273D',
+  border: '1px solid #2C1A43',
   width: '250px',
   height: 'fit-content',
   boxShadow: 'none'
@@ -126,19 +126,19 @@ export const showAuthSuccessToast = (userName) => {
   
   return toast.success(
     (t) => (
-      <div className="flex items-start gap-2">
-        {/* Success Icon - Same size as title text */}
-        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
-          <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center gap-3">
+        {/* Success Icon - Centered vertically */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#2C1A43', border: '1px solid #2C1A43' }}>
+          <svg className="w-3 h-3" style={{ color: '#C27AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         
         {/* Content and Close Button in same row */}
-        <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
-            <div className="text-xs leading-tight mt-2" style={{ color: '#FF7AD0' }}>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#C27AFF' }}>
               Selamat datang di SpecWeave!
             </div>
           </div>
@@ -148,7 +148,7 @@ export const showAuthSuccessToast = (userName) => {
             onClick={() => toast.dismiss(t.id)}
             className="flex-shrink-0 w-4 h-4 flex items-center justify-center transition-opacity"
             style={{ 
-              color: '#FF7AD0',
+              color: '#C27AFF',
               opacity: 0.5
             }}
             onMouseEnter={(e) => {
@@ -188,20 +188,20 @@ export const showAuthSuccessToast = (userName) => {
 export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
   return toast.success(
     (t) => (
-      <div className="flex items-start gap-2">
-        {/* JIRA Logo - Same size as title text */}
-        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
-          <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} viewBox="0 0 24 24" fill="currentColor">
+      <div className="flex items-center gap-3">
+        {/* JIRA Logo - Centered vertically */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#2C1A43', border: '1px solid #2C1A43' }}>
+          <svg className="w-3 h-3" style={{ color: '#C27AFF' }} viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
           </svg>
         </div>
         
         {/* Content and Close Button */}
-        <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Export Berhasil!</div>
             <div className="flex items-center gap-1.5 text-xs leading-tight mt-2">
-              <span style={{ color: '#FF7AD0' }}>{epicName}:</span>
+              <span style={{ color: '#C27AFF' }}>{epicName}:</span>
               <span className="font-mono font-semibold" style={{ color: '#FFFFFF' }}>{issueKey}</span>
             </div>
             
@@ -213,16 +213,16 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors mt-1.5"
                 style={{ 
-                  backgroundColor: 'rgba(255, 122, 208, 0.2)',
-                  color: '#FF7AD0',
-                  border: '1px solid #44273D'
+                  backgroundColor: 'rgba(194, 122, 255, 0.2)',
+                  color: '#C27AFF',
+                  border: '1px solid #2C1A43'
                 }}
                 onClick={() => toast.dismiss(t.id)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.3)';
+                  e.currentTarget.style.backgroundColor = 'rgba(194, 122, 255, 0.3)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.2)';
+                  e.currentTarget.style.backgroundColor = 'rgba(194, 122, 255, 0.2)';
                 }}
               >
                 <span>Buka di JIRA</span>
@@ -238,7 +238,7 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
             onClick={() => toast.dismiss(t.id)}
             className="flex-shrink-0 w-4 h-4 flex items-center justify-center transition-opacity"
             style={{ 
-              color: '#FF7AD0',
+              color: '#C27AFF',
               opacity: 0.5
             }}
             onMouseEnter={(e) => {
