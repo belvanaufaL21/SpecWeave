@@ -12,11 +12,9 @@ import toast from 'react-hot-toast';
 
 const baseStyle = {
   background: '#160D14',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
   color: '#FF7AD0',
   borderRadius: '12px',
-  padding: '10px 12px',
+  padding: '10px 4px',
   minWidth: '280px',
   border: '1px solid #44273D',
   boxShadow: '0 10px 40px rgba(255, 122, 208, 0.2)'
