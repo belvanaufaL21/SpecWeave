@@ -5,6 +5,7 @@ import { useJira } from '../../contexts/JiraContext';
 import { getCurrentChatId } from '../../utils/helpers/jiraServiceHelpers';
 import UserDataService from '../../services/UserDataService';
 import cleanLogger from '../../config/cleanLogging.js';
+import { showErrorToast, showJiraExportSuccessToast } from '../../utils/toastNotifications';
 
 const JiraExportCTA = ({ scenarioData }) => {
   const { epicContext, hasEpic, openEpicModal } = useJira();
@@ -78,39 +79,13 @@ const JiraExportCTA = ({ scenarioData }) => {
       timestamp: new Date().toISOString()
     });
     if (!hasEpic || !epicContext) {
-      toast.error('No Epic selected. Please select an Epic first.', {
-        duration: 4000,
-        position: 'top-right',
-        style: {
-          background: 'rgba(10, 10, 15, 0.95)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          color: '#fff',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
-          padding: '12px'
-        }
-      });
+      showErrorToast('No Epic selected. Please select an Epic first.');
       openEpicModal();
       return;
     }
 
     if (!epicContext.epicData) {
-      toast.error('Invalid Epic context. Please select an Epic again.', {
-        duration: 4000,
-        position: 'top-right',
-        style: {
-          background: 'rgba(10, 10, 15, 0.95)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          color: '#fff',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
-          padding: '12px'
-        }
-      });
+      showErrorToast('Invalid Epic context. Please select an Epic again.');
       openEpicModal();
       return;
     }
@@ -196,77 +171,12 @@ const JiraExportCTA = ({ scenarioData }) => {
         const issueUrl = result.data.userStory?.url || result.data.issueUrl;
         const epicName = epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Epic';
         
-        // Show simple, clean success notification
-        toast.success(
-          (t) => (
-            <div className="flex items-center gap-3">
-              {/* JIRA Logo */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
-                </svg>
-              </div>
-              
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-base mb-1">Export Berhasil!</div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">{epicName}:</span>
-                  <span className="font-mono font-semibold text-purple-400">{issueKey}</span>
-                </div>
-              </div>
-              
-              {/* Arrow Link to JIRA */}
-              {issueUrl && (
-                <a
-                  href={issueUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 flex items-center justify-center transition-colors group"
-                  onClick={() => toast.dismiss(t.id)}
-                  title="Buka di JIRA"
-                >
-                  <svg className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              )}
-            </div>
-          ),
-          {
-            duration: 5000,
-            position: 'top-right',
-            style: {
-              background: 'rgba(10, 10, 15, 0.95)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              color: '#fff',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: '12px',
-              boxShadow: '0 10px 40px rgba(139, 92, 246, 0.2)',
-              padding: '18px 24px',
-              minWidth: '340px'
-            },
-            icon: null
-          }
-        );
+        // Show success notification using helper
+        showJiraExportSuccessToast(issueKey, issueUrl, epicName);
       } else {
         // Handle timeout specifically
         if (result.isTimeout) {
-          toast.error(result.error, {
-            duration: 5000,
-            position: 'top-right',
-            style: {
-              background: 'rgba(10, 10, 15, 0.95)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              color: '#fff',
-              border: '1px solid rgba(234, 179, 8, 0.3)',
-              borderRadius: '12px',
-              boxShadow: '0 10px 40px rgba(234, 179, 8, 0.2)',
-              padding: '18px 24px'
-            }
-          });
+          showErrorToast(result.error, { duration: 5000 });
         } else {
           throw new Error(result.error || 'Failed to export to JIRA');
         }

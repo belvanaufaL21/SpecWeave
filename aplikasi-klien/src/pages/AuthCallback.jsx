@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { registerUser } from '../utils/userValidation';
 import { supabase } from '../config/supabase';
 import AppLoader from '../components/common/AppLoader';
+import { showAuthSuccessToast } from '../utils/toastNotifications';
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
@@ -199,6 +200,10 @@ const AuthCallback = () => {
           setStatus('success');
           setMessage('');
           setValidationComplete(true);
+          
+          // Show success notification with user name
+          const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+          showAuthSuccessToast(userName);
           
           // Longer delay for smoother animation
           setTimeout(() => {
