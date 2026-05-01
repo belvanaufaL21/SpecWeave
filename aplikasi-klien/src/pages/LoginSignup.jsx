@@ -19,10 +19,20 @@ const LoginSignup = () => {
     }
   }, [user, navigate]);
 
-  // Cleanup on unmount
+  // Reset loading state when component mounts (handles back navigation)
   useEffect(() => {
+    // Check if we're returning from OAuth redirect
+    const isReturningFromOAuth = sessionStorage.getItem('oauth_in_progress');
+    
+    if (isReturningFromOAuth) {
+      // User returned without completing OAuth (pressed back button)
+      console.log('Detected return from OAuth without completion');
+      sessionStorage.removeItem('oauth_in_progress');
+      setIsLoading(false);
+    }
+    
     return () => {
-      // Reset loading state when component unmounts
+      // Cleanup on unmount
       setIsLoading(false);
     };
   }, []);
@@ -31,83 +41,30 @@ const LoginSignup = () => {
     setIsLoading(true);
     setError(null);
 
-    // Track if authentication completed
-    let authCompleted = false;
-    
-    // Setup timeout to detect if popup was closed without completing auth
-    // This handles the case when user presses browser back button
-    const authTimeout = setTimeout(() => {
-      if (!authCompleted) {
-        console.log('Authentication timeout - popup likely closed by user');
-        setIsLoading(false);
-      }
-    }, 3000); // 3 seconds timeout to detect popup closure
-
-    // Setup focus listener to detect when popup closes
-    const handleWindowFocus = () => {
-      // Small delay to allow auth to complete if it was successful
-      setTimeout(() => {
-        if (!authCompleted) {
-          console.log('Window regained focus - popup likely closed by user');
-          setIsLoading(false);
-          window.removeEventListener('focus', handleWindowFocus);
-        }
-      }, 500);
-    };
-    
-    window.addEventListener('focus', handleWindowFocus);
-
     try {
-      // Always use 'signup' mode - this allows both new and existing users
+      // Mark that OAuth is in progress
+      sessionStorage.setItem('oauth_in_progress', 'true');
+      
+      // signInWithGoogle uses redirect flow, so it will redirect the page
+      // The loading state will persist during redirect, which is expected
       const { error: authError } = await signInWithGoogle('signup');
       
-      authCompleted = true;
-      clearTimeout(authTimeout);
-      window.removeEventListener('focus', handleWindowFocus);
-      
       if (authError) {
-        // Check if user cancelled the popup/flow
-        // Common error messages when user cancels:
-        // - "popup_closed_by_user"
-        // - "access_denied"
-        // - User closed the popup
-        const isCancelled = 
-          authError.message?.includes('popup_closed_by_user') ||
-          authError.message?.includes('access_denied') ||
-          authError.message?.includes('closed') ||
-          authError.message?.includes('cancelled');
+        // Remove OAuth in progress flag on error
+        sessionStorage.removeItem('oauth_in_progress');
         
-        if (isCancelled) {
-          // User cancelled - just reset loading state, no error message
-          console.log('User cancelled authentication');
-          setIsLoading(false);
-          return;
-        }
-        
-        // Real error - show error message
+        // Only handle actual errors, not cancellations
+        console.error('Authentication error:', authError);
         setError(authError.message || 'Authentication failed. Please try again.');
         setIsLoading(false);
       }
-      // If successful, user will be redirected via AuthCallback
+      // If successful, page will redirect to Google OAuth
+      // oauth_in_progress flag will be cleared when user returns (in useEffect)
     } catch (err) {
-      authCompleted = true;
-      clearTimeout(authTimeout);
-      window.removeEventListener('focus', handleWindowFocus);
+      // Remove OAuth in progress flag on error
+      sessionStorage.removeItem('oauth_in_progress');
       
-      // Check if it's a cancellation
-      const isCancelled = 
-        err.message?.includes('popup_closed_by_user') ||
-        err.message?.includes('access_denied') ||
-        err.message?.includes('closed') ||
-        err.message?.includes('cancelled');
-      
-      if (isCancelled) {
-        // User cancelled - just reset loading state
-        console.log('User cancelled authentication');
-        setIsLoading(false);
-        return;
-      }
-      
+      console.error('Unexpected authentication error:', err);
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
