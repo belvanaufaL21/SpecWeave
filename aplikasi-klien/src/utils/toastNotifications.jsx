@@ -115,9 +115,16 @@ export const showCustomToast = (message, options = {}) => {
 /**
  * Show authentication success notification
  * Simple notification without action button - just icon, title, subtitle, and close
+ * Uses unique ID to prevent duplicates
  * @param {string} userName - User's name
  */
 export const showAuthSuccessToast = (userName) => {
+  // Use unique ID to prevent duplicate toasts
+  const toastId = 'auth-success-toast';
+  
+  // Dismiss any existing auth success toast first
+  toast.dismiss(toastId);
+  
   return toast.success(
     (t) => (
       <div className="flex items-center gap-3">
@@ -158,6 +165,7 @@ export const showAuthSuccessToast = (userName) => {
       </div>
     ),
     {
+      id: toastId, // Use unique ID to prevent duplicates
       duration: 4000,
       position: 'top-right',
       style: {

@@ -13,6 +13,7 @@ const AuthCallback = () => {
   const [status, setStatus] = useState('processing'); // processing, success, error
   const [message, setMessage] = useState(''); // Start with empty message
   const [validationComplete, setValidationComplete] = useState(false);
+  const [notificationShown, setNotificationShown] = useState(false); // Prevent duplicate notifications
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -201,9 +202,12 @@ const AuthCallback = () => {
           setMessage('');
           setValidationComplete(true);
           
-          // Show success notification with user name
-          const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-          showAuthSuccessToast(userName);
+          // Show success notification with user name - ONLY ONCE
+          if (!notificationShown) {
+            const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+            showAuthSuccessToast(userName);
+            setNotificationShown(true);
+          }
           
           // Longer delay for smoother animation
           setTimeout(() => {
@@ -232,7 +236,7 @@ const AuthCallback = () => {
     if (user && !validationComplete) {
       validateUser();
     }
-  }, [user, validationComplete, navigate]);
+  }, [user, validationComplete, navigate, notificationShown]);
 
   return (
     <div className="min-h-screen bg-[#020203] text-white flex items-center justify-center relative overflow-hidden">
