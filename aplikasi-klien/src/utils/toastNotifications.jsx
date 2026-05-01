@@ -17,7 +17,7 @@ const baseStyle = {
   padding: '10px 8px',
   border: '1px solid #44273D',
   boxShadow: '0 10px 40px rgba(255, 122, 208, 0.2)',
-  width: '320px',
+  width: '250px',
   height: 'fit-content'
 };
 
@@ -139,7 +139,7 @@ export const showAuthSuccessToast = (userName) => {
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
             <div className="text-xs leading-tight mt-2" style={{ color: '#FF7AD0' }}>
-              SpecWeave siap!
+              Selamat datang di SpecWeave!
             </div>
           </div>
 
