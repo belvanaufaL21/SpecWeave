@@ -288,7 +288,8 @@ const AuthCallback = () => {
             
             <button
               onClick={() => navigate('/login', { replace: true })}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl border"
+              style={{ backgroundColor: '#160D14', borderColor: '#44273D', color: '#FF7AD0' }}
             >
               Kembali ke Login
             </button>

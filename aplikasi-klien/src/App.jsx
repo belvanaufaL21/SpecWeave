@@ -21,7 +21,6 @@ import JiraCallback from './pages/JiraCallback';
 import AuthCallback from './pages/AuthCallback';
 import MeteorResults from './pages/MeteorResults';
 import TestResultsDetailPage from './pages/TestResultsDetailPage';
-import PasswordReset from './pages/PasswordReset';
 import EvaluationHistory from './components/evaluation/EvaluationHistory';
 
 function App() {
@@ -74,11 +73,6 @@ function App() {
             <Route path="/auth/callback" element={
               <PageTransition>
                 <AuthCallback />
-              </PageTransition>
-            } />
-            <Route path="/reset-password" element={
-              <PageTransition>
-                <PasswordReset />
               </PageTransition>
             } />
             <Route 

@@ -281,20 +281,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Reset password
-   */
-  const resetPassword = async (email) => {
-    return await AuthService.resetPassword(email);
-  };
-
-  /**
-   * Update password
-   */
-  const updatePassword = async (newPassword) => {
-    return await AuthService.updatePassword(newPassword);
-  };
-
-  /**
    * Get access token
    */
   const getAccessToken = async () => {
@@ -341,8 +327,6 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signOut,
     updateProfile,
-    resetPassword,
-    updatePassword,
     getAccessToken,
     hasRole,
     fetchUserProfile,

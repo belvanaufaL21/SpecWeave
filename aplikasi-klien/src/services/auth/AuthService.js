@@ -560,42 +560,6 @@ class AuthService {
   }
 
   /**
-   * Reset password
-   * @param {string} email - Email address
-   * @returns {Promise<Object>} - Reset result
-   */
-  static async resetPassword(email) {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  }
-
-  /**
-   * Update password
-   * @param {string} newPassword - New password
-   * @returns {Promise<Object>} - Update result
-   */
-  static async updatePassword(newPassword) {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  }
-
-  /**
    * Clear auth mode from session storage
    * @returns {void}
    */

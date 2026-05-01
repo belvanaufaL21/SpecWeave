@@ -585,13 +585,14 @@ const Profile = () => {
                   <div className="relative group">
                     {/* Avatar Display */}
                     <div
-                      className="w-32 h-32 rounded-3xl bg-[#160D14] border-4 border-white/5 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
+                      className="w-32 h-32 rounded-3xl border-4 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
+                      style={{ backgroundColor: '#160D14', borderColor: '#44273D' }}
                       onClick={() => isEditing && setIsAvatarPickerOpen(true)}
                     >
                       {editForm.avatar || profile?.avatar ? (
                         <span>{editForm.avatar || profile?.avatar}</span>
                       ) : (
-                        <span className="text-4xl font-bold bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                        <span className="text-4xl font-bold" style={{ color: '#FF7AD0' }}>
                           {getInitials(profile?.name, user?.email)}
                         </span>
                       )}
