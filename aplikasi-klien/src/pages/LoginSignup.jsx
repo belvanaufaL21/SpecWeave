@@ -31,8 +31,25 @@ const LoginSignup = () => {
       setIsLoading(false);
     }
     
+    // Handle browser back button navigation (pageshow event)
+    const handlePageShow = (event) => {
+      // event.persisted is true when page is loaded from bfcache (back/forward cache)
+      if (event.persisted) {
+        console.log('Page loaded from bfcache (back button pressed)');
+        const oauthInProgress = sessionStorage.getItem('oauth_in_progress');
+        if (oauthInProgress) {
+          console.log('Resetting loading state after back navigation');
+          sessionStorage.removeItem('oauth_in_progress');
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    window.addEventListener('pageshow', handlePageShow);
+    
     return () => {
       // Cleanup on unmount
+      window.removeEventListener('pageshow', handlePageShow);
       setIsLoading(false);
     };
   }, []);
