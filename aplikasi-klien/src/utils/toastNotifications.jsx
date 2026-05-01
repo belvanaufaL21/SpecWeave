@@ -127,7 +127,7 @@ export const showAuthSuccessToast = (userName) => {
     (t) => (
       <div className="flex items-start gap-2">
         {/* Success Icon - Same size as title text */}
-        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#160D14', border: '1px solid #44273D' }}>
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
           <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
@@ -188,7 +188,7 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
     (t) => (
       <div className="flex items-start gap-2">
         {/* JIRA Logo - Same size as title text */}
-        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#160D14', border: '1px solid #44273D' }}>
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
           <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
           </svg>
