@@ -119,9 +119,11 @@ const AuthCallback = () => {
             registerUser(user.email);
           }
           
+          // Declare profile at higher scope so it's accessible later
+          let profile = null;
+          
           // Ensure profile exists with retry logic
           try {
-            let profile = null;
             let attempts = 0;
             const maxAttempts = 3;
             
