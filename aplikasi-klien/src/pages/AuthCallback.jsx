@@ -204,17 +204,20 @@ const AuthCallback = () => {
           setMessage('');
           setValidationComplete(true);
           
-          // Show success notification with user name - ONLY ONCE
-          if (!notificationShown) {
-            // Get user name from profile (database) first, fallback to Google metadata
-            const userName = profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-            showAuthSuccessToast(userName);
-            setNotificationShown(true);
-          }
-          
-          // Longer delay for smoother animation
+          // Navigate first, then show notification after page loads
           setTimeout(() => {
             navigate('/chat', { replace: true });
+            
+            // Show success notification AFTER navigation - ONLY ONCE
+            if (!notificationShown) {
+              // Delay notification to ensure chat page is fully loaded
+              setTimeout(() => {
+                // Get user name from profile (database) first, fallback to Google metadata
+                const userName = profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+                showAuthSuccessToast(userName);
+                setNotificationShown(true);
+              }, 500); // Show notification 500ms after navigation
+            }
           }, 2000);
         }
 
