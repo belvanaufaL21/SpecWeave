@@ -16,7 +16,7 @@ const baseStyle = {
   WebkitBackdropFilter: 'blur(16px)',
   color: '#FF7AD0',
   borderRadius: '12px',
-  padding: '10px 14px',
+  padding: '10px 12px',
   minWidth: '280px',
   border: '1px solid #44273D',
   boxShadow: '0 10px 40px rgba(255, 122, 208, 0.2)'
@@ -128,9 +128,9 @@ export const showAuthSuccessToast = (userName) => {
   return toast.success(
     (t) => (
       <div className="flex items-start gap-2">
-        {/* Success Icon - Much Smaller */}
-        <div className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
-          <svg className="w-3.5 h-3.5" style={{ color: '#160D14' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Success Icon - Same size as title text */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#FF7AD0' }}>
+          <svg className="w-3 h-3" style={{ color: '#160D14' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
@@ -140,7 +140,7 @@ export const showAuthSuccessToast = (userName) => {
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
             <div className="text-xs leading-tight mt-0.5" style={{ color: '#FF7AD0' }}>
-              Selamat datang, <span className="font-medium">{userName}</span>
+              SpecWeave siap!
             </div>
           </div>
 
@@ -172,8 +172,8 @@ export const showAuthSuccessToast = (userName) => {
       position: 'top-right',
       style: {
         ...baseStyle,
-        minWidth: '300px',
-        maxWidth: '380px'
+        minWidth: '280px',
+        maxWidth: '360px'
       },
       icon: null
     }
@@ -191,9 +191,9 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
   return toast.success(
     (t) => (
       <div className="flex items-start gap-2">
-        {/* JIRA Logo - Much Smaller */}
-        <div className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
-          <svg className="w-3.5 h-3.5" style={{ color: '#160D14' }} viewBox="0 0 24 24" fill="currentColor">
+        {/* JIRA Logo - Same size as title text */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5" style={{ backgroundColor: '#FF7AD0' }}>
+          <svg className="w-3 h-3" style={{ color: '#160D14' }} viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
           </svg>
         </div>
@@ -262,8 +262,8 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
       position: 'top-right',
       style: {
         ...baseStyle,
-        minWidth: '340px',
-        maxWidth: '400px'
+        minWidth: '320px',
+        maxWidth: '380px'
       },
       icon: null
     }
