@@ -16,7 +16,7 @@ const baseStyle = {
   WebkitBackdropFilter: 'blur(16px)',
   color: '#FF7AD0',
   borderRadius: '12px',
-  padding: '18px 24px',
+  padding: '12px 16px',
   minWidth: '300px',
   border: '1px solid #44273D',
   boxShadow: '0 10px 40px rgba(255, 122, 208, 0.2)'
@@ -127,38 +127,39 @@ export const showAuthSuccessToast = (userName) => {
   
   return toast.success(
     (t) => (
-      <div className="flex items-center gap-3">
-        {/* Success Icon */}
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
-          <svg className="w-5 h-5" style={{ color: '#160D14' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      <div className="flex items-center gap-2.5">
+        {/* Success Icon - Smaller */}
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
+          <svg className="w-4 h-4" style={{ color: '#160D14' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base mb-1" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
-          <div className="text-sm" style={{ color: '#FF7AD0' }}>
+          <div className="font-semibold text-sm mb-0.5" style={{ color: '#FFFFFF' }}>Login Berhasil!</div>
+          <div className="text-xs" style={{ color: '#FF7AD0' }}>
             Selamat datang, <span className="font-medium">{userName}</span>
           </div>
         </div>
 
-        {/* Close Button */}
+        {/* Close Button - Smaller and simpler */}
         <button
           onClick={() => toast.dismiss(t.id)}
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+          className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center transition-colors"
           style={{ 
-            backgroundColor: 'rgba(255, 122, 208, 0.1)',
-            color: '#FF7AD0'
+            backgroundColor: 'transparent',
+            color: '#FF7AD0',
+            opacity: 0.6
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.2)';
+            e.currentTarget.style.opacity = '1';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.1)';
+            e.currentTarget.style.opacity = '0.6';
           }}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -170,7 +171,8 @@ export const showAuthSuccessToast = (userName) => {
       position: 'top-right',
       style: {
         ...baseStyle,
-        minWidth: '340px'
+        minWidth: '320px',
+        maxWidth: '400px'
       },
       icon: null
     }
@@ -187,29 +189,29 @@ export const showAuthSuccessToast = (userName) => {
 export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
   return toast.success(
     (t) => (
-      <div className="flex items-center gap-3">
-        {/* JIRA Logo */}
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
-          <svg className="w-5 h-5" style={{ color: '#160D14' }} viewBox="0 0 24 24" fill="currentColor">
+      <div className="flex items-center gap-2.5">
+        {/* JIRA Logo - Smaller */}
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF7AD0' }}>
+          <svg className="w-4 h-4" style={{ color: '#160D14' }} viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
           </svg>
         </div>
         
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base mb-1" style={{ color: '#FFFFFF' }}>Export Berhasil!</div>
-          <div className="flex items-center gap-2 text-sm mb-2">
+          <div className="font-semibold text-sm mb-0.5" style={{ color: '#FFFFFF' }}>Export Berhasil!</div>
+          <div className="flex items-center gap-1.5 text-xs mb-1.5">
             <span style={{ color: '#FF7AD0' }}>{epicName}:</span>
             <span className="font-mono font-semibold" style={{ color: '#FFFFFF' }}>{issueKey}</span>
           </div>
           
-          {/* Action Chip/Button - Only for notifications with external actions */}
+          {/* Action Chip/Button - Smaller */}
           {issueUrl && (
             <a
               href={issueUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
               style={{ 
                 backgroundColor: 'rgba(255, 122, 208, 0.2)',
                 color: '#FF7AD0',
@@ -224,29 +226,30 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
               }}
             >
               <span>Buka di JIRA</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
           )}
         </div>
 
-        {/* Close Button */}
+        {/* Close Button - Smaller and simpler */}
         <button
           onClick={() => toast.dismiss(t.id)}
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+          className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center transition-colors"
           style={{ 
-            backgroundColor: 'rgba(255, 122, 208, 0.1)',
-            color: '#FF7AD0'
+            backgroundColor: 'transparent',
+            color: '#FF7AD0',
+            opacity: 0.6
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.2)';
+            e.currentTarget.style.opacity = '1';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 122, 208, 0.1)';
+            e.currentTarget.style.opacity = '0.6';
           }}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -257,7 +260,8 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
       position: 'top-right',
       style: {
         ...baseStyle,
-        minWidth: '380px'
+        minWidth: '360px',
+        maxWidth: '420px'
       },
       icon: null
     }
