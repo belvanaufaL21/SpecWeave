@@ -1008,14 +1008,13 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         }`}
                         required
                       />
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-gray-500">
+                      {newTemplateErrors.template ? (
+                        <p className="text-red-400 text-xs mt-1">{newTemplateErrors.template}</p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-1">
                           Gunakan format standar user story: "Sebagai... saya ingin... agar..."
                         </p>
-                        {newTemplateErrors.template && (
-                          <p className="text-red-400 text-xs">{newTemplateErrors.template}</p>
-                        )}
-                      </div>
+                      )}
                     </div>
 
                     <div className="pt-4">
