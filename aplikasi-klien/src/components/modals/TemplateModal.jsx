@@ -890,38 +890,30 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                           </svg>
                         </div>
 
-                        <AnimatePresence>
-                          {isCategoryDropdownOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -8 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute z-50 w-full mt-2 bg-[#0D0D0D] border border-white/5 rounded-xl shadow-2xl overflow-hidden"
-                            >
-                              <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
-                                {categoryOptions.map((option) => (
-                                  <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() => {
-                                      setNewTemplate(prev => ({ ...prev, category: option }));
-                                      setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
-                                      setIsCategoryDropdownOpen(false);
-                                    }}
-                                    className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                                      newTemplate.category === option
-                                        ? 'bg-[#2C1A43] text-[#C27AFF]'
-                                        : 'text-white hover:bg-[#2C1A43] hover:text-[#C27AFF]'
-                                    }`}
-                                  >
-                                    {option}
-                                  </button>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {isCategoryDropdownOpen && (
+                          <div className="absolute z-50 w-full mt-2 bg-[#0D0D0D] border border-white/5 rounded-xl shadow-2xl overflow-hidden">
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
+                              {categoryOptions.map((option) => (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewTemplate(prev => ({ ...prev, category: option }));
+                                    setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
+                                    setIsCategoryDropdownOpen(false);
+                                  }}
+                                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                                    newTemplate.category === option
+                                      ? 'bg-[#2C1A43] text-[#C27AFF]'
+                                      : 'text-white hover:bg-[#2C1A43] hover:text-[#C27AFF]'
+                                  }`}
+                                >
+                                  {option}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       {newTemplateErrors.category && (
                         <p className="text-red-400 text-xs mt-1">{newTemplateErrors.category}</p>
