@@ -39,6 +39,27 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
         scrollbar-width: thin;
         scrollbar-color: rgba(147, 51, 234, 0.3) transparent;
       }
+      
+      /* Custom select dropdown styling */
+      select.custom-select option {
+        background-color: #0D0D0D;
+        color: white;
+        padding: 12px 16px;
+        margin: 4px 0;
+        border-radius: 8px;
+      }
+      
+      select.custom-select option:hover,
+      select.custom-select option:focus,
+      select.custom-select option:checked {
+        background-color: #2C1A43 !important;
+        background: #2C1A43 !important;
+        color: white;
+      }
+      
+      select.custom-select option:disabled {
+        color: #6B7280;
+      }
     `;
     document.head.appendChild(style);
     
@@ -837,12 +858,15 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         <select
                           value={newTemplate.category}
                           onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                          className={`w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all appearance-none ${
+                          className={`custom-select w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all appearance-none ${
                             newTemplateErrors.category ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                           }`}
+                          style={{
+                            backgroundImage: 'none'
+                          }}
                           required
                         >
-                          <option value="" disabled className="text-gray-500">Pilih kategori template...</option>
+                          <option value="" disabled>Pilih kategori template...</option>
                           <option value="Authentication">Authentication</option>
                           <option value="User Management">User Management</option>
                           <option value="Administration">Administration</option>
