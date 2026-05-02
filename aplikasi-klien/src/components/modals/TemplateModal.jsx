@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTemplates } from '../../hooks/useTemplates';
 
@@ -17,6 +17,23 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
   const [newTemplateErrors, setNewTemplateErrors] = useState({});
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Custom category dropdown state
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef(null);
+
+  const categoryOptions = [
+    'Authentication',
+    'User Management',
+    'Administration',
+    'E-commerce',
+    'Inventory',
+    'Reporting',
+    'Communication',
+    'Content Management',
+    'Customer Service',
+    'SaaS Platform'
+  ];
 
   // Add custom scrollbar styles
   React.useEffect(() => {
@@ -38,56 +55,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
       .custom-scrollbar {
         scrollbar-width: thin;
         scrollbar-color: rgba(147, 51, 234, 0.3) transparent;
-      }
-      
-      /* Custom select dropdown styling */
-      select.custom-select {
-        color-scheme: dark;
-      }
-      
-      select.custom-select option {
-        background-color: #0D0D0D;
-        color: white;
-        padding: 12px 16px;
-      }
-      
-      /* Change blue highlight to purple theme */
-      select.custom-select option:hover,
-      select.custom-select option:focus {
-        background-color: #2C1A43 !important;
-        background: linear-gradient(to right, #2C1A43, #2C1A43) !important;
-      }
-      
-      select.custom-select option:checked {
-        background-color: #2C1A43 !important;
-        background: linear-gradient(to right, #2C1A43, #2C1A43) !important;
-      }
-      
-      select.custom-select option:disabled {
-        color: #6B7280;
-        background-color: #0D0D0D;
-      }
-      
-      /* Rounded dropdown container - Firefox */
-      select.custom-select::-moz-list-box {
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      
-      /* Rounded dropdown container - Webkit */
-      select.custom-select::-webkit-scrollbar {
-        width: 8px;
-        border-radius: 12px;
-      }
-      
-      select.custom-select::-webkit-scrollbar-track {
-        background: #0D0D0D;
-        border-radius: 12px;
-      }
-      
-      select.custom-select::-webkit-scrollbar-thumb {
-        background: #2C1A43;
-        border-radius: 12px;
       }
     `;
     document.head.appendChild(style);
@@ -360,6 +327,21 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    if (isCategoryDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCategoryDropdownOpen]);
 
   // Load templates when modal opens - fixed to prevent infinite loop
   useEffect(() => {
@@ -848,8 +830,8 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         value={newTemplate.title}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="Contoh: User Login Process"
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                          newTemplateErrors.title ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors ${
+                          newTemplateErrors.title ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
                       />
@@ -868,8 +850,8 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Jelaskan kapan template ini sebaiknya digunakan..."
                         rows={3}
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all resize-none ${
-                          newTemplateErrors.description ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors resize-none ${
+                          newTemplateErrors.description ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
                       />
@@ -878,40 +860,68 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                       )}
                     </div>
 
-                    {/* Category Field */}
+                    {/* Category Field - Custom Dropdown */}
                     <div className="mt-3">
                       <label className="block text-sm font-medium text-gray-300 mb-3">
                         Kategori <span className="text-red-400">*</span>
                       </label>
-                      <div className="relative">
-                        <select
-                          value={newTemplate.category}
-                          onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                          className={`custom-select w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all appearance-none ${
-                            newTemplateErrors.category ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                      <div className="relative" ref={categoryDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                          className={`w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-left transition-colors focus:outline-none ${
+                            newTemplate.category ? 'text-white' : 'text-gray-500'
+                          } ${
+                            newTemplateErrors.category ? 'border-red-500/50' : 'border-white/5'
                           }`}
-                          style={{
-                            backgroundImage: 'none'
-                          }}
-                          required
                         >
-                          <option value="" disabled>Pilih kategori template...</option>
-                          <option value="Authentication">Authentication</option>
-                          <option value="User Management">User Management</option>
-                          <option value="Administration">Administration</option>
-                          <option value="E-commerce">E-commerce</option>
-                          <option value="Inventory">Inventory</option>
-                          <option value="Reporting">Reporting</option>
-                          <option value="Communication">Communication</option>
-                          <option value="Content Management">Content Management</option>
-                          <option value="Customer Service">Customer Service</option>
-                          <option value="SaaS Platform">SaaS Platform</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {newTemplate.category || 'Pilih kategori template...'}
+                        </button>
+                        <div className="absolute top-0 right-0 h-[3.25rem] flex items-center pr-3 pointer-events-none">
+                          <svg
+                            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                              isCategoryDropdownOpen ? 'rotate-180' : ''
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
+
+                        <AnimatePresence>
+                          {isCategoryDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -8 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-50 w-full mt-2 bg-[#0D0D0D] border border-white/5 rounded-xl shadow-2xl overflow-hidden"
+                            >
+                              <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
+                                {categoryOptions.map((option) => (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewTemplate(prev => ({ ...prev, category: option }));
+                                      setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
+                                      setIsCategoryDropdownOpen(false);
+                                    }}
+                                    className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                                      newTemplate.category === option
+                                        ? 'bg-[#2C1A43] text-[#C27AFF]'
+                                        : 'text-white hover:bg-[#2C1A43] hover:text-[#C27AFF]'
+                                    }`}
+                                  >
+                                    {option}
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                       {newTemplateErrors.category && (
                         <p className="text-red-400 text-xs mt-1">{newTemplateErrors.category}</p>
@@ -928,8 +938,8 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, template: e.target.value }))}
                         placeholder="Sebagai [role], saya ingin [feature] agar [benefit]..."
                         rows={4}
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all resize-none ${
-                          newTemplateErrors.template ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors resize-none ${
+                          newTemplateErrors.template ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
                       />
