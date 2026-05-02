@@ -902,7 +902,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                                     setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
                                     setIsCategoryDropdownOpen(false);
                                   }}
-                                  className={`w-full px-4 py-2.5 text-left text-sm transition-all ${
+                                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors duration-100 ${
                                     newTemplate.category === option
                                       ? 'bg-[#120C18] text-[#C27AFF]'
                                       : 'text-white hover:text-[#C27AFF]'
