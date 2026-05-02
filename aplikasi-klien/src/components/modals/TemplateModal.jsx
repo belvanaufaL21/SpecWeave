@@ -830,7 +830,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         value={newTemplate.title}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="Contoh: User Login Process"
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors ${
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] ${
                           newTemplateErrors.title ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
@@ -850,7 +850,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Jelaskan kapan template ini sebaiknya digunakan..."
                         rows={3}
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors resize-none ${
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] resize-none ${
                           newTemplateErrors.description ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
@@ -869,7 +869,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         <button
                           type="button"
                           onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                          className={`w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-left transition-colors focus:outline-none ${
+                          className={`w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-left focus:outline-none ${
                             newTemplate.category ? 'text-white' : 'text-gray-500'
                           } ${
                             newTemplateErrors.category ? 'border-red-500/50' : 'border-white/5'
@@ -879,7 +879,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         </button>
                         <div className="absolute top-0 right-0 h-[3.25rem] flex items-center pr-3 pointer-events-none">
                           <svg
-                            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                            className={`w-5 h-5 text-gray-400 ${
                               isCategoryDropdownOpen ? 'rotate-180' : ''
                             }`}
                             fill="none"
@@ -902,7 +902,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                                     setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
                                     setIsCategoryDropdownOpen(false);
                                   }}
-                                  className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                                  className={`w-full px-4 py-2.5 text-left text-sm ${
                                     newTemplate.category === option
                                       ? 'bg-[#2C1A43] text-[#C27AFF]'
                                       : 'text-white hover:bg-[#2C1A43] hover:text-[#C27AFF]'
@@ -930,7 +930,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, template: e.target.value }))}
                         placeholder="Sebagai [role], saya ingin [feature] agar [benefit]..."
                         rows={4}
-                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-colors resize-none ${
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] resize-none ${
                           newTemplateErrors.template ? 'border-red-500/50' : 'border-white/5'
                         }`}
                         required
