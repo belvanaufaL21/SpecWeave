@@ -905,7 +905,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                                   className={`w-full px-4 py-2.5 text-left text-sm transition-all ${
                                     newTemplate.category === option
                                       ? 'bg-[#120C18] text-[#C27AFF]'
-                                      : 'text-white hover:bg-[#120C18] hover:text-[#C27AFF]'
+                                      : 'text-white hover:text-[#C27AFF]'
                                   }`}
                                 >
                                   {option}
