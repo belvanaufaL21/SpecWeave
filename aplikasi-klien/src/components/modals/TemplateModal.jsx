@@ -41,24 +41,53 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
       }
       
       /* Custom select dropdown styling */
+      select.custom-select {
+        color-scheme: dark;
+      }
+      
       select.custom-select option {
         background-color: #0D0D0D;
         color: white;
         padding: 12px 16px;
-        margin: 4px 0;
-        border-radius: 8px;
       }
       
+      /* Change blue highlight to purple theme */
       select.custom-select option:hover,
-      select.custom-select option:focus,
+      select.custom-select option:focus {
+        background-color: #2C1A43 !important;
+        background: linear-gradient(to right, #2C1A43, #2C1A43) !important;
+      }
+      
       select.custom-select option:checked {
         background-color: #2C1A43 !important;
-        background: #2C1A43 !important;
-        color: white;
+        background: linear-gradient(to right, #2C1A43, #2C1A43) !important;
       }
       
       select.custom-select option:disabled {
         color: #6B7280;
+        background-color: #0D0D0D;
+      }
+      
+      /* Rounded dropdown container - Firefox */
+      select.custom-select::-moz-list-box {
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      
+      /* Rounded dropdown container - Webkit */
+      select.custom-select::-webkit-scrollbar {
+        width: 8px;
+        border-radius: 12px;
+      }
+      
+      select.custom-select::-webkit-scrollbar-track {
+        background: #0D0D0D;
+        border-radius: 12px;
+      }
+      
+      select.custom-select::-webkit-scrollbar-thumb {
+        background: #2C1A43;
+        border-radius: 12px;
       }
     `;
     document.head.appendChild(style);
@@ -850,8 +879,8 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                     </div>
 
                     {/* Category Field */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
                         Kategori <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
