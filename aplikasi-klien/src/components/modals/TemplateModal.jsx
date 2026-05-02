@@ -12,7 +12,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     title: '',
     description: '',
     template: '',
-    category: 'custom'
+    category: ''
   });
   const [newTemplateErrors, setNewTemplateErrors] = useState({});
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -396,6 +396,10 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
       errors.description = 'Deskripsi template harus diisi';
     }
     
+    if (!newTemplate.category || newTemplate.category === '') {
+      errors.category = 'Kategori harus dipilih';
+    }
+    
     if (!newTemplate.template.trim()) {
       errors.template = 'User story template harus diisi';
     } else if (!newTemplate.template.toLowerCase().includes('sebagai')) {
@@ -413,25 +417,31 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     setIsCreatingTemplate(true);
     
     try {
+      // Map frontend fields to backend expected fields
       const templateData = {
-        ...newTemplate,
-        id: Date.now(), // Temporary ID for fallback
-        isSystem: false,
-        usageCount: 0,
+        name: newTemplate.title, // Backend expects 'name'
+        category: newTemplate.category,
+        description: newTemplate.description,
+        template_content: newTemplate.template, // Backend expects 'template_content'
+        variables: [], // Empty variables array
         tags: [], // Empty tags array
-        preview: {
-          given: 'Kondisi awal sistem',
-          when: 'Aksi yang dilakukan user',
-          then: 'Hasil yang diharapkan'
-        }
+        is_system: false
       };
+      
+      console.log('📤 [TEMPLATE-MODAL] Creating template:', templateData);
       
       // Try to create via service
       if (createTemplate) {
-        await createTemplate(templateData);
+        const result = await createTemplate(templateData);
+        console.log('✅ [TEMPLATE-MODAL] Template created successfully:', result);
+        
+        // Show success message
+        if (window.showNotification) {
+          window.showNotification('Template berhasil dibuat!', 'success');
+        }
       } else {
-        // Fallback: add to local state (for demo purposes)
-        console.log('Created template:', templateData);
+        console.error('❌ [TEMPLATE-MODAL] createTemplate function not available');
+        throw new Error('Template service not available');
       }
       
       // Reset form
@@ -439,21 +449,29 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
         title: '',
         description: '',
         template: '',
-        category: 'custom'
+        category: ''
       });
       setNewTemplateErrors({});
       setShowCreateForm(false);
       
-      // Show success message
-      if (window.showNotification) {
-        window.showNotification('Template berhasil dibuat!', 'success');
+      // Reload templates to show the new one
+      if (loadTemplates) {
+        await loadTemplates();
       }
       
     } catch (error) {
-      console.error('Failed to create template:', error);
+      console.error('❌ [TEMPLATE-MODAL] Failed to create template:', error);
+      
+      // Show error notification with details
+      const errorMessage = error.message || 'Gagal membuat template. Silakan coba lagi.';
       if (window.showNotification) {
-        window.showNotification('Gagal membuat template. Silakan coba lagi.', 'error');
+        window.showNotification(errorMessage, 'error');
       }
+      
+      // Set error in state for display
+      setNewTemplateErrors({ 
+        submit: errorMessage 
+      });
     } finally {
       setIsCreatingTemplate(false);
     }
@@ -763,6 +781,12 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                     </p>
                   </div>
 
+                  {newTemplateErrors.submit && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <p className="text-red-400 text-sm">{newTemplateErrors.submit}</p>
+                    </div>
+                  )}
+
                   <form onSubmit={(e) => { e.preventDefault(); handleCreateTemplate(); }} className="space-y-4">
                     {/* Title Field */}
                     <div>
@@ -807,25 +831,38 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                     {/* Category Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Kategori
+                        Kategori <span className="text-red-400">*</span>
                       </label>
-                      <select
-                        value={newTemplate.category}
-                        onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                        className="w-full px-4 py-3 bg-[#0D0D0D] border border-white/5 rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] focus:border-white/50 transition-all"
-                      >
-                        <option value="custom">Custom</option>
-                        <option value="Authentication">Authentication</option>
-                        <option value="User Management">User Management</option>
-                        <option value="Administration">Administration</option>
-                        <option value="E-commerce">E-commerce</option>
-                        <option value="Inventory">Inventory</option>
-                        <option value="Reporting">Reporting</option>
-                        <option value="Communication">Communication</option>
-                        <option value="Content Management">Content Management</option>
-                        <option value="Customer Service">Customer Service</option>
-                        <option value="SaaS Platform">SaaS Platform</option>
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={newTemplate.category}
+                          onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
+                          className={`w-full px-4 py-3 pr-10 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all appearance-none ${
+                            newTemplateErrors.category ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                          }`}
+                          required
+                        >
+                          <option value="" disabled className="text-gray-500">Pilih kategori template...</option>
+                          <option value="Authentication">Authentication</option>
+                          <option value="User Management">User Management</option>
+                          <option value="Administration">Administration</option>
+                          <option value="E-commerce">E-commerce</option>
+                          <option value="Inventory">Inventory</option>
+                          <option value="Reporting">Reporting</option>
+                          <option value="Communication">Communication</option>
+                          <option value="Content Management">Content Management</option>
+                          <option value="Customer Service">Customer Service</option>
+                          <option value="SaaS Platform">SaaS Platform</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      {newTemplateErrors.category && (
+                        <p className="text-red-400 text-xs mt-1">{newTemplateErrors.category}</p>
+                      )}
                     </div>
 
                     {/* User Story Template Field */}
@@ -853,17 +890,10 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                       </div>
                     </div>
 
-                    {/* Tags Field */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Tags <span className="text-red-400">*</span>
-                      </label>
-                    </div>
-
                     <div className="pt-4">
                       <button
                         type="submit"
-                        disabled={isCreatingTemplate || !newTemplate.title || !newTemplate.description || !newTemplate.template}
+                        disabled={isCreatingTemplate || !newTemplate.title || !newTemplate.description || !newTemplate.category || !newTemplate.template}
                         className="w-full px-4 py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {isCreatingTemplate ? (
