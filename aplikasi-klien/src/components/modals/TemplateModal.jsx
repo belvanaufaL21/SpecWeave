@@ -902,10 +902,10 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                                     setNewTemplateErrors(prev => ({ ...prev, category: undefined }));
                                     setIsCategoryDropdownOpen(false);
                                   }}
-                                  className={`w-full px-4 py-2.5 text-left text-sm ${
+                                  className={`w-full px-4 py-2.5 text-left text-sm transition-all ${
                                     newTemplate.category === option
-                                      ? 'bg-[#2C1A43] text-[#C27AFF]'
-                                      : 'text-white hover:bg-[#2C1A43] hover:text-[#C27AFF]'
+                                      ? 'bg-[#120C18] text-[#C27AFF]'
+                                      : 'text-white hover:bg-[#120C18] hover:text-[#C27AFF]'
                                   }`}
                                 >
                                   {option}
