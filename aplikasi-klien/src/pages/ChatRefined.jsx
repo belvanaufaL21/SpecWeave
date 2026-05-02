@@ -1158,57 +1158,31 @@ const ChatRefined = () => {
   };
 
   const handleSelectTemplate = async (templateContent) => {
+    console.log('📝 [CHAT-REFINED] Template selected:', templateContent?.substring(0, 50));
 
     if (!templateContent || typeof templateContent !== 'string' || templateContent.trim().length === 0) {
-      console.error('Γ¥î [CHAT-REFINED] Invalid template content:', templateContent);
+      console.error('❌ [CHAT-REFINED] Invalid template content:', templateContent);
       return;
     }
     
     // Close template modal first
     setIsTemplateModalOpen(false);
     
-    // For templates, bypass Epic requirement and create chat directly
-    let currentId = activeChatId;
-    
-    if (!currentId) {
-      console.log('≡ƒåò [CHAT-REFINED] Creating new chat for template');
-      // Create new chat using context
-      const result = await contextCreateNewChat();
-      
-      if (result.success) {
-        currentId = result.chatId;
-        setActiveChatId(currentId);
-
-        // Navigate to the new chat URL to show conversation
-        navigate(`/chat?id=${currentId}`, { replace: true });
-      } else {
-        console.error('Γ¥î [CHAT-REFINED] Failed to create new chat:', result.error);
-        return;
-      }
+    // Pre-fill the appropriate input based on current state
+    if (activeChatId) {
+      // If there's an active chat, fill the bottom input
+      console.log('📝 [CHAT-REFINED] Pre-filling bottom input for active chat');
+      setInputBottom(templateContent);
+    } else {
+      // If no active chat (welcome state), fill the welcome input
+      console.log('📝 [CHAT-REFINED] Pre-filling welcome input');
+      setInput(templateContent);
     }
-
-    // Get current messages from context
-    const currentMessages = contextChats[currentId] || [];
-
-    const userMessage = { 
-      id: Date.now().toString(), 
-      role: 'user', 
-      content: templateContent, 
-      createdAt: new Date() 
-    };
     
-    console.log('≡ƒÆ¼ [CHAT-REFINED] Adding user message:', userMessage);
-    
-    // Update messages using context
-    const updatedMessages = [...currentMessages, userMessage];
-    await updateChatMessages(currentId, updatedMessages);
-    
-    console.log('≡ƒñû [CHAT-REFINED] Sending message to AI');
-    // Send message to AI (templates can work without Epic context)
-    sendMessage(templateContent, { 
-      epicContext: epicContext,
-      model: selectedModel // Pass selected model
-    });
+    // Show success notification
+    if (window.showNotification) {
+      window.showNotification('Template berhasil diterapkan! Silakan review dan kirim.', 'success');
+    }
   };
 
   // Chat management handlers

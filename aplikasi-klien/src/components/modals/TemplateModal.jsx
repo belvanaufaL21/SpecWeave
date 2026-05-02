@@ -6,8 +6,6 @@ import DeleteConfirmationModal from '../modals/DeleteConfirmationModal';
 const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   // Custom template creation state
   const [newTemplate, setNewTemplate] = useState({
     title: '',
@@ -355,7 +353,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     if (isOpen) {
       setSearchQuery('');
       setShowCreateForm(false);
-      setSelectedTemplateId(null);
       clearError();
     }
   }, [isOpen, clearError]);
@@ -379,37 +376,24 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
   }, [isOpen, hasTriedLoading, hookTemplates.length, templatesLoading, loadTemplates]);
 
   const handleSelectTemplate = async (template) => {
-    setIsLoading(true);
-    setSelectedTemplateId(template.id);
-    
     console.log('🔍 [TEMPLATE-MODAL] Template selected:', {
       id: template.id,
       title: template.title,
-      template: template.template,
-      templateLength: template.template?.length,
-      templateType: typeof template.template
+      templateLength: template.template?.length
     });
     
     try {
-      // Simulate loading for better UX
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
       // Validate template content
       if (!template.template || typeof template.template !== 'string' || template.template.trim().length === 0) {
         console.error('Invalid template content:', template.template);
         throw new Error('Template content is empty or invalid');
       }
       
-      // Call the parent callback with the template content
+      // Call the parent callback with the template content (will pre-fill input)
       onSelectTemplate(template.template);
       
-      // Close modal with success feedback
+      // Close modal
       onClose();
-      
-      // Show success notification (if notification system is available)
-      if (window.showNotification) {
-        window.showNotification('Template berhasil diterapkan!', 'success');
-      }
     } catch (error) {
       console.error('Failed to apply template:', error);
       
@@ -417,9 +401,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
       if (window.showNotification) {
         window.showNotification('Gagal menerapkan template. Silakan coba lagi.', 'error');
       }
-    } finally {
-      setIsLoading(false);
-      setSelectedTemplateId(null);
     }
   };
 
@@ -747,9 +728,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                         tabIndex={0}
                         role="button"
                         aria-label={`Gunakan template ${template.title}`}
-                        className={`p-6 bg-[#09090A] border border-white/5 rounded-xl hover:border-[#2C1A43] focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer h-full flex flex-col ${
-                          selectedTemplateId === template.id ? 'ring-2 ring-green-500/50 border-green-500/30' : ''
-                        }`}
+                        className="p-6 bg-[#09090A] border border-white/5 rounded-xl hover:border-[#2C1A43] focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all cursor-pointer h-full flex flex-col"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
@@ -831,7 +810,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="px-4 py-2 bg-[#120C18] text-[#C27AFF] border border-[#2C1A43] rounded-lg hover:bg-[#1A1020] transition-colors text-sm font-medium"
-                  disabled={isLoading || templatesLoading}
+                  disabled={templatesLoading}
                 >
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1045,22 +1024,6 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
           )}
         </AnimatePresence>
 
-        {/* Loading Overlay */}
-        <AnimatePresence>
-          {isLoading && (
-            <motion.div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="bg-[#09090A] border border-white/5 rounded-lg p-6 flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-[#C27AFF] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[#C27AFF] font-medium">Applying template...</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
       
       {/* Delete Confirmation Modal */}
