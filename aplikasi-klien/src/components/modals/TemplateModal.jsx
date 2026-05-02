@@ -737,62 +737,70 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Create Form Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/5 bg-gradient-to-r from-green-500/10 to-blue-500/10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">Buat Template Baru</h3>
-                      <p className="text-gray-300 text-sm">Buat template user story kustom untuk digunakan kembali</p>
-                    </div>
-                  </div>
+                {/* Create Form Content */}
+                <div className="p-8 relative overflow-y-auto max-h-[90vh]">
+                  {/* Close Button */}
                   <button
                     onClick={() => setShowCreateForm(false)}
-                    className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                </div>
+                  
+                  <div className="mb-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#160D14] border border-[#44273D] flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </div>
+                      <h2 className="text-xl font-bold text-white">Buat Template Baru</h2>
+                    </div>
+                    <p className="text-gray-400 text-sm">
+                      Buat template user story kustom untuk digunakan kembali
+                    </p>
+                  </div>
 
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                  <form onSubmit={(e) => { e.preventDefault(); handleCreateTemplate(); }} className="space-y-6">
+                  <form onSubmit={(e) => { e.preventDefault(); handleCreateTemplate(); }} className="space-y-4">
                     {/* Title Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Judul Template *
+                        Judul Template <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
                         value={newTemplate.title}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="Contoh: User Login Process"
-                        className="w-full px-4 py-3 bg-gradient-to-br from-[#020203]/80 to-black/90 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                          newTemplateErrors.title ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        }`}
+                        required
                       />
                       {newTemplateErrors.title && (
-                        <p className="text-red-400 text-sm mt-1">{newTemplateErrors.title}</p>
+                        <p className="text-red-400 text-xs mt-1">{newTemplateErrors.title}</p>
                       )}
                     </div>
 
                     {/* Description Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Deskripsi Template *
+                        Deskripsi Template <span className="text-red-400">*</span>
                       </label>
                       <textarea
                         value={newTemplate.description}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Jelaskan kapan template ini sebaiknya digunakan..."
                         rows={3}
-                        className="w-full px-4 py-3 bg-gradient-to-br from-[#020203]/80 to-black/90 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all resize-none ${
+                          newTemplateErrors.description ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        }`}
+                        required
                       />
                       {newTemplateErrors.description && (
-                        <p className="text-red-400 text-sm mt-1">{newTemplateErrors.description}</p>
+                        <p className="text-red-400 text-xs mt-1">{newTemplateErrors.description}</p>
                       )}
                     </div>
 
@@ -804,7 +812,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                       <select
                         value={newTemplate.category}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                        className="w-full px-4 py-3 bg-gradient-to-br from-[#020203]/80 to-black/90 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                        className="w-full px-4 py-3 bg-[#0D0D0D] border border-white/5 rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] focus:border-white/50 transition-all"
                       >
                         <option value="custom">Custom</option>
                         <option value="Authentication">Authentication</option>
@@ -823,60 +831,57 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                     {/* User Story Template Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        User Story Template *
+                        User Story Template <span className="text-red-400">*</span>
                       </label>
                       <textarea
                         value={newTemplate.template}
                         onChange={(e) => setNewTemplate(prev => ({ ...prev, template: e.target.value }))}
                         placeholder="Sebagai [role], saya ingin [feature] agar [benefit]..."
                         rows={4}
-                        className="w-full px-4 py-3 bg-gradient-to-br from-[#020203]/80 to-black/90 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+                        className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all resize-none ${
+                          newTemplateErrors.template ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        }`}
+                        required
                       />
-                      {newTemplateErrors.template && (
-                        <p className="text-red-400 text-sm mt-1">{newTemplateErrors.template}</p>
-                      )}
-                      <p className="text-gray-400 text-xs mt-1">
-                        Gunakan format standar user story: "Sebagai... saya ingin... agar..."
-                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-gray-500">
+                          Gunakan format standar user story: "Sebagai... saya ingin... agar..."
+                        </p>
+                        {newTemplateErrors.template && (
+                          <p className="text-red-400 text-xs">{newTemplateErrors.template}</p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Tags Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Tags *
+                        Tags <span className="text-red-400">*</span>
                       </label>
                     </div>
-                  </form>
-                </div>
 
-                {/* Create Form Footer */}
-                <div className="flex justify-between items-center p-6 border-t border-white/5 bg-[#09090A]">
-                  <button
-                    onClick={() => setShowCreateForm(false)}
-                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                    disabled={isCreatingTemplate}
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={handleCreateTemplate}
-                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg transition-all font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isCreatingTemplate}
-                  >
-                    {isCreatingTemplate ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Membuat Template...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Buat Template
-                      </>
-                    )}
-                  </button>
+                    <div className="pt-4">
+                      <button
+                        type="submit"
+                        disabled={isCreatingTemplate || !newTemplate.title || !newTemplate.description || !newTemplate.template}
+                        className="w-full px-4 py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isCreatingTemplate ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-[#FF7AD0]/30 border-t-[#FF7AD0] rounded-full animate-spin"></div>
+                            Membuat Template...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Buat Template
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </motion.div>
             </motion.div>
