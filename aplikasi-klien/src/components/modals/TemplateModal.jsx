@@ -528,15 +528,20 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
     setIsDeletingTemplate(true);
 
     try {
-      console.log('🗑️ [TEMPLATE-MODAL] Deleting template:', templateToDelete.id);
+      console.log('🗑️ [TEMPLATE-MODAL] Deleting/hiding template:', templateToDelete.id);
       
       if (deleteTemplate) {
-        await deleteTemplate(templateToDelete.id);
-        console.log('✅ [TEMPLATE-MODAL] Template deleted successfully');
+        const result = await deleteTemplate(templateToDelete.id);
+        
+        // Check if it was hidden or deleted
+        const isHidden = result?.isHidden || false;
+        const action = isHidden ? 'disembunyikan' : 'dihapus';
+        
+        console.log(`✅ [TEMPLATE-MODAL] Template ${action} successfully`);
         
         // Show success message
         if (window.showNotification) {
-          window.showNotification('Template berhasil dihapus!', 'success');
+          window.showNotification(`Template berhasil ${action}!`, 'success');
         }
         
         // Reload templates
@@ -547,7 +552,7 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
         throw new Error('Delete template function not available');
       }
     } catch (error) {
-      console.error('❌ [TEMPLATE-MODAL] Failed to delete template:', error);
+      console.error('❌ [TEMPLATE-MODAL] Failed to delete/hide template:', error);
       
       const errorMessage = error.message || 'Gagal menghapus template. Silakan coba lagi.';
       if (window.showNotification) {
@@ -754,24 +759,22 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
                             {/* Template metadata */}
                           </div>
                           
-                          {/* Delete button - only for non-system templates */}
-                          {!template.isSystem && !template.is_system && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(template);
-                              }}
-                              className="p-2 hover:bg-red-500/10 rounded-lg transition-colors ml-2"
-                              style={{ color: '#EE4038' }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#f1554d'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = '#EE4038'}
-                              title="Hapus template"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          )}
+                          {/* Delete button - for all templates (hide system, delete user's own) */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(template);
+                            }}
+                            className="p-2 hover:bg-red-500/10 rounded-lg transition-colors ml-2"
+                            style={{ color: '#EE4038' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#f1554d'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#EE4038'}
+                            title={template.isSystem || template.is_system ? 'Sembunyikan template' : 'Hapus template'}
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                         
                         <p className="text-gray-400 text-sm mb-4 group-hover:text-gray-300 transition-colors flex-1">
@@ -1069,8 +1072,12 @@ const TemplateModal = ({ isOpen, onClose, onSelectTemplate }) => {
           setTemplateToDelete(null);
         }}
         onConfirm={confirmDeleteTemplate}
-        title="Hapus Template"
-        message={`Apakah Anda yakin ingin menghapus template "${templateToDelete?.title || templateToDelete?.name}"?`}
+        title={templateToDelete?.isSystem || templateToDelete?.is_system ? 'Sembunyikan Template' : 'Hapus Template'}
+        message={
+          templateToDelete?.isSystem || templateToDelete?.is_system
+            ? `Apakah Anda yakin ingin menyembunyikan template "${templateToDelete?.title || templateToDelete?.name}"? Template ini tidak akan muncul di daftar Anda, tetapi tetap tersedia untuk pengguna lain.`
+            : `Apakah Anda yakin ingin menghapus template "${templateToDelete?.title || templateToDelete?.name}"? Tindakan ini tidak dapat dibatalkan.`
+        }
         isDeleting={isDeletingTemplate}
       />
     </AnimatePresence>
