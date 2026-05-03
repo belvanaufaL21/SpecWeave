@@ -146,6 +146,12 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
     
+    // CRITICAL: Handle 409 Conflict (duplicate) - pass through without modification
+    if (error.response?.status === 409) {
+      cleanLogger.warn('API', `Conflict error (409): ${originalRequest.url}`);
+      return Promise.reject(error); // Pass through original error with response data
+    }
+    
     // Handle all other errors with ErrorRecovery
     const recovery = await ErrorRecovery.handleError(error, 'API');
     cleanLogger.error('API', recovery.userMessage);
