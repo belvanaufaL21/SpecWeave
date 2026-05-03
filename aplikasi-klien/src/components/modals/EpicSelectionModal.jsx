@@ -462,7 +462,8 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                       ({selectedConnection.project_key})
                     </span>
                   )}
-                  <span className="text-xs text-white/70">
+                  {/* URL hanya ditampilkan pada layar medium ke atas */}
+                  <span className="hidden md:inline text-xs text-white/70">
                     • {selectedConnection.jira_url}
                   </span>
                 </motion.div>
