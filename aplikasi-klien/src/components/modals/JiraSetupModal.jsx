@@ -78,18 +78,23 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
         }
         break;
       case 'tokenExpiresAt':
-        if (value) {
+        if (!value) {
+          errors.tokenExpiresAt = 'Token Expiry Date wajib diisi';
+        } else {
           const expiryDate = new Date(value);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           
+          const oneYearFromNow = new Date(today);
+          oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+          
           if (expiryDate < today) {
             errors.tokenExpiresAt = 'Token sudah kedaluwarsa';
+          } else if (expiryDate > oneYearFromNow) {
+            errors.tokenExpiresAt = 'Token maksimal 1 tahun dari hari ini';
           } else {
             delete errors.tokenExpiresAt;
           }
-        } else {
-          delete errors.tokenExpiresAt; // Optional field
         }
         break;
       default:
@@ -116,7 +121,7 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
     e.preventDefault();
     
     // Validate all fields
-    const isValid = ['jiraUrl', 'email', 'apiToken', 'projectKey'].every(field => 
+    const isValid = ['jiraUrl', 'email', 'apiToken', 'projectKey', 'tokenExpiresAt'].every(field => 
       validateField(field, formData[field])
     );
     
@@ -358,31 +363,51 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
                 {/* Token Expiry Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
-                    <span>Token Expiry Date</span>
+                    <span>Token Expiry Date <span className="text-red-400">*</span></span>
                     <div className="group relative">
                       <svg className="w-4 h-4 text-gray-500 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/10 rounded-lg text-xs text-gray-300 z-10">
-                        Tanggal kedaluwarsa token (opsional). Cek di JIRA → Profile → Security → API Tokens
+                        Cek di JIRA → Profile → Security → API Tokens. Token maksimal 1 tahun dari hari ini.
                       </div>
                     </div>
                   </label>
-                  <input
-                    type="date"
-                    name="tokenExpiresAt"
-                    value={formData.tokenExpiresAt}
-                    onChange={handleInputChange}
-                    min={new Date().toISOString().split('T')[0]}
-                    className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                      validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="tokenExpiresAt"
+                      value={formData.tokenExpiresAt}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split('T')[0]}
+                      max={(() => {
+                        const maxDate = new Date();
+                        maxDate.setFullYear(maxDate.getFullYear() + 1);
+                        return maxDate.toISOString().split('T')[0];
+                      })()}
+                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
+                        validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                      }`}
+                      style={{
+                        colorScheme: 'dark',
+                        WebkitAppearance: 'none',
+                        MozAppearance: 'none',
+                        position: 'relative'
+                      }}
+                      required
+                    />
+                    {/* Calendar icon overlay - purely decorative */}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
                   {validationErrors.tokenExpiresAt ? (
                     <p className="text-red-400 text-xs mt-1">{validationErrors.tokenExpiresAt}</p>
                   ) : (
                     <p className="text-xs text-gray-500 mt-1">
-                      Opsional, untuk reminder sebelum expired
+                      Wajib diisi. Maksimal 1 tahun dari hari ini.
                     </p>
                   )}
                 </div>
@@ -416,7 +441,7 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={loading || Object.keys(validationErrors).length > 0 || !formData.jiraUrl || !formData.email || !formData.apiToken || !formData.projectKey}
+                  disabled={loading || Object.keys(validationErrors).length > 0 || !formData.jiraUrl || !formData.email || !formData.apiToken || !formData.projectKey || !formData.tokenExpiresAt}
                   className="w-full px-4 py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
