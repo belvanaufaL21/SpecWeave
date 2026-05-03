@@ -1,13 +1,8 @@
-import Groq from "groq-sdk";
 import dotenv from 'dotenv';
 import { detectConnextraFormat } from './formatDetectionService.js';
 import llmProviderService from './llmProviderService.js';
 
 dotenv.config();
-
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 export const convertToGherkin = async (userStory, options = {}) => {
   try {
@@ -62,51 +57,39 @@ export const convertToGherkin = async (userStory, options = {}) => {
 
     let text;
 
-    // Use provider abstraction if provider and modelName are provided
-    if (options.provider && options.modelName) {
-      console.log('🔄 [AI-SERVICE] Using provider abstraction:', {
-        provider: options.provider,
-        model: options.modelName
-      });
-      
-      try {
-        const response = await llmProviderService.generateCompletion(
-          options.modelName,
-          options.provider,
-          messages
-        );
-        
-        text = response.text;
-        
-        console.log('✅ [AI-SERVICE] LLM response received:', {
-          provider: options.provider,
-          model: options.modelName,
-          textLength: text.length,
-          tokensInput: response.tokensInput,
-          tokensOutput: response.tokensOutput
-        });
-      } catch (providerError) {
-        console.error('❌ [AI-SERVICE] Provider error:', {
-          provider: options.provider,
-          model: options.modelName,
-          error: providerError.message
-        });
-        throw providerError;
-      }
-    } else {
-      // Fallback to direct Groq call for backward compatibility (anonymous users)
-      console.log('🔄 [AI-SERVICE] Using direct Groq call (fallback)');
-      
-      const chatCompletion = await groq.chat.completions.create({
-        messages,
-        model: "openai/gpt-oss-120b", // Using Llama 3.1 70B model for better Indonesian support
-        temperature: responseType === 'gherkin' ? 0.3 : 0.7, // More creative for general responses
-        max_tokens: 4000,
-        top_p: 0.9,
-        stream: false,
-      });
+    // Use provider abstraction - provider and modelName are required
+    if (!options.provider || !options.modelName) {
+      throw new Error('Provider dan model name harus disediakan. Groq tidak lagi didukung.');
+    }
 
-      text = chatCompletion.choices[0]?.message?.content || "";
+    console.log('🔄 [AI-SERVICE] Using provider abstraction:', {
+      provider: options.provider,
+      model: options.modelName
+    });
+    
+    try {
+      const response = await llmProviderService.generateCompletion(
+        options.modelName,
+        options.provider,
+        messages
+      );
+      
+      text = response.text;
+      
+      console.log('✅ [AI-SERVICE] LLM response received:', {
+        provider: options.provider,
+        model: options.modelName,
+        textLength: text.length,
+        tokensInput: response.tokensInput,
+        tokensOutput: response.tokensOutput
+      });
+    } catch (providerError) {
+      console.error('❌ [AI-SERVICE] Provider error:', {
+        provider: options.provider,
+        model: options.modelName,
+        error: providerError.message
+      });
+      throw providerError;
     }
 
     if (responseType === 'gherkin') {
@@ -143,7 +126,7 @@ export const convertToGherkin = async (userStory, options = {}) => {
 
   } catch (error) {
     console.error("❌ AI Service Error:", error);
-    throw new Error("Gagal memproses transformasi AI. Cek koneksi atau API Key Groq.");
+    throw new Error("Gagal memproses transformasi AI. Cek koneksi atau konfigurasi LLM provider.");
   }
 };
 

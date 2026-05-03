@@ -93,15 +93,9 @@ async function main() {
   section('1. Environment Variables');
   
   check(
-    'GROQ_API_KEY is set',
-    !!process.env.GROQ_API_KEY,
-    'Add GROQ_API_KEY to .env file'
-  );
-  
-  check(
-    'GEMINI_API_KEY is set',
-    !!process.env.GEMINI_API_KEY,
-    'Add GEMINI_API_KEY to .env file (get from https://aistudio.google.com/app/apikey)'
+    'OPENROUTER_API_KEY is set',
+    !!process.env.OPENROUTER_API_KEY,
+    'Add OPENROUTER_API_KEY to .env file (get from https://openrouter.ai/keys)'
   );
   
   check(
@@ -122,15 +116,9 @@ async function main() {
   section('2. Required Dependencies');
   
   check(
-    'groq-sdk is installed',
-    packageInstalled('groq-sdk'),
-    'Run: npm install groq-sdk'
-  );
-  
-  check(
-    '@google/generative-ai is installed',
-    packageInstalled('@google/generative-ai'),
-    'Run: npm install @google/generative-ai'
+    'openai is installed (for OpenRouter)',
+    packageInstalled('openai'),
+    'Run: npm install openai'
   );
   
   check(
@@ -300,7 +288,7 @@ async function main() {
     log(`\n${checkmark} System is ready for deployment!`, 'green');
     log('\nNext steps:', 'cyan');
     log('1. Run migration in Supabase Dashboard (if not done yet)', 'cyan');
-    log('2. Update Railway environment variables with GEMINI_API_KEY', 'cyan');
+    log('2. Update Railway environment variables with OPENROUTER_API_KEY', 'cyan');
     log('3. Deploy to Railway', 'cyan');
     log('4. Test API endpoints', 'cyan');
     log('\nSee QUICK-DEPLOYMENT-CHECKLIST.md for details\n', 'cyan');
