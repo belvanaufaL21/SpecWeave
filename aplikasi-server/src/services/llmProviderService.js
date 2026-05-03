@@ -128,8 +128,14 @@ class LLMProviderService {
       }
       
       if (error.message && error.message.includes('429')) {
+        // Check if it's Gemini Pro (stricter rate limits)
+        const isGeminiPro = modelName.includes('pro');
+        const rateLimit = isGeminiPro ? '2 requests/min' : '15 requests/min';
+        
         throw new Error(
-          'Gemini API rate limit exceeded (429). Please wait a moment and try again, or upgrade your quota.'
+          `Gemini API rate limit exceeded (429). ` +
+          `${modelName} has a limit of ${rateLimit} on free tier. ` +
+          `Please wait 1-2 minutes and try again, or use Gemini 2.5 Flash for higher quota.`
         );
       }
       
