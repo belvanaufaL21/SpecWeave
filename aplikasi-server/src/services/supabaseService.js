@@ -147,6 +147,31 @@ class SupabaseService {
    */
   async createJiraConnection(userId, connectionData) {
       try {
+        // VALIDATION: Check for duplicate connection
+        // A duplicate is defined as same user_id, jira_url, jira_email, and project_key
+        const { data: existingConnections, error: checkError } = await this.admin
+          .from('jira_connections')
+          .select('id, project_name, project_key')
+          .eq('user_id', userId)
+          .eq('jira_url', connectionData.jira_url)
+          .eq('jira_email', connectionData.jira_email)
+          .eq('project_key', connectionData.project_key);
+
+        if (checkError) {
+          console.error('Error checking for duplicate connection:', checkError);
+          throw checkError;
+        }
+
+        // If duplicate found, throw specific error
+        if (existingConnections && existingConnections.length > 0) {
+          const existing = existingConnections[0];
+          const projectDisplay = existing.project_name && existing.project_key
+            ? `${existing.project_name} (${existing.project_key})`
+            : existing.project_name || existing.project_key;
+          
+          throw new Error(`DUPLICATE_PROJECT:${projectDisplay}`);
+        }
+
         const insertData = {
           user_id: userId,
           jira_url: connectionData.jira_url,
@@ -178,6 +203,12 @@ class SupabaseService {
         return data;
       } catch (error) {
         console.error('Error creating JIRA connection:', error);
+        
+        // Re-throw duplicate error as-is for special handling
+        if (error.message && error.message.startsWith('DUPLICATE_PROJECT:')) {
+          throw error;
+        }
+        
         throw new Error(`Failed to create JIRA connection: ${error.message}`);
       }
     }

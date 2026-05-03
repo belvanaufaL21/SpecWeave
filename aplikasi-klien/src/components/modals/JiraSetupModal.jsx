@@ -197,6 +197,11 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
   const getErrorMessage = (error) => {
     const errorStr = String(error || '').toLowerCase();
     
+    // Check for duplicate project error (special handling)
+    if (errorStr.includes('sudah terhubung') || errorStr.includes('duplicate')) {
+      return error; // Return as-is for duplicate errors
+    }
+    
     if (errorStr.includes('401') || errorStr.includes('unauthorized')) {
       return 'Email atau API Token tidak valid. Periksa kembali kredensial Anda.';
     } else if (errorStr.includes('403') || errorStr.includes('forbidden')) {
@@ -264,8 +269,16 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
             </div>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm">{error}</p>
+              <div className={`mb-4 p-3 rounded-lg ${
+                error.toLowerCase().includes('sudah terhubung') || error.toLowerCase().includes('duplicate')
+                  ? 'bg-[#160D14] border border-[#44273D]'
+                  : 'bg-red-500/10 border border-red-500/20'
+              }`}>
+                <p className={`text-sm ${
+                  error.toLowerCase().includes('sudah terhubung') || error.toLowerCase().includes('duplicate')
+                    ? 'text-[#FF7AD0]'
+                    : 'text-red-400'
+                }`}>{error}</p>
               </div>
             )}
 

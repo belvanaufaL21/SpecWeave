@@ -158,6 +158,18 @@ export const createConnection = async (req, res) => {
     });
   } catch (error) {
     cleanLogger.error('JIRA-CONTROLLER', 'Create connection error', { error: error.message });
+    
+    // Handle duplicate project error specially
+    if (error.message && error.message.startsWith('DUPLICATE_PROJECT:')) {
+      const projectName = error.message.replace('DUPLICATE_PROJECT:', '');
+      return res.status(409).json({
+        success: false,
+        error: `Project JIRA "${projectName}" sudah terhubung, silahkan hubungkan Project JIRA lainnya`,
+        errorType: 'DUPLICATE_PROJECT',
+        projectName: projectName
+      });
+    }
+    
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to create JIRA connection'
