@@ -195,24 +195,27 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
 
   // Get user-friendly error messages in Indonesian
   const getErrorMessage = (error) => {
-    const errorStr = String(error || '').toLowerCase();
+    const errorStr = String(error || '');
+    const errorStrLower = errorStr.toLowerCase();
     
-    // Check for duplicate project error (special handling)
-    if (errorStr.includes('sudah terhubung') || errorStr.includes('duplicate')) {
-      return error; // Return as-is for duplicate errors
+    // CRITICAL: Check for duplicate project error FIRST (exact match)
+    // Backend sends: "Project JIRA "NAME (KEY)" sudah terhubung, silahkan hubungkan Project JIRA lainnya"
+    if (errorStr.includes('sudah terhubung') || errorStr.includes('Project JIRA')) {
+      return errorStr; // Return exact message from backend
     }
     
-    if (errorStr.includes('401') || errorStr.includes('unauthorized')) {
+    // Check for other error types
+    if (errorStrLower.includes('401') || errorStrLower.includes('unauthorized')) {
       return 'Email atau API Token tidak valid. Periksa kembali kredensial Anda.';
-    } else if (errorStr.includes('403') || errorStr.includes('forbidden')) {
+    } else if (errorStrLower.includes('403') || errorStrLower.includes('forbidden')) {
       return 'Akses ditolak. Pastikan Anda memiliki izin untuk mengakses project ini.';
-    } else if (errorStr.includes('404') || errorStr.includes('not found')) {
+    } else if (errorStrLower.includes('404') || errorStrLower.includes('not found')) {
       return 'Project Key tidak ditemukan. Periksa kembali kode project JIRA Anda.';
-    } else if (errorStr.includes('network') || errorStr.includes('fetch') || errorStr.includes('failed to fetch')) {
+    } else if (errorStrLower.includes('network') || errorStrLower.includes('fetch') || errorStrLower.includes('failed to fetch')) {
       return 'Tidak dapat terhubung ke JIRA. Periksa URL dan koneksi internet Anda.';
-    } else if (errorStr.includes('cors')) {
+    } else if (errorStrLower.includes('cors')) {
       return 'Masalah CORS. Pastikan URL JIRA Anda benar dan dapat diakses.';
-    } else if (errorStr.includes('timeout')) {
+    } else if (errorStrLower.includes('timeout')) {
       return 'Koneksi timeout. Server JIRA tidak merespons, coba lagi.';
     } else {
       return 'Data project JIRA tidak valid. Periksa kembali URL, Email, API Token, dan Project Key Anda.';

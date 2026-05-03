@@ -46,6 +46,22 @@ export const handleJiraError = (error, operation) => {
     };
   }
   
+  // Check if error has response data from backend (axios error)
+  if (error.response && error.response.data) {
+    const responseData = error.response.data;
+    
+    // If backend sent specific error message, use it
+    if (responseData.error) {
+      console.error(`Error in ${operation}:`, responseData.error);
+      return { 
+        success: false, 
+        error: responseData.error,
+        errorType: responseData.errorType, // Include error type if available
+        data: [] 
+      };
+    }
+  }
+  
   console.error(`Error in ${operation}:`, error);
   return { 
     success: false, 
