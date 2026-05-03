@@ -69,13 +69,30 @@ export const convertToGherkin = async (userStory, options = {}) => {
         model: options.modelName
       });
       
-      const response = await llmProviderService.generateCompletion(
-        options.modelName,
-        options.provider,
-        messages
-      );
-      
-      text = response.text;
+      try {
+        const response = await llmProviderService.generateCompletion(
+          options.modelName,
+          options.provider,
+          messages
+        );
+        
+        text = response.text;
+        
+        console.log('✅ [AI-SERVICE] LLM response received:', {
+          provider: options.provider,
+          model: options.modelName,
+          textLength: text.length,
+          tokensInput: response.tokensInput,
+          tokensOutput: response.tokensOutput
+        });
+      } catch (providerError) {
+        console.error('❌ [AI-SERVICE] Provider error:', {
+          provider: options.provider,
+          model: options.modelName,
+          error: providerError.message
+        });
+        throw providerError;
+      }
     } else {
       // Fallback to direct Groq call for backward compatibility (anonymous users)
       console.log('🔄 [AI-SERVICE] Using direct Groq call (fallback)');

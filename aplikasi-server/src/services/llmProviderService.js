@@ -75,32 +75,67 @@ class LLMProviderService {
    * @returns {Promise<{text: string, tokensInput: number, tokensOutput: number}>}
    */
   async _callGemini(modelName, messages) {
-    // Extract system and user messages
-    const systemContent = messages
-      .filter(m => m.role === 'system')
-      .map(m => m.content)
-      .join('\n');
+    try {
+      // Extract system and user messages
+      const systemContent = messages
+        .filter(m => m.role === 'system')
+        .map(m => m.content)
+        .join('\n');
 
-    const userContent = messages
-      .filter(m => m.role === 'user')
-      .map(m => m.content)
-      .join('\n');
+      const userContent = messages
+        .filter(m => m.role === 'user')
+        .map(m => m.content)
+        .join('\n');
 
-    // Get the generative model
-    const model = gemini.getGenerativeModel({ 
-      model: modelName,
-      systemInstruction: systemContent || undefined,
-    });
+      // Get the generative model
+      const model = gemini.getGenerativeModel({ 
+        model: modelName,
+        systemInstruction: systemContent || undefined,
+      });
 
-    // Generate content
-    const result = await model.generateContent(userContent);
-    const response = result.response;
+      // Generate content
+      const result = await model.generateContent(userContent);
+      const response = result.response;
 
-    return {
-      text: response.text(),
-      tokensInput: response.usageMetadata?.promptTokenCount || 0,
-      tokensOutput: response.usageMetadata?.candidatesTokenCount || 0,
-    };
+      return {
+        text: response.text(),
+        tokensInput: response.usageMetadata?.promptTokenCount || 0,
+        tokensOutput: response.usageMetadata?.candidatesTokenCount || 0,
+      };
+    } catch (error) {
+      // Enhanced error handling for Gemini API
+      if (error.message && error.message.includes('API key was reported as leaked')) {
+        throw new Error(
+          'Gemini API key has been reported as leaked and blocked by Google. ' +
+          'Please generate a new API key at https://aistudio.google.com/app/apikey ' +
+          'and update the GEMINI_API_KEY in your .env file. ' +
+          'See QUICK-FIX-GEMINI.md for detailed instructions.'
+        );
+      }
+      
+      if (error.message && error.message.includes('403')) {
+        throw new Error(
+          'Gemini API access forbidden (403). This may be due to: ' +
+          '1) Leaked API key, 2) Invalid API key, or 3) API not enabled. ' +
+          'Please check your API key at https://aistudio.google.com/app/apikey'
+        );
+      }
+      
+      if (error.message && error.message.includes('401')) {
+        throw new Error(
+          'Gemini API authentication failed (401). Please verify your API key is correct in the .env file.'
+        );
+      }
+      
+      if (error.message && error.message.includes('429')) {
+        throw new Error(
+          'Gemini API rate limit exceeded (429). Please wait a moment and try again, or upgrade your quota.'
+        );
+      }
+      
+      // Re-throw original error if not a known case
+      throw error;
+    }
   }
 }
 
