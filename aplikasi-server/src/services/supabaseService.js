@@ -154,6 +154,7 @@ class SupabaseService {
           jira_api_token: connectionData.jira_api_token,
           project_key: connectionData.project_key,
           project_name: connectionData.project_name,
+          is_active: true, // ADDED: Set new connections as active by default
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -209,7 +210,8 @@ class SupabaseService {
         .from('jira_connections')
         .select('*')
         .eq('user_id', userId)
-        .eq('is_active', true)
+        // REMOVED: .eq('is_active', true) - Allow multiple active connections
+        // All connections are now returned, regardless of is_active status
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -718,20 +720,17 @@ class SupabaseService {
   }
 
   /**
-   * Set active project for user (global, not per-chat)
+   * Set active project for user (supports multiple active projects)
    * @param {string} userId - User ID
    * @param {string} connectionId - Connection ID to set as active
    * @returns {Promise<Object>} Set active project result
    */
   async setActiveProject(userId, connectionId) {
     try {
-      // First, set all user's connections to inactive
-      await this.admin
-        .from('jira_connections')
-        .update({ is_active: false })
-        .eq('user_id', userId);
-
-      // Then, set the selected connection to active
+      // CHANGED: No longer set all connections to inactive
+      // Multiple connections can be active simultaneously
+      
+      // Set the selected connection to active
       const { data, error } = await this.admin
         .from('jira_connections')
         .update({ 
@@ -753,14 +752,22 @@ class SupabaseService {
   }
 
   /**
-   * Get all active projects for user (deprecated - now only one active project)
+   * Get all active projects for user (now supports multiple)
    * @param {string} userId - User ID
-   * @returns {Promise<Array>} User's active project (as array for backward compatibility)
+   * @returns {Promise<Array>} User's active projects
    */
   async getUserActiveProjects(userId) {
     try {
-      const activeProject = await this.getActiveProject(userId);
-      return activeProject ? [activeProject] : [];
+      const { data, error } = await this.admin
+        .from('jira_connections')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data || [];
     } catch (error) {
       console.error('Error getting user active projects:', error);
       return [];
@@ -768,7 +775,7 @@ class SupabaseService {
   }
 
   /**
-   * Clear active project for user
+   * Clear active project for user (clears all active projects)
    * @param {string} userId - User ID
    * @returns {Promise<boolean>} Success status
    */
