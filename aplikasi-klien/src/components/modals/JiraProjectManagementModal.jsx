@@ -6,6 +6,7 @@ import ConfirmationModal from '../common/ConfirmationModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import projectStateManager from '../../utils/managers/ProjectStateManager.js';
 import { getActiveProjectInfo } from '../../utils/helpers/activeProjectHelpers';
+import { calculateTokenStatus, getTokenStatusBadgeClasses } from '../../utils/helpers/jiraTokenHelpers';
 
 const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   const [connections, setConnections] = useState([]);
@@ -532,6 +533,10 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                       const isActiveInThisChat = activeProjectId === connection.id;
                       const isSelected = selectedProjectId === connection.id;
                       
+                      // Calculate token status
+                      const tokenStatus = calculateTokenStatus(connection.token_expires_at);
+                      const statusBadgeClasses = getTokenStatusBadgeClasses(tokenStatus.type);
+                      
                       return (
                         <div
                           key={connection.id}
@@ -547,7 +552,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                           <div className="flex items-start justify-between">
                             {/* Project Info */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <h4 className="text-white font-medium text-sm">{connection.project_name || connection.project_key}</h4>
                                 {connection.project_name && connection.project_name !== connection.project_key && (
                                   <span className="text-xs text-gray-400 font-mono">({connection.project_key})</span>
@@ -560,6 +565,12 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                                 {isSelected && !isActiveInThisChat && (
                                   <span className="px-2 py-0.5 text-xs rounded border bg-purple-500/20 text-purple-400 border-purple-500/30">
                                     Selected
+                                  </span>
+                                )}
+                                {/* Token Status Badge */}
+                                {tokenStatus.type !== 'unknown' && (
+                                  <span className={statusBadgeClasses.container} title={`Token expires: ${connection.token_expires_at ? new Date(connection.token_expires_at).toLocaleDateString() : 'Unknown'}`}>
+                                    {tokenStatus.icon} {tokenStatus.label}
                                   </span>
                                 )}
                               </div>

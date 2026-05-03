@@ -15,7 +15,8 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
     jiraUrl: '',
     email: '',
     apiToken: '',
-    projectKey: ''
+    projectKey: '',
+    tokenExpiresAt: ''
   });
 
   // Reset modal state when opened
@@ -29,7 +30,8 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
         jiraUrl: '',
         email: '',
         apiToken: '',
-        projectKey: ''
+        projectKey: '',
+        tokenExpiresAt: ''
       });
     }
   }, [isOpen]);
@@ -73,6 +75,21 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
           errors.projectKey = 'Project Key harus huruf kapital dan angka (contoh: PROJ)';
         } else {
           delete errors.projectKey;
+        }
+        break;
+      case 'tokenExpiresAt':
+        if (value) {
+          const expiryDate = new Date(value);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (expiryDate < today) {
+            errors.tokenExpiresAt = 'Token sudah kedaluwarsa';
+          } else {
+            delete errors.tokenExpiresAt;
+          }
+        } else {
+          delete errors.tokenExpiresAt; // Optional field
         }
         break;
       default:
@@ -133,13 +150,20 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
       const projectName = testResult.data?.projectName || formData.projectKey;
 
       // Create connection if test successful
-      const result = await jiraService.createConnection({
+      const connectionData = {
         jiraUrl: formData.jiraUrl,
         email: formData.email,
         apiToken: formData.apiToken,
         projectKey: formData.projectKey,
         projectName: projectName
-      });
+      };
+
+      // Add token expiry date if provided
+      if (formData.tokenExpiresAt) {
+        connectionData.tokenExpiresAt = formData.tokenExpiresAt;
+      }
+
+      const result = await jiraService.createConnection(connectionData);
       
       console.log('Create connection result:', result);
       
@@ -295,37 +319,73 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
-                  <span>
-                    API Token <span className="text-red-400">*</span>
-                  </span>
-                  <a 
-                    href="https://id.atlassian.com/manage-profile/security/api-tokens" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-white hover:text-gray-300 transition-colors"
-                    title="Buat API Token"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </label>
-                <input
-                  type="password"
-                  name="apiToken"
-                  value={formData.apiToken}
-                  onChange={handleInputChange}
-                  placeholder="API Token JIRA Anda"
-                  className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                    validationErrors.apiToken ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
-                  }`}
-                  required
-                />
-                {validationErrors.apiToken && (
-                  <p className="text-red-400 text-xs mt-1">{validationErrors.apiToken}</p>
-                )}
+              {/* API Token and Token Expiry Date - 2 Grid Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* API Token */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
+                    <span>
+                      API Token <span className="text-red-400">*</span>
+                    </span>
+                    <a 
+                      href="https://id.atlassian.com/manage-profile/security/api-tokens" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-white hover:text-gray-300 transition-colors"
+                      title="Buat API Token"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </label>
+                  <input
+                    type="password"
+                    name="apiToken"
+                    value={formData.apiToken}
+                    onChange={handleInputChange}
+                    placeholder="API Token JIRA Anda"
+                    className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                      validationErrors.apiToken ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                    }`}
+                    required
+                  />
+                  {validationErrors.apiToken && (
+                    <p className="text-red-400 text-xs mt-1">{validationErrors.apiToken}</p>
+                  )}
+                </div>
+
+                {/* Token Expiry Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
+                    <span>Token Expiry Date</span>
+                    <div className="group relative">
+                      <svg className="w-4 h-4 text-gray-500 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/10 rounded-lg text-xs text-gray-300 z-10">
+                        Tanggal kedaluwarsa token (opsional). Cek di JIRA → Profile → Security → API Tokens
+                      </div>
+                    </div>
+                  </label>
+                  <input
+                    type="date"
+                    name="tokenExpiresAt"
+                    value={formData.tokenExpiresAt}
+                    onChange={handleInputChange}
+                    min={new Date().toISOString().split('T')[0]}
+                    className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                      validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                    }`}
+                  />
+                  {validationErrors.tokenExpiresAt ? (
+                    <p className="text-red-400 text-xs mt-1">{validationErrors.tokenExpiresAt}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Opsional, untuk reminder sebelum expired
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div>

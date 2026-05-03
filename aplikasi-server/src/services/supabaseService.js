@@ -147,18 +147,26 @@ class SupabaseService {
    */
   async createJiraConnection(userId, connectionData) {
       try {
+        const insertData = {
+          user_id: userId,
+          jira_url: connectionData.jira_url,
+          jira_email: connectionData.jira_email,
+          jira_api_token: connectionData.jira_api_token,
+          project_key: connectionData.project_key,
+          project_name: connectionData.project_name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        // Add token expiry date if provided
+        if (connectionData.token_expires_at) {
+          insertData.token_expires_at = connectionData.token_expires_at;
+          insertData.token_status = this._calculateTokenStatus(connectionData.token_expires_at);
+        }
+
         const { data, error } = await this.admin
           .from('jira_connections')
-          .insert({
-            user_id: userId,
-            jira_url: connectionData.jira_url,
-            jira_email: connectionData.jira_email,
-            jira_api_token: connectionData.jira_api_token,
-            project_key: connectionData.project_key,
-            project_name: connectionData.project_name,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -172,6 +180,22 @@ class SupabaseService {
         throw new Error(`Failed to create JIRA connection: ${error.message}`);
       }
     }
+
+  /**
+   * Calculate token status based on expiry date
+   * @private
+   */
+  _calculateTokenStatus(expiryDate) {
+    if (!expiryDate) return 'unknown';
+    
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) return 'expired';
+    if (daysUntilExpiry <= 7) return 'expiring_soon';
+    return 'valid';
+  }
 
 
   /**
@@ -256,12 +280,19 @@ class SupabaseService {
    */
   async updateJiraConnection(connectionId, userId, updates) {
     try {
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      // Recalculate token status if expiry date is being updated
+      if (updates.token_expires_at !== undefined) {
+        updateData.token_status = this._calculateTokenStatus(updates.token_expires_at);
+      }
+
       const { data, error } = await this.admin
         .from('jira_connections')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', connectionId)
         .eq('user_id', userId)
         .select()

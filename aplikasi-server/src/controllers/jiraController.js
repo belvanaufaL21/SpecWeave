@@ -143,6 +143,11 @@ export const createConnection = async (req, res) => {
       project_key: req.body.projectKey,
       project_name: req.body.projectName || req.body.projectKey
     };
+
+    // Add token expiry date if provided
+    if (req.body.tokenExpiresAt) {
+      connectionData.token_expires_at = req.body.tokenExpiresAt;
+    }
     
     const result = await jiraService.createJiraConnection(userId, connectionData);
 
