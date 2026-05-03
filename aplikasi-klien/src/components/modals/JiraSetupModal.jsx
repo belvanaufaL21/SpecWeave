@@ -247,7 +247,12 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
         input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-month-field,
         input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-day-field,
         input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-year-field {
-          color: #6b7280;
+          color: #6b7280 !important;
+        }
+        
+        /* Firefox support */
+        input[type="date"].jira-date-input.is-empty {
+          color: #6b7280 !important;
         }
 
         /* Sembunyikan native calendar icon supaya tidak dobel dengan icon overlay */
