@@ -4,12 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Usage Limit Service
  * 
- * Manages per-user, per-model request limits for LLM usage.
- * Enforces tier-based limits (economy, standard, premium) and tracks usage counters.
+ * Manages per-user, per-model daily request limits for LLM usage.
+ * Simple system: Each model has its own daily limit, auto-resets at midnight UTC.
  * 
  * Key responsibilities:
  * - Check if user can make request to a model (checkLimit)
- * - Increment usage counter after successful request (incrementUsage)
+ * - Increment usage counter with auto-reset (incrementUsage)
  * - Fetch user's usage across all models (getUserUsage)
  * - Find alternative models with remaining quota (getAlternativeModels)
  * - Record request history for analytics (recordRequest)
@@ -18,8 +18,7 @@ class UsageLimitService {
   /**
    * Check if user can make request to model
    * 
-   * Performs a JOIN query across models, model_tiers, and usage_counters
-   * to retrieve model info, tier limits, and current usage in a single call.
+   * Uses the database function get_remaining_requests which handles daily reset logic.
    * 
    * @param {string} userId - User ID
    * @param {string} modelName - Model name (e.g., 'llama-3.1-8b-instant')
@@ -28,11 +27,11 @@ class UsageLimitService {
    *   modelName: string,
    *   displayName: string,
    *   provider: string,
-   *   tier: string,
-   *   limit: number,
+   *   dailyLimit: number,
    *   used: number,
    *   remaining: number,
    *   modelId: string,
+   *   resetsAt: string,
    *   alternatives?: Array
    * }>}
    */
@@ -40,53 +39,52 @@ class UsageLimitService {
     try {
       const client = supabaseService.getClient();
 
-      // JOIN query to get model, tier, and usage in one call
-      const { data, error } = await client
+      // Get model info
+      const { data: model, error: modelError } = await client
         .from('models')
-        .select(`
-          id,
-          name,
-          display_name,
-          provider,
-          model_tiers!inner (
-            name,
-            request_limit
-          ),
-          usage_counters!left (
-            request_count
-          )
-        `)
+        .select('id, name, display_name, provider, daily_limit')
         .eq('name', modelName)
         .eq('is_active', true)
-        .eq('usage_counters.user_id', userId)
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
+      if (modelError) {
+        if (modelError.code === 'PGRST116') {
           throw new Error(`Model not found: ${modelName}`);
         }
-        throw error;
+        throw modelError;
       }
 
-      const model = data;
-      const tier = model.model_tiers;
-      const usageCounter = model.usage_counters?.[0];
+      // Get remaining requests using database function
+      const { data: remainingData, error: remainingError } = await client
+        .rpc('get_remaining_requests', {
+          p_user_id: userId,
+          p_model_id: model.id
+        });
 
-      const used = usageCounter?.request_count || 0;
-      const limit = tier.request_limit;
-      const remaining = Math.max(0, limit - used);
+      if (remainingError) {
+        throw remainingError;
+      }
+
+      const remaining = remainingData || model.daily_limit;
+      const used = model.daily_limit - remaining;
       const allowed = remaining > 0;
+
+      // Calculate next reset time (midnight UTC)
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 0, 0);
 
       const result = {
         allowed,
         modelName: model.name,
         displayName: model.display_name,
         provider: model.provider,
-        tier: tier.name,
-        limit,
+        dailyLimit: model.daily_limit,
         used,
         remaining,
         modelId: model.id,
+        resetsAt: tomorrow.toISOString(),
       };
 
       // If limit exceeded, fetch alternative models
@@ -102,28 +100,26 @@ class UsageLimitService {
   }
 
   /**
-   * Increment usage counter after successful request
+   * Increment usage counter with auto-reset
    * 
-   * Uses atomic upsert to handle first-time users and concurrent requests.
+   * Uses database function increment_usage_with_reset which handles:
+   * - Auto-reset if last reset was yesterday
+   * - Atomic increment
+   * - Returns new count and remaining
    * 
    * @param {string} userId - User ID
    * @param {string} modelName - Model name
    * @param {string} requestId - Request ID for tracking
-   * @returns {Promise<{newCount: number, remaining: number}>}
+   * @returns {Promise<{newCount: number, remaining: number, wasReset: boolean}>}
    */
   async incrementUsage(userId, modelName, requestId) {
     try {
       const client = supabaseService.getClient();
 
-      // First, get model ID and limit
+      // Get model ID
       const { data: modelData, error: modelError } = await client
         .from('models')
-        .select(`
-          id,
-          model_tiers!inner (
-            request_limit
-          )
-        `)
+        .select('id')
         .eq('name', modelName)
         .eq('is_active', true)
         .single();
@@ -132,65 +128,25 @@ class UsageLimitService {
         throw modelError;
       }
 
-      const modelId = modelData.id;
-      const limit = modelData.model_tiers.request_limit;
+      // Increment using database function (handles auto-reset)
+      const { data, error } = await client
+        .rpc('increment_usage_with_reset', {
+          p_user_id: userId,
+          p_model_id: modelData.id
+        });
 
-      // Atomic upsert: increment if exists, create if not
-      const { data: counterData, error: counterError } = await client
-        .from('usage_counters')
-        .select('request_count')
-        .eq('user_id', userId)
-        .eq('model_id', modelId)
-        .single();
-
-      if (counterError && counterError.code !== 'PGRST116') {
-        throw counterError;
+      if (error) {
+        throw error;
       }
 
-      let newCount;
+      // data is array with one row
+      const result = data[0];
 
-      if (counterData) {
-        // Counter exists, increment it
-        const { data: updatedData, error: updateError } = await client
-          .from('usage_counters')
-          .update({
-            request_count: counterData.request_count + 1,
-            last_request_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', userId)
-          .eq('model_id', modelId)
-          .select('request_count')
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        newCount = updatedData.request_count;
-      } else {
-        // Counter doesn't exist, create it
-        const { data: insertedData, error: insertError } = await client
-          .from('usage_counters')
-          .insert({
-            user_id: userId,
-            model_id: modelId,
-            request_count: 1,
-            last_request_at: new Date().toISOString(),
-          })
-          .select('request_count')
-          .single();
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        newCount = insertedData.request_count;
-      }
-
-      const remaining = Math.max(0, limit - newCount);
-
-      return { newCount, remaining };
+      return {
+        newCount: result.new_count,
+        remaining: result.remaining,
+        wasReset: result.was_reset
+      };
     } catch (error) {
       console.error('Error incrementing usage:', error);
       throw new Error(`Failed to increment usage: ${error.message}`);
@@ -200,64 +156,47 @@ class UsageLimitService {
   /**
    * Get usage information for all models for a user
    * 
+   * Uses the user_model_usage view which includes reset status.
+   * 
    * @param {string} userId - User ID
    * @returns {Promise<Array<{
    *   id: string,
    *   name: string,
    *   displayName: string,
    *   provider: string,
-   *   tier: string,
-   *   limit: number,
+   *   dailyLimit: number,
    *   used: number,
-   *   remaining: number
+   *   remaining: number,
+   *   needsReset: boolean,
+   *   lastResetAt: string
    * }>>}
    */
   async getUserUsage(userId) {
     try {
       const client = supabaseService.getClient();
 
-      // Get all active models with their tiers and user's usage
+      // Use the view for easy access
       const { data, error } = await client
-        .from('models')
-        .select(`
-          id,
-          name,
-          display_name,
-          provider,
-          model_tiers!inner (
-            name,
-            request_limit
-          ),
-          usage_counters!left (
-            request_count
-          )
-        `)
-        .eq('is_active', true)
-        .eq('usage_counters.user_id', userId)
-        .order('model_tiers(request_limit)', { ascending: false });
+        .from('user_model_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .order('daily_limit', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      return data.map(model => {
-        const tier = model.model_tiers;
-        const usageCounter = model.usage_counters?.[0];
-        const used = usageCounter?.request_count || 0;
-        const limit = tier.request_limit;
-        const remaining = Math.max(0, limit - used);
-
-        return {
-          id: model.id,
-          name: model.name,
-          displayName: model.display_name,
-          provider: model.provider,
-          tier: tier.name,
-          limit,
-          used,
-          remaining,
-        };
-      });
+      return data.map(row => ({
+        id: row.model_id,
+        name: row.model_name,
+        displayName: row.display_name,
+        provider: row.provider || 'unknown',
+        dailyLimit: row.daily_limit,
+        used: row.current_count,
+        remaining: row.remaining,
+        needsReset: row.needs_reset,
+        lastResetAt: row.last_reset_at
+      }));
     } catch (error) {
       console.error('Error getting user usage:', error);
       throw new Error(`Failed to get user usage: ${error.message}`);
@@ -275,7 +214,7 @@ class UsageLimitService {
    *   model: string,
    *   displayName: string,
    *   provider: string,
-   *   tier: string,
+   *   dailyLimit: number,
    *   remaining: number
    * }>>}
    */
@@ -290,7 +229,7 @@ class UsageLimitService {
           model: model.name,
           displayName: model.displayName,
           provider: model.provider,
-          tier: model.tier,
+          dailyLimit: model.dailyLimit,
           remaining: model.remaining,
         }));
     } catch (error) {
