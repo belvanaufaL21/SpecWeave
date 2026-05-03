@@ -448,22 +448,22 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
               </p>
               {selectedConnection && (
                 <motion.div 
-                  className="flex items-center gap-2 mt-3 p-2 bg-[#120C18] border border-[#2C1A43] rounded-lg"
+                  className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-[#120C18] border border-[#2C1A43] rounded-lg w-fit"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-[#C27AFF] font-medium">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse flex-shrink-0"></div>
+                  <span className="text-xs text-[#C27AFF] font-medium whitespace-nowrap">
                     Active Project: {selectedConnection.project_name || selectedConnection.project_key}
                   </span>
                   {selectedConnection.project_name && selectedConnection.project_name !== selectedConnection.project_key && (
-                    <span className="text-xs text-white/70">
+                    <span className="text-xs text-white/70 whitespace-nowrap">
                       ({selectedConnection.project_key})
                     </span>
                   )}
                   {/* URL hanya ditampilkan pada layar medium ke atas */}
-                  <span className="hidden md:inline text-xs text-white/70">
+                  <span className="hidden md:inline text-xs text-white/70 whitespace-nowrap">
                     • {selectedConnection.jira_url}
                   </span>
                 </motion.div>
