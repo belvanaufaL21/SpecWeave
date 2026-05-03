@@ -202,7 +202,7 @@ const ProjectSelector = ({ chatId, onProjectSelected }) => {
                 <div className="text-sm font-medium text-green-300">
                   Active Project: {activeProject.project_name || activeProject.project_key}
                 </div>
-                {activeProject.project_name && activeProject.project_name !== activeProject.project_key && (
+                {activeProject.project_name && activeProject.project_key && (
                   <div className="text-xs text-green-400/80 font-mono">
                     ({activeProject.project_key})
                   </div>
@@ -242,7 +242,7 @@ const ProjectSelector = ({ chatId, onProjectSelected }) => {
           {connections.map((connection) => (
             <option key={connection.id} value={connection.id} className="bg-gray-800">
               {connection.project_name || connection.project_key}
-              {connection.project_name && connection.project_name !== connection.project_key && ` (${connection.project_key})`}
+              {connection.project_name && connection.project_key && ` (${connection.project_key})`}
             </option>
           ))}
         </select>

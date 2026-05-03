@@ -457,7 +457,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                   <span className="text-xs text-[#C27AFF] font-medium whitespace-nowrap">
                     Active Project: {selectedConnection.project_name || selectedConnection.project_key}
                   </span>
-                  {selectedConnection.project_name && selectedConnection.project_name !== selectedConnection.project_key && (
+                  {selectedConnection.project_name && selectedConnection.project_key && (
                     <span className="text-xs text-white/70 whitespace-nowrap">
                       ({selectedConnection.project_key})
                     </span>
@@ -748,7 +748,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                       </div>
                       <div>
                         <span className="text-gray-400">{EPIC_LABELS.EPIC_PROJECT}:</span> {selectedConnection?.project_name || selectedConnection?.project_key}
-                        {selectedConnection?.project_name && selectedConnection.project_name !== selectedConnection.project_key && (
+                        {selectedConnection?.project_name && selectedConnection.project_key && (
                           <span className="text-gray-500 ml-1 font-mono">({selectedConnection.project_key})</span>
                         )}
                       </div>

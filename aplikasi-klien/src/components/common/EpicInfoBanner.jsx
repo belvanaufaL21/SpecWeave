@@ -129,7 +129,12 @@ const EpicInfoBanner = ({ onSelectEpic, className = '' }) => {
             </div>
             <div>
               <p className="text-green-300 font-medium mb-1">Connection:</p>
-              <p className="text-green-300/80">Project: {connection?.project_name || connection?.project_key}</p>
+              <p className="text-green-300/80">
+                Project: {connection?.project_name || connection?.project_key}
+                {connection?.project_name && connection?.project_key && (
+                  <span className="text-green-300/60 ml-1 font-mono">({connection.project_key})</span>
+                )}
+              </p>
               <p className="text-green-300/80">Issue Type: {connection.issue_type || 'Story'}</p>
               <a 
                 href={`${connection.jira_url}/browse/${epic.key}`}

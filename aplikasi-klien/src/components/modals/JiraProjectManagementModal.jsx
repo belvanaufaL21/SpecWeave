@@ -151,7 +151,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     if (pendingActiveProject !== currentActive) {
       const selectedProject = connections.find(conn => conn.id === pendingActiveProject);
       const projectName = selectedProject?.project_name || selectedProject?.project_key || 'Unknown';
-      const projectDisplayName = selectedProject?.project_key && selectedProject?.project_name !== selectedProject?.project_key 
+      const projectDisplayName = selectedProject?.project_key && selectedProject?.project_name
         ? `${projectName} (${selectedProject.project_key})` 
         : projectName;
 
@@ -275,7 +275,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   const handleDeleteConnection = async (connectionId) => {
     const connection = connections.find(conn => conn.id === connectionId);
     const projectName = connection?.project_name || connection?.project_key || 'this project';
-    const projectDisplayName = connection?.project_key && connection?.project_name !== connection?.project_key
+    const projectDisplayName = connection?.project_key && connection?.project_name
       ? `${projectName} (${connection.project_key})`
       : projectName;
     
@@ -554,7 +554,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <h4 className="text-white font-medium text-sm">{connection.project_name || connection.project_key}</h4>
-                                {connection.project_name && connection.project_name !== connection.project_key && (
+                                {connection.project_name && connection.project_key && (
                                   <span className="text-xs text-gray-400 font-mono">({connection.project_key})</span>
                                 )}
                                 {isActiveInThisChat && (
