@@ -377,7 +377,7 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
                         maxDate.setFullYear(maxDate.getFullYear() + 1);
                         return maxDate.toISOString().split('T')[0];
                       })()}
-                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
+                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
                         validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                       }`}
                       style={{
