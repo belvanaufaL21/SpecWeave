@@ -872,9 +872,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   z-index: 1;
 }
 
-/* Style for date input in dark mode - EMPTY STATE (placeholder-like) */
+/* Style for date input - EMPTY STATE (placeholder-like) */
+/* Default: white with 30% opacity for empty state */
 input[type="date"]::-webkit-datetime-edit {
-  color: rgb(107, 114, 128); /* gray-500 - same as placeholder */
+  color: rgba(255, 255, 255, 0.3); /* #FFFFFF with 30% opacity */
   padding: 0;
 }
 
@@ -883,18 +884,18 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
 }
 
 input[type="date"]::-webkit-datetime-edit-text {
-  color: rgb(107, 114, 128); /* gray-500 - same as placeholder */
+  color: rgba(255, 255, 255, 0.3); /* #FFFFFF with 30% opacity */
   padding: 0 2px;
 }
 
 input[type="date"]::-webkit-datetime-edit-month-field,
 input[type="date"]::-webkit-datetime-edit-day-field,
 input[type="date"]::-webkit-datetime-edit-year-field {
-  color: rgb(107, 114, 128); /* gray-500 - same as placeholder */
+  color: rgba(255, 255, 255, 0.3); /* #FFFFFF with 30% opacity */
   padding: 0 2px;
 }
 
-/* When date has value - make it WHITE */
+/* When date has value - make it FULL WHITE */
 input[type="date"]:not(:placeholder-shown)::-webkit-datetime-edit,
 input[type="date"]:valid::-webkit-datetime-edit {
   color: #FFFFFF !important;
@@ -902,7 +903,7 @@ input[type="date"]:valid::-webkit-datetime-edit {
 
 input[type="date"]:not(:placeholder-shown)::-webkit-datetime-edit-text,
 input[type="date"]:valid::-webkit-datetime-edit-text {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: rgba(255, 255, 255, 0.5) !important; /* Separator stays dimmer */
 }
 
 input[type="date"]:not(:placeholder-shown)::-webkit-datetime-edit-month-field,
@@ -933,12 +934,12 @@ input[type="date"]::-moz-calendar-picker-indicator {
   z-index: 1;
 }
 
-/* Firefox placeholder color */
+/* Firefox - white with 30% opacity when empty */
 input[type="date"] {
-  color: rgb(107, 114, 128); /* gray-500 when empty */
+  color: rgba(255, 255, 255, 0.3);
 }
 
-/* Firefox - white when has value */
+/* Firefox - full white when has value */
 input[type="date"]:not(:placeholder-shown),
 input[type="date"]:valid {
   color: #FFFFFF;
