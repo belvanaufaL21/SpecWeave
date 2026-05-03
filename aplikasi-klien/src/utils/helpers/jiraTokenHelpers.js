@@ -9,7 +9,7 @@ export const calculateTokenStatus = (expiryDate) => {
       type: 'unknown',
       label: 'Unknown',
       color: 'gray',
-      icon: '⚪',
+      icon: '●', // Menggunakan bullet point yang lebih kecil
       daysRemaining: null
     };
   }
@@ -27,7 +27,7 @@ export const calculateTokenStatus = (expiryDate) => {
       type: 'expired',
       label: 'Token Expired',
       color: 'red',
-      icon: '🔴',
+      icon: '●',
       daysRemaining: daysUntilExpiry
     };
   }
@@ -37,7 +37,7 @@ export const calculateTokenStatus = (expiryDate) => {
       type: 'expiring_today',
       label: 'Expires Today',
       color: 'red',
-      icon: '🔴',
+      icon: '●',
       daysRemaining: 0
     };
   }
@@ -47,7 +47,7 @@ export const calculateTokenStatus = (expiryDate) => {
       type: 'expiring_soon',
       label: `Expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`,
       color: 'yellow',
-      icon: '🟡',
+      icon: '●',
       daysRemaining: daysUntilExpiry
     };
   }
@@ -57,7 +57,7 @@ export const calculateTokenStatus = (expiryDate) => {
       type: 'valid',
       label: `Expires in ${daysUntilExpiry} days`,
       color: 'green',
-      icon: '🟢',
+      icon: '●',
       daysRemaining: daysUntilExpiry
     };
   }
@@ -66,7 +66,7 @@ export const calculateTokenStatus = (expiryDate) => {
     type: 'valid',
     label: `Valid (${daysUntilExpiry} days left)`,
     color: 'green',
-    icon: '🟢',
+    icon: '●',
     daysRemaining: daysUntilExpiry
   };
 };
@@ -78,30 +78,30 @@ export const calculateTokenStatus = (expiryDate) => {
  */
 export const getTokenStatusBadgeClasses = (statusType) => {
   // Hanya teks tanpa background dan border
-  const baseClasses = 'text-xs font-medium';
+  const baseClasses = 'text-xs font-medium inline-flex items-center gap-1';
   
   switch (statusType) {
     case 'expired':
     case 'expiring_today':
       return {
         container: `${baseClasses} text-red-400`,
-        icon: 'text-red-400'
+        icon: 'text-red-400 text-[10px] leading-none'
       };
     case 'expiring_soon':
       return {
         container: `${baseClasses} text-yellow-400`,
-        icon: 'text-yellow-400'
+        icon: 'text-yellow-400 text-[10px] leading-none'
       };
     case 'valid':
       return {
         container: `${baseClasses} text-green-400`,
-        icon: 'text-green-400'
+        icon: 'text-green-400 text-[10px] leading-none'
       };
     case 'unknown':
     default:
       return {
         container: `${baseClasses} text-gray-400`,
-        icon: 'text-gray-400'
+        icon: 'text-gray-400 text-[10px] leading-none'
       };
   }
 };

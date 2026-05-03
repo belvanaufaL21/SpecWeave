@@ -570,7 +570,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                                 {/* Token Status Badge */}
                                 {tokenStatus.type !== 'unknown' && (
                                   <span className={statusBadgeClasses.container} title={`Token expires: ${connection.token_expires_at ? new Date(connection.token_expires_at).toLocaleDateString() : 'Unknown'}`}>
-                                    {tokenStatus.icon} {tokenStatus.label}
+                                    <span className={statusBadgeClasses.icon}>{tokenStatus.icon}</span>
+                                    <span>{tokenStatus.label}</span>
                                   </span>
                                 )}
                               </div>
