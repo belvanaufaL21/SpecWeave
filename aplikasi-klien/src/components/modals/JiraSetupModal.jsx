@@ -224,257 +224,294 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-[#09090A] border border-white/5 rounded-xl max-w-2xl w-full mx-auto max-h-[80vh] overflow-y-auto shadow-2xl transform transition-all duration-200 animate-in fade-in zoom-in-95">
-        
-        {/* Step 3: Credentials Form */}
-        {step === 3 && (
-          <div className="p-8 relative">
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-[#160D14] border border-[#44273D] flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
-                  </svg>
+    <>
+      {/* Fix warna placeholder dd/mm/yyyy untuk input type="date" */}
+      <style>{`
+        input[type="date"].jira-date-input {
+          color: #ffffff;
+        }
+        input[type="date"].jira-date-input::-webkit-datetime-edit {
+          color: #ffffff;
+        }
+        input[type="date"].jira-date-input:invalid::-webkit-datetime-edit {
+          color: #6b7280;
+        }
+        input[type="date"].jira-date-input:focus:invalid::-webkit-datetime-edit {
+          color: #6b7280;
+        }
+        input[type="date"].jira-date-input::-webkit-datetime-edit-fields-wrapper {
+          padding: 0;
+        }
+        input[type="date"].jira-date-input::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          cursor: pointer;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+        }
+        /* Firefox: fallback warna teks empty state */
+        @-moz-document url-prefix() {
+          input[type="date"].jira-date-input:invalid {
+            color: #6b7280;
+          }
+          input[type="date"].jira-date-input:valid {
+            color: #ffffff;
+          }
+        }
+      `}</style>
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-[#09090A] border border-white/5 rounded-xl max-w-2xl w-full mx-auto max-h-[80vh] overflow-y-auto shadow-2xl transform transition-all duration-200 animate-in fade-in zoom-in-95">
+          
+          {/* Step 3: Credentials Form */}
+          {step === 3 && (
+            <div className="p-8 relative">
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#160D14] border border-[#44273D] flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Setup Project JIRA</h2>
                 </div>
-                <h2 className="text-xl font-bold text-white">Setup Project JIRA</h2>
+                <p className="text-gray-400 text-sm">
+                  Hubungkan project JIRA Anda untuk membuat user story dan subtask secara otomatis
+                </p>
               </div>
-              <p className="text-gray-400 text-sm">
-                Hubungkan project JIRA Anda untuk membuat user story dan subtask secara otomatis
-              </p>
-            </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
 
-            {/* JIRA Error Handler */}
-            {errors.map((errorItem) => (
-              <JiraErrorHandler
-                key={errorItem.id}
-                error={errorItem.error}
-                context={errorItem.context}
-                onRetry={() => {
-                  return handleSubmit({ preventDefault: () => {} });
-                }}
-                onDismiss={() => removeError(errorItem.id)}
-              />
-            ))}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  URL JIRA <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="url"
-                  name="jiraUrl"
-                  value={formData.jiraUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://perusahaan.atlassian.net"
-                  className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                    validationErrors.jiraUrl ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
-                  }`}
-                  required
+              {/* JIRA Error Handler */}
+              {errors.map((errorItem) => (
+                <JiraErrorHandler
+                  key={errorItem.id}
+                  error={errorItem.error}
+                  context={errorItem.context}
+                  onRetry={() => {
+                    return handleSubmit({ preventDefault: () => {} });
+                  }}
+                  onDismiss={() => removeError(errorItem.id)}
                 />
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500">
-                    URL instance JIRA Anda (Cloud atau Server)
-                  </p>
-                  {validationErrors.jiraUrl && (
-                    <p className="text-red-400 text-xs">{validationErrors.jiraUrl}</p>
-                  )}
-                </div>
-              </div>
+              ))}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="email.anda@perusahaan.com"
-                  className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                    validationErrors.email ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
-                  }`}
-                  required
-                />
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500">
-                    Email akun JIRA Anda
-                  </p>
-                  {validationErrors.email && (
-                    <p className="text-red-400 text-xs">{validationErrors.email}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* API Token and Token Expiry Date - 2 Grid Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* API Token */}
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
-                    <span>
-                      API Token <span className="text-red-400">*</span>
-                    </span>
-                    <a 
-                      href="https://id.atlassian.com/manage-profile/security/api-tokens" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-white hover:text-gray-300 transition-colors"
-                      title="Buat API Token"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    URL JIRA <span className="text-red-400">*</span>
                   </label>
                   <input
-                    type="password"
-                    name="apiToken"
-                    value={formData.apiToken}
+                    type="url"
+                    name="jiraUrl"
+                    value={formData.jiraUrl}
                     onChange={handleInputChange}
-                    placeholder="API Token JIRA Anda"
+                    placeholder="https://perusahaan.atlassian.net"
                     className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                      validationErrors.apiToken ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                      validationErrors.jiraUrl ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                     }`}
                     required
                   />
-                  {validationErrors.apiToken && (
-                    <p className="text-red-400 text-xs mt-1">{validationErrors.apiToken}</p>
-                  )}
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-gray-500">
+                      URL instance JIRA Anda (Cloud atau Server)
+                    </p>
+                    {validationErrors.jiraUrl && (
+                      <p className="text-red-400 text-xs">{validationErrors.jiraUrl}</p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Token Expiry Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Token Expiry Date <span className="text-red-400">*</span>
+                    Email <span className="text-red-400">*</span>
                   </label>
-                  <div className="relative">
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="email.anda@perusahaan.com"
+                    className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                      validationErrors.email ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                    }`}
+                    required
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-gray-500">
+                      Email akun JIRA Anda
+                    </p>
+                    {validationErrors.email && (
+                      <p className="text-red-400 text-xs">{validationErrors.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* API Token and Token Expiry Date - 2 Grid Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* API Token */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
+                      <span>
+                        API Token <span className="text-red-400">*</span>
+                      </span>
+                      <a 
+                        href="https://id.atlassian.com/manage-profile/security/api-tokens" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-white hover:text-gray-300 transition-colors"
+                        title="Buat API Token"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </label>
                     <input
-                      type="date"
-                      name="tokenExpiresAt"
-                      value={formData.tokenExpiresAt}
+                      type="password"
+                      name="apiToken"
+                      value={formData.apiToken}
                       onChange={handleInputChange}
-                      min={new Date().toISOString().split('T')[0]}
-                      max={(() => {
-                        const maxDate = new Date();
-                        maxDate.setFullYear(maxDate.getFullYear() + 1);
-                        return maxDate.toISOString().split('T')[0];
-                      })()}
-                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
-                        validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                      placeholder="API Token JIRA Anda"
+                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                        validationErrors.apiToken ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                       }`}
-                      style={{
-                        colorScheme: 'dark',
-                        WebkitAppearance: 'none',
-                        MozAppearance: 'none',
-                        position: 'relative'
-                      }}
                       required
                     />
-                    {/* Calendar icon overlay - purely decorative */}
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
+                    {validationErrors.apiToken && (
+                      <p className="text-red-400 text-xs mt-1">{validationErrors.apiToken}</p>
+                    )}
                   </div>
-                  {validationErrors.tokenExpiresAt ? (
-                    <p className="text-red-400 text-xs mt-1">{validationErrors.tokenExpiresAt}</p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Wajib diisi. Maksimal 1 tahun dari hari ini.
+
+                  {/* Token Expiry Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Token Expiry Date <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        name="tokenExpiresAt"
+                        value={formData.tokenExpiresAt}
+                        onChange={handleInputChange}
+                        min={new Date().toISOString().split('T')[0]}
+                        max={(() => {
+                          const maxDate = new Date();
+                          maxDate.setFullYear(maxDate.getFullYear() + 1);
+                          return maxDate.toISOString().split('T')[0];
+                        })()}
+                        className={`jira-date-input w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
+                          validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                        }`}
+                        style={{
+                          colorScheme: 'dark',
+                          position: 'relative'
+                        }}
+                        required
+                      />
+                      {/* Calendar icon overlay - purely decorative */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    {validationErrors.tokenExpiresAt ? (
+                      <p className="text-red-400 text-xs mt-1">{validationErrors.tokenExpiresAt}</p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Wajib diisi. Maksimal 1 tahun dari hari ini.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Project Key <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="projectKey"
+                    value={formData.projectKey}
+                    onChange={handleInputChange}
+                    placeholder="PROJ"
+                    className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+                      validationErrors.projectKey ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
+                    }`}
+                    required
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-gray-500">
+                      Kode project JIRA (huruf kapital, contoh: PROJ, DEV)
                     </p>
-                  )}
+                    {validationErrors.projectKey && (
+                      <p className="text-red-400 text-xs">{validationErrors.projectKey}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Project Key <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="projectKey"
-                  value={formData.projectKey}
-                  onChange={handleInputChange}
-                  placeholder="PROJ"
-                  className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
-                    validationErrors.projectKey ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
-                  }`}
-                  required
-                />
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500">
-                    Kode project JIRA (huruf kapital, contoh: PROJ, DEV)
-                  </p>
-                  {validationErrors.projectKey && (
-                    <p className="text-red-400 text-xs">{validationErrors.projectKey}</p>
-                  )}
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading || Object.keys(validationErrors).length > 0 || !formData.jiraUrl || !formData.email || !formData.apiToken || !formData.projectKey || !formData.tokenExpiresAt}
+                    className="w-full px-4 py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-[#FF7AD0]/30 border-t-[#FF7AD0] rounded-full animate-spin"></div>
+                        Menghubungkan...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        Hubungkan
+                      </>
+                    )}
+                  </button>
                 </div>
-              </div>
-
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={loading || Object.keys(validationErrors).length > 0 || !formData.jiraUrl || !formData.email || !formData.apiToken || !formData.projectKey || !formData.tokenExpiresAt}
-                  className="w-full px-4 py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-[#FF7AD0]/30 border-t-[#FF7AD0] rounded-full animate-spin"></div>
-                      Menghubungkan...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      Hubungkan
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Step 5: Success */}
-        {step === 5 && (
-          <div className="p-8 text-center bg-[#09090A] border border-white/5 rounded-xl">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#160D14] border border-[#44273D] flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              </form>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">JIRA Berhasil Terhubung!</h2>
-            <p className="text-gray-400 mb-6">
-              Akun JIRA Anda telah berhasil terhubung. Sekarang Anda dapat membuat user story dan subtask secara otomatis.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-[#FF7AD0]/30 border-t-[#FF7AD0] rounded-full animate-spin"></div>
-              Mengarahkan ke dashboard...
+          )}
+
+          {/* Step 5: Success */}
+          {step === 5 && (
+            <div className="p-8 text-center bg-[#09090A] border border-white/5 rounded-xl">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#160D14] border border-[#44273D] flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">JIRA Berhasil Terhubung!</h2>
+              <p className="text-gray-400 mb-6">
+                Akun JIRA Anda telah berhasil terhubung. Sekarang Anda dapat membuat user story dan subtask secara otomatis.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <div className="w-4 h-4 border-2 border-[#FF7AD0]/30 border-t-[#FF7AD0] rounded-full animate-spin"></div>
+                Mengarahkan ke dashboard...
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
