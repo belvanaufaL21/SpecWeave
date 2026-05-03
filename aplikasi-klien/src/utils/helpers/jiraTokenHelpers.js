@@ -77,29 +77,30 @@ export const calculateTokenStatus = (expiryDate) => {
  * @returns {Object} Tailwind classes for badge
  */
 export const getTokenStatusBadgeClasses = (statusType) => {
-  const baseClasses = 'px-2 py-0.5 text-xs rounded border';
+  // Hanya teks tanpa background dan border
+  const baseClasses = 'text-xs font-medium';
   
   switch (statusType) {
     case 'expired':
     case 'expiring_today':
       return {
-        container: `${baseClasses} bg-red-500/20 text-red-400 border-red-500/30`,
+        container: `${baseClasses} text-red-400`,
         icon: 'text-red-400'
       };
     case 'expiring_soon':
       return {
-        container: `${baseClasses} bg-yellow-500/20 text-yellow-400 border-yellow-500/30`,
+        container: `${baseClasses} text-yellow-400`,
         icon: 'text-yellow-400'
       };
     case 'valid':
       return {
-        container: `${baseClasses} bg-green-500/20 text-green-400 border-green-500/30`,
+        container: `${baseClasses} text-green-400`,
         icon: 'text-green-400'
       };
     case 'unknown':
     default:
       return {
-        container: `${baseClasses} bg-gray-500/20 text-gray-400 border-gray-500/30`,
+        container: `${baseClasses} text-gray-400`,
         icon: 'text-gray-400'
       };
   }
