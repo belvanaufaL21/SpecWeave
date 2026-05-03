@@ -223,25 +223,34 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
 
   if (!isOpen) return null;
 
+  // Cek apakah field date kosong, untuk menentukan warna teks dd/mm/yyyy
+  const isDateEmpty = !formData.tokenExpiresAt;
+
   return (
     <>
       {/* Fix warna placeholder dd/mm/yyyy untuk input type="date" */}
       <style>{`
-        input[type="date"].jira-date-input {
+        /* Default: warna teks tanggal yang sudah dipilih */
+        input[type="date"].jira-date-input,
+        input[type="date"].jira-date-input::-webkit-datetime-edit,
+        input[type="date"].jira-date-input::-webkit-datetime-edit-text,
+        input[type="date"].jira-date-input::-webkit-datetime-edit-month-field,
+        input[type="date"].jira-date-input::-webkit-datetime-edit-day-field,
+        input[type="date"].jira-date-input::-webkit-datetime-edit-year-field {
           color: #ffffff;
         }
-        input[type="date"].jira-date-input::-webkit-datetime-edit {
-          color: #ffffff;
-        }
-        input[type="date"].jira-date-input:invalid::-webkit-datetime-edit {
+
+        /* Saat kosong: warna abu-abu agar match dengan placeholder field lain */
+        input[type="date"].jira-date-input.is-empty,
+        input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit,
+        input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-text,
+        input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-month-field,
+        input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-day-field,
+        input[type="date"].jira-date-input.is-empty::-webkit-datetime-edit-year-field {
           color: #6b7280;
         }
-        input[type="date"].jira-date-input:focus:invalid::-webkit-datetime-edit {
-          color: #6b7280;
-        }
-        input[type="date"].jira-date-input::-webkit-datetime-edit-fields-wrapper {
-          padding: 0;
-        }
+
+        /* Sembunyikan native calendar icon supaya tidak dobel dengan icon overlay */
         input[type="date"].jira-date-input::-webkit-calendar-picker-indicator {
           opacity: 0;
           cursor: pointer;
@@ -250,15 +259,12 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
           top: 0;
           width: 100%;
           height: 100%;
+          padding: 0;
+          margin: 0;
         }
-        /* Firefox: fallback warna teks empty state */
-        @-moz-document url-prefix() {
-          input[type="date"].jira-date-input:invalid {
-            color: #6b7280;
-          }
-          input[type="date"].jira-date-input:valid {
-            color: #ffffff;
-          }
+
+        input[type="date"].jira-date-input::-webkit-datetime-edit-fields-wrapper {
+          padding: 0;
         }
       `}</style>
 
@@ -415,7 +421,7 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
                           maxDate.setFullYear(maxDate.getFullYear() + 1);
                           return maxDate.toISOString().split('T')[0];
                         })()}
-                        className={`jira-date-input w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
+                        className={`jira-date-input ${isDateEmpty ? 'is-empty' : ''} w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
                           validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                         }`}
                         style={{
