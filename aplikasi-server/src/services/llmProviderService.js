@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,22 +12,32 @@ const groq = new Groq({
 
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1',
+  defaultHeaders: {
+    'HTTP-Referer': process.env.APP_URL || 'https://specweave.com',
+    'X-Title': 'SpecWeave',
+  }
+});
+
 /**
  * LLM Provider Service
  * 
  * Abstracts provider-specific SDK calls into a unified interface.
- * Routes requests to Groq or Gemini based on the model's provider field.
+ * Routes requests to Groq, Gemini, or OpenRouter based on the model's provider field.
  * 
  * Supports:
  * - Groq (for economy tier models like Llama 3.1 8B)
  * - Google Gemini (for standard/premium tier models like Gemini 2.5 Flash/Pro)
+ * - OpenRouter (for 300+ models from multiple providers with no rate limits)
  */
 class LLMProviderService {
   /**
    * Send a completion request to the appropriate LLM provider
    * 
-   * @param {string} modelName - Model identifier (e.g., 'llama-3.1-8b-instant', 'gemini-2.5-flash')
-   * @param {string} provider - Provider name ('groq' or 'gemini')
+   * @param {string} modelName - Model identifier (e.g., 'llama-3.1-8b-instant', 'gemini-2.5-flash', 'anthropic/claude-sonnet-4.6')
+   * @param {string} provider - Provider name ('groq', 'gemini', or 'openrouter')
    * @param {Array} messages - Chat messages in OpenAI format [{role, content}]
    * @returns {Promise<{text: string, tokensInput: number, tokensOutput: number}>}
    * @throws {Error} If provider is unsupported or API call fails
@@ -37,6 +48,9 @@ class LLMProviderService {
     }
     if (provider === 'gemini') {
       return this._callGemini(modelName, messages);
+    }
+    if (provider === 'openrouter') {
+      return this._callOpenRouter(modelName, messages);
     }
     throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -136,6 +150,60 @@ class LLMProviderService {
           `Gemini API rate limit exceeded (429). ` +
           `${modelName} has a limit of ${rateLimit} on free tier. ` +
           `Please wait 1-2 minutes and try again, or use Gemini 2.5 Flash for higher quota.`
+        );
+      }
+      
+      // Re-throw original error if not a known case
+      throw error;
+    }
+  }
+
+  /**
+   * Call OpenRouter API using OpenAI SDK
+   * 
+   * OpenRouter provides access to 300+ models through a single API.
+   * Uses OpenAI-compatible API format for easy integration.
+   * 
+   * Benefits:
+   * - No rate limits (unlike direct Gemini API)
+   * - Access to multiple providers (Anthropic, OpenAI, Google, Meta, etc.)
+   * - Competitive pricing
+   * - Free models available
+   * 
+   * @private
+   * @param {string} modelName - OpenRouter model name (e.g., 'anthropic/claude-sonnet-4.6')
+   * @param {Array} messages - Chat messages in OpenAI format
+   * @returns {Promise<{text: string, tokensInput: number, tokensOutput: number}>}
+   */
+  async _callOpenRouter(modelName, messages) {
+    try {
+      const response = await openrouter.chat.completions.create({
+        model: modelName,
+        messages,
+      });
+
+      return {
+        text: response.choices[0].message.content,
+        tokensInput: response.usage?.prompt_tokens || 0,
+        tokensOutput: response.usage?.completion_tokens || 0,
+      };
+    } catch (error) {
+      // Enhanced error handling for OpenRouter API
+      if (error.message && error.message.includes('insufficient_quota')) {
+        throw new Error(
+          'OpenRouter API quota exceeded. Please add more credits to your OpenRouter account at https://openrouter.ai/'
+        );
+      }
+      
+      if (error.message && error.message.includes('401')) {
+        throw new Error(
+          'OpenRouter API authentication failed (401). Please verify your API key is correct in the .env file.'
+        );
+      }
+      
+      if (error.message && error.message.includes('404')) {
+        throw new Error(
+          `OpenRouter model not found (404): ${modelName}. Please check the model name at https://openrouter.ai/models`
         );
       }
       
