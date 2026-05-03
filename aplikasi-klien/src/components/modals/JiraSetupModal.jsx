@@ -362,16 +362,8 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
 
                 {/* Token Expiry Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
-                    <span>Token Expiry Date <span className="text-red-400">*</span></span>
-                    <div className="group relative">
-                      <svg className="w-4 h-4 text-gray-500 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/10 rounded-lg text-xs text-gray-300 z-10">
-                        Cek di JIRA → Profile → Security → API Tokens. Token maksimal 1 tahun dari hari ini.
-                      </div>
-                    </div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Token Expiry Date <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -385,7 +377,7 @@ const JiraSetupModal = ({ isOpen, onClose, onSkip, onComplete }) => {
                         maxDate.setFullYear(maxDate.getFullYear() + 1);
                         return maxDate.toISOString().split('T')[0];
                       })()}
-                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
+                      className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all cursor-pointer ${
                         validationErrors.tokenExpiresAt ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-white/50'
                       }`}
                       style={{

@@ -882,7 +882,7 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
 }
 
 input[type="date"]::-webkit-datetime-edit-text {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.3);
   padding: 0 2px;
 }
 
@@ -910,7 +910,24 @@ input[type="date"]::-moz-calendar-picker-indicator {
   cursor: pointer;
 }
 
-/* Placeholder styling for empty date input */
-input[type="date"]:not(:focus):invalid {
-  color: rgba(255, 255, 255, 0.3);
+/* Placeholder styling for empty date input - make it dimmer like other fields */
+input[type="date"]:not(:focus):invalid,
+input[type="date"]:not(:focus):not(:valid) {
+  color: rgba(156, 163, 175, 0.5); /* gray-400 with 50% opacity - same as placeholder */
+}
+
+/* When date input is empty, show placeholder-like text */
+input[type="date"]::-webkit-datetime-edit-month-field:not([value]),
+input[type="date"]::-webkit-datetime-edit-day-field:not([value]),
+input[type="date"]::-webkit-datetime-edit-year-field:not([value]) {
+  color: rgba(156, 163, 175, 0.5); /* Match placeholder color */
+}
+
+/* Empty state styling */
+input[type="date"]:not(:focus)::-webkit-datetime-edit {
+  color: rgba(156, 163, 175, 0.5);
+}
+
+input[type="date"]:focus::-webkit-datetime-edit {
+  color: white;
 }
