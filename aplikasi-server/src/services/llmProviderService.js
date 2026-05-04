@@ -58,9 +58,23 @@ class LLMProviderService {
    */
   async _callOpenRouter(modelName, messages) {
     try {
+      console.log('🔄 [LLM-PROVIDER] Calling OpenRouter API:', {
+        model: modelName,
+        messagesCount: messages.length,
+        apiKeyPresent: !!process.env.OPENROUTER_API_KEY,
+        apiKeyPrefix: process.env.OPENROUTER_API_KEY?.substring(0, 10) + '...'
+      });
+
       const response = await openrouter.chat.completions.create({
         model: modelName,
         messages,
+      });
+
+      console.log('✅ [LLM-PROVIDER] OpenRouter API success:', {
+        model: modelName,
+        tokensInput: response.usage?.prompt_tokens || 0,
+        tokensOutput: response.usage?.completion_tokens || 0,
+        responseLength: response.choices[0].message.content.length
       });
 
       return {
@@ -69,6 +83,15 @@ class LLMProviderService {
         tokensOutput: response.usage?.completion_tokens || 0,
       };
     } catch (error) {
+      console.error('❌ [LLM-PROVIDER] OpenRouter API error:', {
+        model: modelName,
+        errorMessage: error.message,
+        errorStatus: error.status,
+        errorCode: error.code,
+        errorType: error.type,
+        errorResponse: error.response?.data || error.response || 'No response data'
+      });
+
       // Enhanced error handling for OpenRouter API
       if (error.message && error.message.includes('insufficient_quota')) {
         throw new Error(
@@ -76,20 +99,26 @@ class LLMProviderService {
         );
       }
       
-      if (error.message && error.message.includes('401')) {
+      if (error.status === 401 || (error.message && error.message.includes('401'))) {
         throw new Error(
           'OpenRouter API authentication failed (401). Please verify your API key is correct in the .env file.'
         );
       }
       
-      if (error.message && error.message.includes('404')) {
+      if (error.status === 404 || (error.message && error.message.includes('404'))) {
         throw new Error(
           `OpenRouter model not found (404): ${modelName}. Please check the model name at https://openrouter.ai/models`
         );
       }
+
+      if (error.status === 400 || (error.message && error.message.includes('400'))) {
+        throw new Error(
+          `OpenRouter bad request (400) for model ${modelName}: ${error.message}. Check if model name is correct.`
+        );
+      }
       
-      // Re-throw original error if not a known case
-      throw error;
+      // Re-throw original error with more context
+      throw new Error(`OpenRouter API error for model ${modelName}: ${error.message}`);
     }
   }
 }
