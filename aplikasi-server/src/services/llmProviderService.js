@@ -68,6 +68,7 @@ class LLMProviderService {
       const response = await openrouter.chat.completions.create({
         model: modelName,
         messages,
+        max_tokens: 4096, // Limit token output untuk menghindari error insufficient credits
       });
 
       console.log('✅ [LLM-PROVIDER] OpenRouter API success:', {
