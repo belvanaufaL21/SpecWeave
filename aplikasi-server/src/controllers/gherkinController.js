@@ -22,12 +22,10 @@ export const generateGherkin = async (req, res, next) => {
     // Use originalUserStory for format detection if available, otherwise use userStory
     const inputForDetection = originalUserStory || userStory;
 
-    // 1. Validasi
+    // 1. Validasi - HANYA cek keberadaan dan tipe, TIDAK ada validasi panjang
+    // Karena input pendek/non-Connextra akan diproses sebagai general response
     if (!userStory || typeof userStory !== 'string') {
       throw new AppError('User story is required and must be a string', 400);
-    }
-    if (userStory.trim().length < 10) {
-      throw new AppError('User story must be at least 10 characters (too short)', 400);
     }
 
     // 2. Start performance monitoring
