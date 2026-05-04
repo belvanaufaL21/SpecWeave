@@ -701,7 +701,20 @@ const ChatRefined = () => {
     }
 
     console.log('≡ƒñû [CHAT-REFINED] Sending message to AI...');
-    
+
+    // ─────────────────────────────────────────────────────────────────────
+    // BRANCH FIX: Derive the active branch BEFORE sending the message.
+    // If the user is currently viewing a specific edit-version branch,
+    // any new message (user input + AI response) must inherit that branch
+    // tag — otherwise the new pair will leak into other versions when the
+    // user navigates between Previous/Next versions of an earlier edit.
+    // ─────────────────────────────────────────────────────────────────────
+    const messagesForBranchDerivation = contextChats[currentId] || [];
+    const activeBranchAtSend = deriveActiveBranch(messagesForBranchDerivation);
+    if (activeBranchAtSend) {
+      console.log('≡ƒî┐ [CHAT-REFINED] Tagging new messages with active branch:', activeBranchAtSend);
+    }
+
     // CRITICAL FIX: Don't save user message here - useChat will handle it
     // Just send directly to AI with callback
     sendMessage(text, { 
@@ -721,6 +734,12 @@ const ChatRefined = () => {
           setUsageInfo(message.usage);
           // Don't trigger full refresh - usage info will be updated via onUsageUpdate prop
         }
+
+        // BRANCH FIX: tag the message with the active branch (if any).
+        // No active branch → no tag → behaves exactly as before.
+        const taggedMessage = activeBranchAtSend
+          ? { ...message, branch: activeBranchAtSend }
+          : message;
         
         // CRITICAL FIX: Use updateChatMessages with a function that gets current messages
         // This avoids stale closure issues
@@ -739,12 +758,13 @@ const ChatRefined = () => {
             return currentMessages; // Return unchanged
           }
           
-          // Add new message
-          const updatedMessages = [...currentMessages, message];
+          // Add new message (tagged when applicable)
+          const updatedMessages = [...currentMessages, taggedMessage];
           
           console.log('≡ƒÆ╛ [CHAT-REFINED] Adding message to context:', {
             chatId,
             newMessageCount: updatedMessages.length,
+            tagged: !!taggedMessage.branch,
             messages: updatedMessages.map(m => ({ id: m.id, role: m.role }))
           });
           
@@ -1010,50 +1030,87 @@ const ChatRefined = () => {
         
         // Find the index of the edited message
         const messageIndex = currentMessages.findIndex(msg => msg.id === updatedMessage.id);
+
+        // ─────────────────────────────────────────────────────────────────
+        // BRANCH FIX (CORE): Determine OLD and NEW branch indices.
+        //   - newVIdx: the just-appended version (always last)
+        //   - oldVIdx: the version the user was viewing BEFORE this edit
+        //              (read from originalMessage.currentVersionIndex)
+        // We then keep the previous messages (don't delete them) and tag
+        // them with the OLD branch. The new AI response will be tagged
+        // with the NEW branch in the onMessageReceived callback.
+        // The display filter (getDisplayedMessages) will show only the
+        // messages whose branch matches the version the user is viewing.
+        // ─────────────────────────────────────────────────────────────────
+        const versions = updatedMessage.versions || [];
+        const newVIdx = versions.length - 1;
+        const oldVIdx = (typeof originalMessage.currentVersionIndex === 'number')
+          ? originalMessage.currentVersionIndex
+          : Math.max(0, versions.length - 2);
         
-        // Find and save the old AI response before removing it
+        const oldBranch = { anchorId: updatedMessage.id, vIdx: oldVIdx };
+        const newBranch = { anchorId: updatedMessage.id, vIdx: newVIdx };
+        
+        console.log('≡ƒî┐ [CHAT-REFINED] Edit branching:', {
+          messageId: updatedMessage.id,
+          messageIndex,
+          oldVIdx,
+          newVIdx,
+          totalVersions: versions.length,
+          oldBranch,
+          newBranch
+        });
+        
+        // Save linkage from old version to its AI response (for tracking).
+        // Note: this is OPTIONAL metadata; the AI response itself stays in
+        // the messages array (tagged with oldBranch).
         const oldAIResponse = currentMessages[messageIndex + 1];
-        
-        if (oldAIResponse && oldAIResponse.role === 'ai') {
-          // Link old AI response to previous version
-          const versions = updatedMessage.versions || [];
-          const previousVersionIndex = versions.length - 2; // Second to last (before new version)
+        if (oldAIResponse && oldAIResponse.role === 'ai' && versions[oldVIdx]) {
+          versions[oldVIdx].outputMessageId = oldAIResponse.id;
+          versions[oldVIdx].outputContent = oldAIResponse.content;
+          versions[oldVIdx].outputData = {
+            responseType: oldAIResponse.responseType,
+            qualityMetrics: oldAIResponse.qualityMetrics,
+            performanceMetrics: oldAIResponse.performanceMetrics,
+            usedReferences: oldAIResponse.usedReferences,
+            metadata: oldAIResponse.metadata
+          };
           
-          if (previousVersionIndex >= 0 && versions[previousVersionIndex]) {
-            versions[previousVersionIndex].outputMessageId = oldAIResponse.id;
-            versions[previousVersionIndex].outputContent = oldAIResponse.content;
-            versions[previousVersionIndex].outputData = {
-              responseType: oldAIResponse.responseType,
-              qualityMetrics: oldAIResponse.qualityMetrics,
-              performanceMetrics: oldAIResponse.performanceMetrics,
-              usedReferences: oldAIResponse.usedReferences,
-              metadata: oldAIResponse.metadata
-            };
-            
-            console.log('≡ƒÆ╛ [CHAT-REFINED] Saved old AI response to version:', {
-              versionIndex: previousVersionIndex,
-              outputMessageId: oldAIResponse.id
-            });
-          }
+          console.log('≡ƒÆ╛ [CHAT-REFINED] Linked old AI response to old version:', {
+            versionIndex: oldVIdx,
+            outputMessageId: oldAIResponse.id
+          });
         }
         
-        // CRITICAL: Remove ALL messages after the edited user message (including old AI response)
-        const messagesBeforeEdit = currentMessages.slice(0, messageIndex);
+        // KEY FIX: instead of REMOVING messages after the edit point, TAG
+        // them with the OLD branch. This preserves the prior conversation
+        // so the user can navigate back. The new AI response will get the
+        // NEW branch tag (added below in the callback).
+        const messagesWithUpdatedUser = currentMessages.map((msg, idx) =>
+          idx === messageIndex ? updatedMessage : msg
+        );
+        const taggedMessages = tagMessagesWithBranch(
+          messagesWithUpdatedUser,
+          messageIndex,
+          oldBranch
+        );
         
-        // Add the updated user message (with versions and saved outputs)
-        const updatedMessagesWithEdit = [...messagesBeforeEdit, updatedMessage];
-        
-        console.log('≡ƒùæ∩╕Å [CHAT-REFINED] Removing old AI response:', {
-          totalMessagesBefore: currentMessages.length,
-          totalMessagesAfter: updatedMessagesWithEdit.length,
-          removedMessages: currentMessages.length - updatedMessagesWithEdit.length
+        console.log('≡ƒÅ╖∩╕Å [CHAT-REFINED] Tagged previous messages with old branch:', {
+          totalMessages: taggedMessages.length,
+          afterEditCount: Math.max(0, taggedMessages.length - messageIndex - 1),
+          afterEditTaggedCount: taggedMessages
+            .slice(messageIndex + 1)
+            .filter(m => m.branch).length,
+          oldBranch
         });
         
         // CRITICAL: Clear hook messages to prevent duplication
         clearMessages();
         
-        // CRITICAL: Save updated messages to database immediately
-        await updateChatMessages(activeChatId, updatedMessagesWithEdit);
+        // CRITICAL: Save tagged messages to database immediately so the
+        // previous response is preserved on the OLD branch and the NEW
+        // branch starts empty (just the edited user message).
+        await updateChatMessages(activeChatId, taggedMessages);
         
         // Small delay to ensure UI updates, then send new message
         setTimeout(() => {
@@ -1073,6 +1130,12 @@ const ChatRefined = () => {
               
               // Only save AI response, not user message (user message already updated above)
               if (message.role === 'ai') {
+                // BRANCH FIX: tag the new AI response with the NEW branch
+                // so it ONLY shows up while the user is viewing this new
+                // edit version. When the user navigates back to oldVIdx,
+                // this message will be filtered out automatically.
+                const taggedMessage = { ...message, branch: newBranch };
+                
                 // Use updateChatMessages with a function that gets current messages
                 await updateChatMessages(chatId, (currentMessages) => {
                   console.log('≡ƒôè [CHAT-REFINED] Current messages in edit callback:', {
@@ -1089,19 +1152,20 @@ const ChatRefined = () => {
                     return currentMessages; // Return unchanged
                   }
                   
-                  // Add new AI response
-                  const updatedMessages = [...currentMessages, message];
+                  // Add new AI response (tagged with NEW branch)
+                  const updatedMessages = [...currentMessages, taggedMessage];
                   
                   console.log('≡ƒÆ╛ [CHAT-REFINED] Adding edited AI response to context:', {
                     chatId,
                     newMessageCount: updatedMessages.length,
-                    messages: updatedMessages.map(m => ({ id: m.id, role: m.role }))
+                    branch: newBranch,
+                    messages: updatedMessages.map(m => ({ id: m.id, role: m.role, branch: m.branch }))
                   });
                   
                   return updatedMessages;
                 });
                 
-                console.log('Γ£à [CHAT-REFINED] Edited message AI response saved to context');
+                console.log('Γ£à [CHAT-REFINED] Edited AI response saved with branch tag:', newBranch);
               }
             }
           });
