@@ -109,6 +109,19 @@ class EnhancedSpecWeaveService {
         throw new Error(response.data.error || 'Failed to generate Gherkin');
       }
     } catch (error) {
+      // Check if this is a validation error (400) with server message
+      if (error.response?.status === 400 && error.response?.data?.error?.message) {
+        const serverMessage = error.response.data.error.message;
+        cleanLogger.generationFailed(serverMessage);
+        
+        return {
+          success: false,
+          error: serverMessage,
+          fallbackAvailable: this.useAutoReference
+        };
+      }
+      
+      // For other errors, use ErrorRecovery
       const recovery = ErrorRecovery.handleUnexpectedError(error, 'GHERKIN_GENERATION');
       
       // Log: Generation failed

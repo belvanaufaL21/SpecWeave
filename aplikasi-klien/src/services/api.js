@@ -152,6 +152,12 @@ api.interceptors.response.use(
       return Promise.reject(error); // Pass through original error with response data
     }
     
+    // CRITICAL: Handle 400 Bad Request - pass through original error to preserve server message
+    if (error.response?.status === 400) {
+      cleanLogger.warn('API', `Validation error (400): ${originalRequest.url}`);
+      return Promise.reject(error); // Pass through original error with response data
+    }
+    
     // Handle all other errors with ErrorRecovery
     const recovery = await ErrorRecovery.handleError(error, 'API');
     cleanLogger.error('API', recovery.userMessage);
