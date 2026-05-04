@@ -184,7 +184,8 @@ const JiraExportCTA = ({ scenarioData }) => {
     } catch (error) {
       console.error(`❌ [JIRA-EXPORT][${exportId}] Export error:`, error);
       
-      let errorMessage = 'Failed to export to JIRA';
+      let errorTitle = 'Export Gagal';
+      let errorMessage = 'Gagal mengekspor ke JIRA';
       
       // Extract more specific error messages
       if (error.response?.data?.error) {
@@ -196,32 +197,52 @@ const JiraExportCTA = ({ scenarioData }) => {
           const validationErrors = error.response.data.details
             .map(err => err.msg)
             .join(', ');
-          errorMessage = `Validation failed: ${validationErrors}`;
+          errorMessage = `Validasi gagal: ${validationErrors}`;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      // Add helpful context for common errors
-      if (errorMessage.includes('401') || errorMessage.includes('not authenticated')) {
-        errorMessage = 'Authentication failed. Please check your JIRA credentials.';
-      } else if (errorMessage.includes('403') || errorMessage.includes('Permission denied')) {
-        errorMessage = 'Permission denied. Please check your JIRA permissions.';
+      // Categorize errors with clear Indonesian messages
+      if (errorMessage.toLowerCase().includes('token') && 
+          (errorMessage.toLowerCase().includes('expired') || 
+           errorMessage.toLowerCase().includes('invalid') ||
+           errorMessage.toLowerCase().includes('kedaluwarsa') ||
+           errorMessage.toLowerCase().includes('kadaluwarsa'))) {
+        errorTitle = 'Export Gagal';
+        errorMessage = 'API Token JIRA telah kedaluwarsa. Silakan perbarui token JIRA Anda di pengaturan koneksi.';
+      } else if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('Unauthorized')) {
+        errorTitle = 'Autentikasi Gagal';
+        errorMessage = 'Kredensial JIRA tidak valid. Periksa kembali email dan API token Anda.';
+      } else if (errorMessage.includes('403') || errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('forbidden')) {
+        errorTitle = 'Akses Ditolak';
+        errorMessage = 'Anda tidak memiliki izin untuk membuat issue di project ini. Hubungi administrator JIRA Anda.';
       } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        errorMessage = 'JIRA resource not found. Please check your Epic and project settings.';
-      } else if (errorMessage.includes('Field errors')) {
-        errorMessage = 'JIRA field validation failed. ' + errorMessage;
+        errorTitle = 'Resource Tidak Ditemukan';
+        errorMessage = 'Epic atau project JIRA tidak ditemukan. Pastikan Epic masih ada dan Anda memiliki akses.';
+      } else if (errorMessage.toLowerCase().includes('timeout')) {
+        errorTitle = 'Koneksi Timeout';
+        errorMessage = 'Server JIRA tidak merespons. Coba lagi dalam beberapa saat.';
+      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch failed')) {
+        errorTitle = 'Kesalahan Jaringan';
+        errorMessage = 'Tidak dapat terhubung ke server JIRA. Periksa koneksi internet Anda.';
+      } else if (errorMessage.toLowerCase().includes('field') && errorMessage.toLowerCase().includes('required')) {
+        errorTitle = 'Data Tidak Lengkap';
+        errorMessage = 'Beberapa field wajib belum diisi. Pastikan semua data scenario lengkap.';
+      } else if (errorMessage.toLowerCase().includes('validation')) {
+        errorTitle = 'Validasi Gagal';
+        errorMessage = errorMessage; // Keep original validation message
       }
       
       toast.error(
         (t) => (
           <div className="flex flex-col gap-2">
-            <div className="font-semibold text-white text-base">Export Gagal</div>
+            <div className="font-semibold text-white text-base">{errorTitle}</div>
             <div className="text-sm text-gray-300 leading-relaxed">{errorMessage}</div>
           </div>
         ),
         {
-          duration: 5000,
+          duration: 6000,
           position: 'top-right',
           style: {
             background: 'rgba(10, 10, 15, 0.95)',
@@ -232,7 +253,8 @@ const JiraExportCTA = ({ scenarioData }) => {
             borderRadius: '12px',
             boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
             padding: '18px 24px',
-            minWidth: '300px'
+            minWidth: '320px',
+            maxWidth: '450px'
           },
           icon: null
         }

@@ -46,25 +46,25 @@ class JiraTokenHealthService {
       if (error.status === 401) {
         return {
           success: false,
-          error: 'API token has expired or is invalid',
+          error: 'API Token JIRA telah kedaluwarsa atau tidak valid',
           tokenStatus: 'expired',
           needsRenewal: true,
           suggestions: [
-            'Generate a new API token from your JIRA account settings',
-            'Update your connection with the new token',
-            'Check if your JIRA account is still active'
+            'Buat API token baru dari pengaturan akun JIRA Anda',
+            'Perbarui koneksi dengan token yang baru',
+            'Pastikan akun JIRA Anda masih aktif'
           ]
         };
       } else if (error.status === 403) {
         return {
           success: false,
-          error: 'API token has insufficient permissions',
+          error: 'API token memiliki izin yang terbatas',
           tokenStatus: 'limited_permissions',
           needsRenewal: false,
           suggestions: [
-            'Contact your JIRA administrator for additional permissions',
-            'Ensure your account has access to the required projects',
-            'Check if your API token scope is sufficient'
+            'Hubungi administrator JIRA untuk izin tambahan',
+            'Pastikan akun Anda memiliki akses ke project yang diperlukan',
+            'Periksa apakah scope API token sudah mencukupi'
           ]
         };
       }
@@ -148,11 +148,11 @@ class JiraTokenHealthService {
   static notifyTokenExpiration(connectionId, health) {
     // Show toast notification
     if (window.toast) {
-      window.toast.error('JIRA API Token Expired', {
-        description: `Your JIRA connection token has expired. Please update your connection settings.`,
+      window.toast.error('Token JIRA Kedaluwarsa', {
+        description: `API Token koneksi JIRA Anda telah kedaluwarsa. Silakan perbarui pengaturan koneksi Anda.`,
         duration: 10000,
         action: {
-          label: 'Update Token',
+          label: 'Perbarui Token',
           onClick: () => this.openTokenUpdateModal(connectionId)
         }
       });
@@ -183,8 +183,8 @@ class JiraTokenHealthService {
   static notifyLimitedPermissions(connectionId, health) {
     // Show warning notification
     if (window.toast) {
-      window.toast.warning('JIRA Token Permissions Limited', {
-        description: `Your JIRA token has limited permissions. Some features may not work properly.`,
+      window.toast.warning('Izin Token JIRA Terbatas', {
+        description: `Token JIRA Anda memiliki izin terbatas. Beberapa fitur mungkin tidak berfungsi dengan baik.`,
         duration: 8000
       });
     }
@@ -251,19 +251,19 @@ class JiraTokenHealthService {
     if (isExpired) {
       return {
         status: 'expired',
-        message: 'API token has expired',
+        message: 'API token telah kedaluwarsa',
         color: 'red',
         icon: '⚠️',
-        action: 'Update token'
+        action: 'Perbarui token'
       };
     }
 
     return {
       status: 'unknown',
-      message: 'Token status unknown',
+      message: 'Status token tidak diketahui',
       color: 'gray',
       icon: '❓',
-      action: 'Check health'
+      action: 'Periksa kesehatan'
     };
   }
 }

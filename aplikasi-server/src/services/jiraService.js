@@ -203,12 +203,40 @@ class JiraService {
       cleanLogger.error('JIRA-SERVICE', 'Connection test failed', { 
         error: error.message,
         jiraUrl,
-        projectKey
+        projectKey,
+        status: error.response?.status
       });
+      
+      // Provide specific error messages based on status code
+      let errorMessage = error.message;
+      
+      if (error.response) {
+        const status = error.response.status;
+        const jiraError = error.response.data;
+        
+        if (status === 401) {
+          errorMessage = 'API Token JIRA telah kedaluwarsa atau tidak valid. Silakan periksa email dan API token Anda.';
+        } else if (status === 403) {
+          errorMessage = 'Akses ditolak. Anda tidak memiliki izin untuk mengakses project ini.';
+        } else if (status === 404) {
+          errorMessage = `Project Key "${projectKey}" tidak ditemukan. Periksa kembali kode project JIRA Anda.`;
+        } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          errorMessage = 'Koneksi timeout. Server JIRA tidak merespons, coba lagi.';
+        } else if (error.code === 'ENOTFOUND' || error.message.includes('getaddrinfo')) {
+          errorMessage = 'URL JIRA tidak valid atau tidak dapat dijangkau. Periksa kembali URL JIRA Anda.';
+        } else {
+          // Use JIRA error message if available
+          errorMessage = jiraError?.errorMessages?.[0] || jiraError?.message || errorMessage;
+        }
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = 'Tidak dapat terhubung ke server JIRA. Periksa URL dan koneksi internet Anda.';
+      } else if (error.code === 'ETIMEDOUT') {
+        errorMessage = 'Koneksi timeout. Periksa koneksi internet Anda dan coba lagi.';
+      }
       
       return {
         success: false,
-        error: error.response?.data?.errorMessages?.[0] || error.message
+        error: errorMessage
       };
     }
   }
@@ -666,6 +694,42 @@ class JiraService {
       }
       
       cleanLogger.error('JIRA-SERVICE', 'Failed to create user story', errorDetails);
+      
+      // Provide more specific error messages based on status code
+      if (error.response) {
+        const status = error.response.status;
+        const jiraError = error.response.data;
+        
+        if (status === 401) {
+          // Token expired or invalid
+          throw new Error('API Token JIRA telah kedaluwarsa atau tidak valid. Silakan perbarui token JIRA Anda.');
+        } else if (status === 403) {
+          // Permission denied
+          throw new Error('Anda tidak memiliki izin untuk membuat issue di project ini. Hubungi administrator JIRA Anda.');
+        } else if (status === 404) {
+          // Resource not found
+          throw new Error('Project atau Epic JIRA tidak ditemukan. Pastikan project key dan Epic ID valid.');
+        } else if (status === 400) {
+          // Bad request - field validation errors
+          const errorMessages = jiraError?.errorMessages || [];
+          const fieldErrors = jiraError?.errors || {};
+          
+          if (errorMessages.length > 0) {
+            throw new Error(`Validasi JIRA gagal: ${errorMessages.join(', ')}`);
+          } else if (Object.keys(fieldErrors).length > 0) {
+            const fieldErrorMsg = Object.entries(fieldErrors)
+              .map(([field, msg]) => `${field}: ${msg}`)
+              .join(', ');
+            throw new Error(`Field tidak valid: ${fieldErrorMsg}`);
+          } else {
+            throw new Error('Data yang dikirim tidak valid. Periksa kembali data scenario Anda.');
+          }
+        } else {
+          // Other errors
+          throw new Error(`Gagal membuat user story di JIRA (${status}): ${error.message}`);
+        }
+      }
+      
       throw error;
     }
   }
