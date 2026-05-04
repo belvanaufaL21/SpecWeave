@@ -14,10 +14,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [saving, setSaving] = useState(false);
   const [activeProjectPerChat, setActiveProjectPerChat] = useState({});
   const [pendingActiveProject, setPendingActiveProject] = useState(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [connectionToDelete, setConnectionToDelete] = useState(null);
 
@@ -54,7 +52,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       const currentChatId = getCurrentChatId();
       if (chatId === currentChatId) {
         setPendingActiveProject(projectId);
-        setHasUnsavedChanges(false);
       }
     };
 
@@ -125,50 +122,39 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     return 'default-chat';
   };
 
-  const handleSelectProject = (connectionId) => {
-    setPendingActiveProject(connectionId);
+  const handleSelectProject = async (connectionId) => {
     const chatId = getCurrentChatId();
     const currentActive = activeProjectPerChat[chatId];
 
-    const hasChanges = connectionId !== currentActive;
-    setHasUnsavedChanges(hasChanges);
-  };
-
-  const handleSaveChanges = async () => {
-    if (!pendingActiveProject) {
-      console.warn('🚫 [PROJECT-MODAL] No pending project to save');
+    // Jika sudah aktif, tidak perlu konfirmasi
+    if (connectionId === currentActive) {
+      console.log('🔵 [PROJECT-MODAL] Project already active, no action needed');
       return;
     }
 
-    const chatId = getCurrentChatId();
-    const currentActive = activeProjectPerChat[chatId];
+    // Langsung tampilkan konfirmasi
+    const selectedProject = connections.find(conn => conn.id === connectionId);
+    const projectName = selectedProject?.project_name || selectedProject?.project_key || 'Unknown';
 
-    // Show confirmation if project is changing
-    if (pendingActiveProject !== currentActive) {
-      const selectedProject = connections.find(conn => conn.id === pendingActiveProject);
-      const projectName = selectedProject?.project_name || selectedProject?.project_key || 'Unknown';
+    const confirmed = await showConfirmation({
+      type: 'warning',
+      title: 'Ganti Project JIRA',
+      message: `Mengganti project aktif ke "${projectName}" akan menghapus Epic yang dipilih untuk chat ini.`,
+      details: 'Anda perlu memilih Epic baru dari project yang baru jika diperlukan. Tindakan ini tidak dapat dibatalkan.',
+      confirmText: 'Lanjutkan',
+      cancelText: 'Batal'
+    });
 
-      const confirmed = await showConfirmation({
-        type: 'warning',
-        title: 'Ganti Project JIRA',
-        message: `Mengganti project aktif ke "${projectName}" akan menghapus Epic yang dipilih untuk chat ini.`,
-        details: 'Anda perlu memilih Epic baru dari project yang baru jika diperlukan. Tindakan ini tidak dapat dibatalkan.',
-        confirmText: 'Lanjutkan',
-        cancelText: 'Batal'
-      });
-
-      if (!confirmed) {
-        console.log('🚫 [PROJECT-MODAL] User cancelled project change');
-        return;
-      }
+    if (!confirmed) {
+      console.log('🚫 [PROJECT-MODAL] User cancelled project change');
+      return;
     }
 
+    // Langsung save tanpa pending state
     try {
-      setSaving(true);
+      setLoading(true);
       setError(null);
       setSuccess(null);
-
-      const selectedProject = connections.find(conn => conn.id === pendingActiveProject);
 
       if (!selectedProject) {
         setError('Selected project not found');
@@ -176,34 +162,30 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       }
 
       // Use ProjectStateManager for consistent state management
-      const result = await projectStateManager.setActiveProject(pendingActiveProject, selectedProject);
+      const result = await projectStateManager.setActiveProject(connectionId, selectedProject);
 
       if (result.success) {
         // Update local state immediately
         setActiveProjectPerChat(prev => ({
           ...prev,
-          [chatId]: pendingActiveProject
+          [chatId]: connectionId
         }));
-
-        setHasUnsavedChanges(false);
+        setPendingActiveProject(connectionId);
 
         const projectName = result.data.projectName;
-        const projectChanged = result.data.projectChanged;
 
-        // Clear Epic context if project changed
-        if (projectChanged) {
-          console.log('🧹 [PROJECT-MODAL] Clearing Epic context due to project change');
-          await jiraService.clearEpicContext();
+        // Clear Epic context
+        console.log('🧹 [PROJECT-MODAL] Clearing Epic context due to project change');
+        await jiraService.clearEpicContext();
 
-          // Dispatch event to notify other components
-          window.dispatchEvent(new CustomEvent('epicContextCleared', {
-            detail: {
-              reason: 'project_changed',
-              newProjectId: pendingActiveProject,
-              timestamp: Date.now()
-            }
-          }));
-        }
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('epicContextCleared', {
+          detail: {
+            reason: 'project_changed',
+            newProjectId: connectionId,
+            timestamp: Date.now()
+          }
+        }));
 
         setSuccess(`Project "${projectName}" sekarang aktif!`);
 
@@ -220,15 +202,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       console.error('❌ [PROJECT-MODAL] Project save error:', err);
       setError(err.message);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  };
-
-  const handleCancelChanges = () => {
-    const chatId = getCurrentChatId();
-    const currentActive = activeProjectPerChat[chatId];
-    setPendingActiveProject(currentActive);
-    setHasUnsavedChanges(false);
   };
 
   const handleDeleteConnection = async (connectionId) => {
@@ -374,11 +349,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
 
   const currentChatId = getCurrentChatId();
   const activeProjectId = activeProjectPerChat[currentChatId];
-  const selectedProjectId = pendingActiveProject;
-
-  // Cari project yang sedang aktif untuk banner info
-  const activeProject = connections.find(c => c.id === activeProjectId);
-  const activeProjectName = activeProject?.project_name || activeProject?.project_key || null;
 
   if (!isOpen) return null;
 
@@ -453,27 +423,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
             </div>
           )}
 
-          {/* Banner: info project aktif saat ini */}
-          {!loading && Object.keys(groupedConnections).length > 0 && (
-            <div className="mb-4 p-3 bg-[#0D0D0D] border border-white/5 rounded-lg flex items-start gap-3">
-              <svg className="w-4 h-4 text-[#FF7AD0] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-xs text-gray-400 leading-relaxed">
-                {activeProjectName ? (
-                  <>
-                    Project aktif saat ini:{' '}
-                    <span className="text-[#FF7AD0] font-medium">{activeProjectName}</span>.
-                    Pilih project lain untuk mengganti, lalu tekan{' '}
-                    <span className="text-white font-medium">Apply Changes</span>.
-                  </>
-                ) : (
-                  <>Belum ada project aktif. Pilih salah satu project di bawah untuk mengaktifkannya.</>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Loading State */}
           {loading ? (
             <div className="text-center py-8">
@@ -514,34 +463,20 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                   {/* Projects under this JIRA URL */}
                   <div className="space-y-2 ml-4">
                     {urlConnections.map((connection) => {
-                      const isActiveInThisChat = activeProjectId === connection.id;
-                      const isSelected = selectedProjectId === connection.id;
-                      const isPendingChange = isSelected && !isActiveInThisChat;
-                      const wasActiveButDeselected = isActiveInThisChat && !isSelected && hasUnsavedChanges;
+                      const isSelected = activeProjectId === connection.id;
 
                       // Calculate token status
                       const tokenStatus = calculateTokenStatus(connection.token_expires_at);
                       const statusBadgeClasses = getTokenStatusBadgeClasses(tokenStatus.type);
 
-                      // Tentukan styling card berdasarkan state aktif/seleksi
-                      let cardClasses;
-                      if (isActiveInThisChat && isSelected) {
-                        // Project aktif dan tidak diubah → highlight ungu (current active)
-                        cardClasses = 'bg-[#160D14] border-[#44273D] ring-1 ring-[#FF7AD0]/30';
-                      } else if (isPendingChange) {
-                        // Project baru dipilih, akan menggantikan yang aktif
-                        cardClasses = 'bg-[#0D1A14] border-green-500/40 ring-1 ring-green-500/20';
-                      } else if (wasActiveButDeselected) {
-                        // Project sebelumnya aktif tapi user pilih yang lain
-                        cardClasses = 'bg-[#1A1410] border-orange-500/30 opacity-70';
-                      } else {
-                        cardClasses = 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/10';
-                      }
-
                       return (
                         <div
                           key={connection.id}
-                          className={`p-3 rounded-lg border transition-all cursor-pointer ${cardClasses}`}
+                          className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#160D14] border-[#44273D] ring-1 ring-[#FF7AD0]/30'
+                              : 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/10'
+                          }`}
                           onClick={() => handleSelectProject(connection.id)}
                         >
                           <div className="flex items-start justify-between">
@@ -554,21 +489,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                                 {connection.project_name && connection.project_key && (
                                   <span className="text-xs text-gray-400 font-mono">
                                     ({connection.project_key})
-                                  </span>
-                                )}
-
-                                {/* Badge: Project sedang aktif */}
-                                {isActiveInThisChat && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] rounded-full bg-[#FF7AD0]/15 text-[#FF7AD0] border border-[#FF7AD0]/30 font-semibold uppercase tracking-wide">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF7AD0] animate-pulse"></span>
-                                    Aktif
-                                  </span>
-                                )}
-
-                                {/* Badge: Akan diaktifkan (pending save) */}
-                                {isPendingChange && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-green-500/15 text-green-400 border border-green-500/30 font-semibold uppercase tracking-wide">
-                                    Akan diaktifkan
                                   </span>
                                 )}
 
@@ -607,29 +527,17 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 ml-3">
-                              {/* Radio indicator: bedakan visual aktif vs pending */}
+                              {/* Radio indicator */}
                               <div
                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                                   isSelected
-                                    ? isActiveInThisChat
-                                      ? 'bg-[#44273D] border-[#FF7AD0]'
-                                      : 'bg-green-500/20 border-green-500'
+                                    ? 'bg-[#44273D] border-[#FF7AD0]'
                                     : 'border-white/20 hover:border-white/40'
                                 }`}
-                                title={
-                                  isActiveInThisChat && isSelected
-                                    ? 'Project aktif'
-                                    : isPendingChange
-                                    ? 'Akan menjadi aktif setelah disimpan'
-                                    : 'Klik untuk memilih'
-                                }
+                                title={isSelected ? 'Project aktif' : 'Klik untuk memilih'}
                               >
                                 {isSelected && (
-                                  <div
-                                    className={`w-2 h-2 rounded-full ${
-                                      isActiveInThisChat ? 'bg-[#FF7AD0]' : 'bg-green-500'
-                                    }`}
-                                  ></div>
+                                  <div className="w-2 h-2 rounded-full bg-[#FF7AD0]"></div>
                                 )}
                               </div>
 
@@ -673,58 +581,18 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           )}
         </div>
 
-        {/* Enhanced Footer */}
+        {/* Footer */}
         <div className="bg-[#09090A] border-t border-white/5">
-          {/* Action Bar */}
-          <div className="px-4 py-4">
-            <div className="flex items-center justify-between">
-              {/* Left Actions - Empty now */}
-              <div className="flex items-center gap-3">
-              </div>
-
-              {/* Right Actions */}
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <>
-                    <button
-                      onClick={handleCancelChanges}
-                      className="px-4 py-2 text-gray-400 hover:text-white transition-all duration-200 text-sm font-medium rounded-lg hover:bg-white/5 border border-white/5 hover:border-white/20"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveChanges}
-                      disabled={saving}
-                      className="px-5 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-semibold text-sm flex items-center gap-2 shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Applying...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Apply Changes
-                        </>
-                      )}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={handleAddNewProject}
-                  className="px-5 py-2 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg hover:bg-[#1a1016] transition-all duration-200 text-sm flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Tambah Project
-                </button>
-              </div>
-            </div>
+          <div className="px-4 py-4 flex justify-end">
+            <button
+              onClick={handleAddNewProject}
+              className="px-5 py-2 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg hover:bg-[#1a1016] transition-all duration-200 text-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Tambah Project
+            </button>
           </div>
         </div>
       </div>
