@@ -35,6 +35,47 @@ import { jiraService } from '../services/jiraService';
 import { getEpicButtonText, getEpicContextDisplayText, getActiveProjectInfo } from '../utils/helpers/activeProjectHelpers';
 import cleanLogger from '../config/cleanLogging.js';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BRANCH HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+// Branch tag shape: { anchorId: string, vIdx: number }
+// anchorId = id of the versioned user message that "owns" this branch
+// vIdx     = which version index this message belongs to
+
+/**
+ * Tag all messages that appear AFTER a given index with the supplied branch.
+ * Messages that already carry a deeper branch tag are left untouched.
+ */
+const tagMessagesWithBranch = (messages, afterIndex, branch) =>
+  messages.map((msg, idx) => {
+    if (idx <= afterIndex) return msg;
+    if (msg.branch) return msg; // Already tagged by a nested edit — leave alone
+    return { ...msg, branch };
+  });
+
+/**
+ * Given the full message list, derive what "active branch" context the user is currently viewing.
+ * Walk forward; the LAST versioned user message encountered sets the context.
+ */
+const deriveActiveBranch = (allMessages) => {
+  let activeBranch = null;
+  for (const msg of allMessages) {
+    // Skip messages that don't belong to the current active branch
+    if (msg.branch) {
+      if (!activeBranch ||
+          msg.branch.anchorId !== activeBranch.anchorId ||
+          msg.branch.vIdx !== activeBranch.vIdx) {
+        continue;
+      }
+    }
+    if (msg.role === 'user' && msg.versions && msg.versions.length > 1) {
+      const currentVI = msg.currentVersionIndex ?? msg.versions.length - 1;
+      activeBranch = { anchorId: msg.id, vIdx: currentVI };
+    }
+  }
+  return activeBranch;
+};
+
 const ChatRefined = () => {
   // --- HOOKS ---
   const { messages: hookMessages, isLoading, currentChatId: hookChatId, loadingChats, isChatLoading, isAnyLoading, sendMessage, clearMessages, loadMessages } = useChat();
@@ -544,6 +585,39 @@ const ChatRefined = () => {
       window.removeEventListener('epicContextCleared', handleEpicContextClear);
     };
   }, [clearEpicContext]);
+
+  // Listen for switchToVersion events (for version navigation)
+  useEffect(() => {
+    const handleSwitchToVersion = async (event) => {
+      const { messageId, versionIndex, scrollAfter, scrollToAI } = event.detail;
+      
+      const currentMessages = contextChats[activeChatId] || [];
+      const userMessage = currentMessages.find(msg => msg.id === messageId);
+      
+      if (userMessage && userMessage.versions) {
+        const updatedMessage = { ...userMessage, currentVersionIndex: versionIndex };
+        const updatedMessages = currentMessages.map(msg =>
+          msg.id === userMessage.id ? updatedMessage : msg
+        );
+        
+        await updateChatMessages(activeChatId, updatedMessages);
+        
+        if (scrollAfter && scrollToAI) {
+          setTimeout(() => {
+            const el = document.querySelector(`[data-message-id="${scrollToAI}"]`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.classList.add('highlight-pulse');
+              setTimeout(() => el.classList.remove('highlight-pulse'), 2000);
+            }
+          }, 500);
+        }
+      }
+    };
+    
+    window.addEventListener('switchToVersion', handleSwitchToVersion);
+    return () => window.removeEventListener('switchToVersion', handleSwitchToVersion);
+  }, [activeChatId, contextChats, updateChatMessages]);
 
   // Handle initial template message from Dashboard
   useEffect(() => {
@@ -1474,64 +1548,44 @@ const ChatRefined = () => {
     return merged;
   }, [activeChatId, contextChats, pendingMessages]);
   
-  // Filter messages based on selected version for user messages with versions
-  const getDisplayedMessages = () => {
-    const displayed = [];
-    let skipNextAI = false;
+  // ─────────────────────────────────────────────────────────────────────────
+  // DISPLAYED MESSAGES — clean branch-based filter
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Algorithm (mirrors Claude AI behaviour):
+   * Walk allMessages in chronological order, maintaining `activeBranch`.
+   * 
+   * 1. If a message carries a `branch` tag:
+   *    - Show it ONLY when activeBranch matches that tag exactly.
+   *    - Otherwise skip.
+   * 2. If a message has NO branch tag:
+   *    - It was sent before any edit — always show it.
+   * 3. When we encounter a versioned user message (versions.length > 1):
+   *    - Update activeBranch to { anchorId: msg.id, vIdx: currentVersionIndex }.
+   *    - This means subsequent branched messages are filtered by the selected page.
+   */
+  const getDisplayedMessages = useCallback(() => {
+    let activeBranch = null; // { anchorId: string, vIdx: number } | null
     
-    for (let i = 0; i < allMessages.length; i++) {
-      const msg = allMessages[i];
-      
-      // Skip AI message if flagged
-      if (msg.role === 'ai' && skipNextAI) {
-        skipNextAI = false;
-        continue;
+    return allMessages.filter(msg => {
+      if (msg.branch) {
+        // This message belongs to a specific version branch
+        const matches =
+          activeBranch !== null &&
+          msg.branch.anchorId === activeBranch.anchorId &&
+          msg.branch.vIdx === activeBranch.vIdx;
+        if (!matches) return false; // Wrong version → skip
       }
       
-      // If it's a user message with versions
+      // Update active branch context when we pass a versioned user message
       if (msg.role === 'user' && msg.versions && msg.versions.length > 1) {
-        const currentVersionIndex = msg.currentVersionIndex ?? msg.versions.length - 1;
-        const currentVersion = msg.versions[currentVersionIndex];
-        const isLatestVersion = currentVersionIndex === msg.versions.length - 1;
-        
-        // Add user message (will display based on currentVersionIndex in ChatBubble)
-        displayed.push(msg);
-        
-        // Check if viewing an old version with saved output
-        if (!isLatestVersion && currentVersion.outputContent) {
-          // Create a virtual AI message from saved output
-          const virtualAIMessage = {
-            id: currentVersion.outputMessageId || `virtual-${msg.id}-${currentVersionIndex}`,
-            role: 'ai',
-            content: currentVersion.outputContent,
-            responseType: currentVersion.outputData?.responseType || 'gherkin',
-            qualityMetrics: currentVersion.outputData?.qualityMetrics,
-            performanceMetrics: currentVersion.outputData?.performanceMetrics,
-            usedReferences: currentVersion.outputData?.usedReferences || [],
-            metadata: currentVersion.outputData?.metadata || {},
-            timestamp: currentVersion.timestamp,
-            isVirtual: true // Flag to indicate this is a restored message
-          };
-          displayed.push(virtualAIMessage);
-          
-          // Skip the actual AI message in the array
-          skipNextAI = true;
-        } else if (isLatestVersion) {
-          // For latest version, show the actual AI response if it exists
-          if (i + 1 < allMessages.length && allMessages[i + 1].role === 'ai') {
-            displayed.push(allMessages[i + 1]);
-            i++; // Skip next iteration since we already added it
-          }
-          // If no AI response yet, loading indicator will be shown by isLoading
-        }
-      } else {
-        // Regular message without versions
-        displayed.push(msg);
+        const currentVI = msg.currentVersionIndex ?? msg.versions.length - 1;
+        activeBranch = { anchorId: msg.id, vIdx: currentVI };
       }
-    }
-    
-    return displayed;
-  };
+      
+      return true;
+    });
+  }, [allMessages]);
   
   const displayedMessages = getDisplayedMessages();
 

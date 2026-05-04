@@ -116,14 +116,15 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
       const newIndex = currentVersionIndex - 1;
       setCurrentVersionIndex(newIndex);
       
-      // Notify parent to update displayed version
-      if (onUpdateMessage && message.id) {
-        const updatedMessage = {
-          ...message,
-          currentVersionIndex: newIndex
-        };
-        onUpdateMessage(updatedMessage);
-      }
+      // Dispatch event untuk update parent
+      window.dispatchEvent(new CustomEvent('switchToVersion', {
+        detail: {
+          messageId: message.id,
+          versionIndex: newIndex,
+          scrollAfter: true,
+          scrollToAI: null
+        }
+      }));
     }
   };
   
@@ -133,14 +134,15 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
       const newIndex = currentVersionIndex + 1;
       setCurrentVersionIndex(newIndex);
       
-      // Notify parent to update displayed version
-      if (onUpdateMessage && message.id) {
-        const updatedMessage = {
-          ...message,
-          currentVersionIndex: newIndex
-        };
-        onUpdateMessage(updatedMessage);
-      }
+      // Dispatch event untuk update parent
+      window.dispatchEvent(new CustomEvent('switchToVersion', {
+        detail: {
+          messageId: message.id,
+          versionIndex: newIndex,
+          scrollAfter: true,
+          scrollToAI: null
+        }
+      }));
     }
   };
 
