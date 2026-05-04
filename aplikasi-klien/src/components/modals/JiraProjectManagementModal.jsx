@@ -147,21 +147,18 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     const chatId = getCurrentChatId();
     const currentActive = activeProjectPerChat[chatId];
 
-    // Show modern confirmation if project is changing and there might be Epic context
+    // Show confirmation if project is changing
     if (pendingActiveProject !== currentActive) {
       const selectedProject = connections.find(conn => conn.id === pendingActiveProject);
       const projectName = selectedProject?.project_name || selectedProject?.project_key || 'Unknown';
-      const projectDisplayName = selectedProject?.project_key && selectedProject?.project_name
-        ? `${projectName} (${selectedProject.project_key})` 
-        : projectName;
 
       const confirmed = await showConfirmation({
         type: 'warning',
-        title: 'Project Change Impact',
-        message: `Changing active project to "${projectName}" will clear any selected Epic context for this chat.`,
-        details: 'You\'ll need to select a new Epic from the new project if needed. This action cannot be undone.',
-        confirmText: 'Continue',
-        cancelText: 'Cancel'
+        title: 'Ganti Project JIRA',
+        message: `Mengganti project aktif ke "${projectName}" akan menghapus Epic yang dipilih untuk chat ini.`,
+        details: 'Anda perlu memilih Epic baru dari project yang baru jika diperlukan. Tindakan ini tidak dapat dibatalkan.',
+        confirmText: 'Lanjutkan',
+        cancelText: 'Batal'
       });
 
       if (!confirmed) {
@@ -186,73 +183,39 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       const result = await projectStateManager.setActiveProject(pendingActiveProject, selectedProject);
 
       if (result.success) {
-        // Update local state immediately (global active project)
-        setActiveProjectPerChat({ global: pendingActiveProject });
+        // Update local state immediately
+        setActiveProjectPerChat(prev => ({
+          ...prev,
+          [chatId]: pendingActiveProject
+        }));
         
         setHasUnsavedChanges(false);
         
         const projectName = result.data.projectName;
         const projectChanged = result.data.projectChanged;
-        setSuccess(`Project "${projectName}" is now active globally!`);
-
-        // ENHANCED: Close modal immediately after successful save
-        console.log('🚪 [PROJECT-MODAL] Closing modal immediately after successful save');
-        onClose();
         
-        // Continue background processes without blocking modal close
+        // Clear Epic context if project changed
         if (projectChanged) {
+          console.log('🧹 [PROJECT-MODAL] Clearing Epic context due to project change');
+          await jiraService.clearEpicContext();
           
-          // Wait for Epic context clear confirmation in background (non-blocking)
-          const clearConfirmationPromise = new Promise((resolve) => {
-            const timeout = setTimeout(() => {
-              console.warn('⚠️ [PROJECT-MODAL] Epic clear confirmation timeout (background)');
-              resolve();
-            }, 2000);
-            
-            const handleClearConfirmation = (event) => {
-              
-              clearTimeout(timeout);
-              window.removeEventListener('epicContextCleared', handleClearConfirmation);
-              resolve();
-            };
-            
-            window.addEventListener('epicContextCleared', handleClearConfirmation);
-          });
-          
-          // Background validation after Epic clear
-          clearConfirmationPromise.then(async () => {
-            try {
-              const validationResult = await projectStateManager.validateConsistency(chatId);
-              if (validationResult.success) {
-                if (validationResult.data.consistent) {
-                  
-                } else {
-                  console.warn('⚠️ [PROJECT-MODAL] Background validation: Inconsistencies detected, fixing...');
-                  await projectStateManager.fixInconsistencies(chatId);
-                }
-              }
-            } catch (error) {
-              console.warn('⚠️ [PROJECT-MODAL] Background validation error:', error);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('epicContextCleared', {
+            detail: {
+              reason: 'project_changed',
+              newProjectId: pendingActiveProject,
+              timestamp: Date.now()
             }
-          });
-        } else {
-          // Background validation for non-project-change saves
-          setTimeout(async () => {
-            try {
-              const validationResult = await projectStateManager.validateConsistency(chatId);
-              if (validationResult.success) {
-                if (validationResult.data.consistent) {
-                  
-                } else {
-                  console.warn('⚠️ [PROJECT-MODAL] Background validation: Inconsistencies detected, fixing...');
-                  await projectStateManager.fixInconsistencies(chatId);
-                }
-              }
-            } catch (error) {
-              console.warn('⚠️ [PROJECT-MODAL] Background validation error:', error);
-            }
-          }, 500); // Quick background validation
+          }));
         }
+        
+        setSuccess(`Project "${projectName}" sekarang aktif!`);
+
+        // Close modal after short delay
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+        
       } else {
         console.error('❌ [PROJECT-MODAL] Failed to set active project:', result.error);
         setError(result.error || 'Failed to set active project');
@@ -542,10 +505,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                           key={connection.id}
                           className={`p-3 rounded-lg border transition-colors cursor-pointer ${
                             isSelected
-                              ? 'bg-[#09090A] border-purple-500/50' 
-                              : isActiveInThisChat 
-                                ? 'bg-[#09090A] border-green-500/30' 
-                                : 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/5'
+                              ? 'bg-[#09090A] border-[#44273D]' 
+                              : 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/10'
                           }`}
                           onClick={() => handleSelectProject(connection.id)}
                         >
@@ -556,16 +517,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                                 <h4 className="text-white font-medium text-sm">{connection.project_name || connection.project_key}</h4>
                                 {connection.project_name && connection.project_key && (
                                   <span className="text-xs text-gray-400 font-mono">({connection.project_key})</span>
-                                )}
-                                {isActiveInThisChat && (
-                                  <span className="px-2 py-0.5 text-xs rounded border bg-green-500/20 text-green-400 border-green-500/30">
-                                    Currently Active
-                                  </span>
-                                )}
-                                {isSelected && !isActiveInThisChat && (
-                                  <span className="px-2 py-0.5 text-xs rounded border bg-purple-500/20 text-purple-400 border-purple-500/30">
-                                    Selected
-                                  </span>
                                 )}
                                 {/* Token Status Badge */}
                                 {tokenStatus.type !== 'unknown' && (
@@ -600,8 +551,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                             {/* Actions */}
                             <div className="flex items-center gap-2 ml-3">
                               {isSelected && (
-                                <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="w-5 h-5 rounded-full bg-[#44273D] border border-[#44273D] flex items-center justify-center">
+                                  <svg className="w-3 h-3 text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </div>
