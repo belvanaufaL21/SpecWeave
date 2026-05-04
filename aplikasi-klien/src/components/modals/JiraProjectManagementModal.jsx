@@ -38,20 +38,18 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'activeProjectsPerChat' || e.key?.includes('specweave_active_project')) {
-        
         loadActiveProjectContext();
       }
     };
 
     const handleActiveProjectUpdate = (e) => {
-      
       const { chatId, projectId } = e.detail;
-      
+
       setActiveProjectPerChat(prev => ({
         ...prev,
         [chatId]: projectId
       }));
-      
+
       // Update pending selection if it matches current chat
       const currentChatId = getCurrentChatId();
       if (chatId === currentChatId) {
@@ -74,7 +72,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       setLoading(true);
       setError(null);
       const result = await jiraService.getConnections();
-      
+
       if (result.success) {
         setConnections(result.data || []);
       } else {
@@ -92,7 +90,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       // Get current chat ID (you might need to get this from context or props)
       const chatId = getCurrentChatId();
       const result = await jiraService.getActiveProjectForChat(chatId);
-      
+
       if (result.success && result.data) {
         const activeProjectId = result.data.projectId;
         setActiveProjectPerChat(prev => ({
@@ -111,31 +109,29 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     // Get chat ID from URL or use default
     const currentPath = window.location.pathname;
     const pathSegments = currentPath.split('/');
-    
+
     // For chat pages, use the last segment
     if (currentPath.includes('/chat')) {
       const chatId = pathSegments[pathSegments.length - 1];
       return chatId && chatId !== 'chat' ? chatId : 'default-chat';
     }
-    
+
     // For dashboard, use dashboard-specific ID
     if (currentPath.includes('/dashboard')) {
       return 'dashboard-default';
     }
-    
+
     // Default fallback
     return 'default-chat';
   };
 
   const handleSelectProject = (connectionId) => {
-    
     setPendingActiveProject(connectionId);
     const chatId = getCurrentChatId();
     const currentActive = activeProjectPerChat[chatId];
 
     const hasChanges = connectionId !== currentActive;
     setHasUnsavedChanges(hasChanges);
-
   };
 
   const handleSaveChanges = async () => {
@@ -143,7 +139,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       console.warn('🚫 [PROJECT-MODAL] No pending project to save');
       return;
     }
-    
+
     const chatId = getCurrentChatId();
     const currentActive = activeProjectPerChat[chatId];
 
@@ -166,19 +162,19 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         return;
       }
     }
-    
+
     try {
       setSaving(true);
       setError(null);
       setSuccess(null);
-      
+
       const selectedProject = connections.find(conn => conn.id === pendingActiveProject);
-      
+
       if (!selectedProject) {
         setError('Selected project not found');
         return;
       }
-      
+
       // Use ProjectStateManager for consistent state management
       const result = await projectStateManager.setActiveProject(pendingActiveProject, selectedProject);
 
@@ -188,17 +184,17 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           ...prev,
           [chatId]: pendingActiveProject
         }));
-        
+
         setHasUnsavedChanges(false);
-        
+
         const projectName = result.data.projectName;
         const projectChanged = result.data.projectChanged;
-        
+
         // Clear Epic context if project changed
         if (projectChanged) {
           console.log('🧹 [PROJECT-MODAL] Clearing Epic context due to project change');
           await jiraService.clearEpicContext();
-          
+
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('epicContextCleared', {
             detail: {
@@ -208,14 +204,14 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
             }
           }));
         }
-        
+
         setSuccess(`Project "${projectName}" sekarang aktif!`);
 
         // Close modal after short delay
         setTimeout(() => {
           onClose();
         }, 1500);
-        
+
       } else {
         console.error('❌ [PROJECT-MODAL] Failed to set active project:', result.error);
         setError(result.error || 'Failed to set active project');
@@ -241,7 +237,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     const projectDisplayName = connection?.project_key && connection?.project_name
       ? `${projectName} (${connection.project_key})`
       : projectName;
-    
+
     setConnectionToDelete({ id: connectionId, name: projectDisplayName, connection });
     setIsDeleteModalOpen(true);
   };
@@ -250,31 +246,31 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     if (!connectionToDelete) return;
 
     const { id: connectionId, connection } = connectionToDelete;
-    
+
     // Get project name from connection object
-    const projectName = connection?.custom_fields?.project_info?.name || 
-                       connection?.project_name || 
-                       connection?.project_key || 
+    const projectName = connection?.custom_fields?.project_info?.name ||
+                       connection?.project_name ||
+                       connection?.project_key ||
                        'Unknown Project';
 
     try {
       setDeletingId(connectionId);
       setError(null);
-      
+
       console.log(`🎯 [PROJECT-MODAL] Starting smooth delete for: ${connectionId}`);
-      
+
       // SMOOTH DELETE: Use JiraContext deleteConnection if available
       if (window.jiraContext && window.jiraContext.deleteConnection) {
         console.log('🎯 [PROJECT-MODAL] Using JiraContext smooth delete');
-        
+
         const result = await window.jiraContext.deleteConnection(connectionId);
-        
+
         if (result.success) {
           console.log('✅ [PROJECT-MODAL] Smooth delete successful');
-          
+
           // Update local state immediately (optimistic update)
           setConnections(prev => prev.filter(conn => conn.id !== connectionId));
-          
+
           // Clear from active project if it was the active one
           const chatId = getCurrentChatId();
           const currentActive = activeProjectPerChat[chatId];
@@ -285,35 +281,35 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
             }));
             setPendingActiveProject(null);
           }
-          
+
           setSuccess(`Connection to "${projectName}" removed successfully`);
-          
+
           // Close modal after short delay for smooth UX
           setTimeout(() => {
             onClose();
           }, 1500);
-          
+
         } else {
           console.error('❌ [PROJECT-MODAL] Smooth delete failed:', result.error);
           setError(result.error || 'Failed to delete connection');
         }
-        
+
       } else {
         // FALLBACK: Use original jiraService method
         console.log('🔄 [PROJECT-MODAL] Fallback to jiraService delete');
-        
+
         const result = await jiraService.deleteConnection(connectionId);
-        
+
         if (result.success) {
           console.log(`✅ [PROJECT-MODAL] Connection deleted successfully: ${connectionId}`);
-          
+
           // Remove from local state immediately
           setConnections(prev => {
             const updated = prev.filter(conn => conn.id !== connectionId);
             console.log(`🔄 [PROJECT-MODAL] Updated local connections count: ${updated.length}`);
             return updated;
           });
-          
+
           // Clear from active project if it was the active one
           const chatId = getCurrentChatId();
           const currentActive = activeProjectPerChat[chatId];
@@ -324,35 +320,35 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
               [chatId]: null
             }));
             setPendingActiveProject(null);
-            
+
             // Clear from localStorage
             await jiraService.setActiveProjectForChat(chatId, null);
           }
-          
+
           // Dispatch events for other components
           window.dispatchEvent(new CustomEvent('jiraConnectionDeleted', {
-            detail: { 
-              connectionId, 
+            detail: {
+              connectionId,
               projectName: projectName,
               updatedConnections: connections.filter(conn => conn.id !== connectionId),
               timestamp: Date.now()
             }
           }));
-          
+
           setSuccess(`Connection to "${projectName}" deleted successfully`);
-          
+
           // Auto-hide success message and close modal
           setTimeout(() => {
             setSuccess(null);
             onClose();
           }, 2000);
-          
+
         } else {
           console.error(`❌ [PROJECT-MODAL] Delete failed:`, result.error);
           setError(result.error || 'Failed to delete connection');
         }
       }
-      
+
     } catch (err) {
       console.error('❌ [PROJECT-MODAL] Delete error:', err);
       setError(err.message || 'Failed to delete connection');
@@ -379,6 +375,10 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   const currentChatId = getCurrentChatId();
   const activeProjectId = activeProjectPerChat[currentChatId];
   const selectedProjectId = pendingActiveProject;
+
+  // Cari project yang sedang aktif untuk banner info
+  const activeProject = connections.find(c => c.id === activeProjectId);
+  const activeProjectName = activeProject?.project_name || activeProject?.project_key || null;
 
   if (!isOpen) return null;
 
@@ -453,6 +453,27 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
             </div>
           )}
 
+          {/* Banner: info project aktif saat ini */}
+          {!loading && Object.keys(groupedConnections).length > 0 && (
+            <div className="mb-4 p-3 bg-[#0D0D0D] border border-white/5 rounded-lg flex items-start gap-3">
+              <svg className="w-4 h-4 text-[#FF7AD0] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-xs text-gray-400 leading-relaxed">
+                {activeProjectName ? (
+                  <>
+                    Project aktif saat ini:{' '}
+                    <span className="text-[#FF7AD0] font-medium">{activeProjectName}</span>.
+                    Pilih project lain untuk mengganti, lalu tekan{' '}
+                    <span className="text-white font-medium">Apply Changes</span>.
+                  </>
+                ) : (
+                  <>Belum ada project aktif. Pilih salah satu project di bawah untuk mengaktifkannya.</>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {loading ? (
             <div className="text-center py-8">
@@ -495,32 +516,68 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                     {urlConnections.map((connection) => {
                       const isActiveInThisChat = activeProjectId === connection.id;
                       const isSelected = selectedProjectId === connection.id;
-                      
+                      const isPendingChange = isSelected && !isActiveInThisChat;
+                      const wasActiveButDeselected = isActiveInThisChat && !isSelected && hasUnsavedChanges;
+
                       // Calculate token status
                       const tokenStatus = calculateTokenStatus(connection.token_expires_at);
                       const statusBadgeClasses = getTokenStatusBadgeClasses(tokenStatus.type);
-                      
+
+                      // Tentukan styling card berdasarkan state aktif/seleksi
+                      let cardClasses;
+                      if (isActiveInThisChat && isSelected) {
+                        // Project aktif dan tidak diubah → highlight ungu (current active)
+                        cardClasses = 'bg-[#160D14] border-[#44273D] ring-1 ring-[#FF7AD0]/30';
+                      } else if (isPendingChange) {
+                        // Project baru dipilih, akan menggantikan yang aktif
+                        cardClasses = 'bg-[#0D1A14] border-green-500/40 ring-1 ring-green-500/20';
+                      } else if (wasActiveButDeselected) {
+                        // Project sebelumnya aktif tapi user pilih yang lain
+                        cardClasses = 'bg-[#1A1410] border-orange-500/30 opacity-70';
+                      } else {
+                        cardClasses = 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/10';
+                      }
+
                       return (
                         <div
                           key={connection.id}
-                          className={`p-3 rounded-lg border transition-colors cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#09090A] border-[#44273D]' 
-                              : 'bg-[#09090A] border-white/5 hover:bg-[#0D0D0D] hover:border-white/10'
-                          }`}
+                          className={`p-3 rounded-lg border transition-all cursor-pointer ${cardClasses}`}
                           onClick={() => handleSelectProject(connection.id)}
                         >
                           <div className="flex items-start justify-between">
                             {/* Project Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h4 className="text-white font-medium text-sm">{connection.project_name || connection.project_key}</h4>
+                                <h4 className="text-white font-medium text-sm">
+                                  {connection.project_name || connection.project_key}
+                                </h4>
                                 {connection.project_name && connection.project_key && (
-                                  <span className="text-xs text-gray-400 font-mono">({connection.project_key})</span>
+                                  <span className="text-xs text-gray-400 font-mono">
+                                    ({connection.project_key})
+                                  </span>
                                 )}
+
+                                {/* Badge: Project sedang aktif */}
+                                {isActiveInThisChat && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] rounded-full bg-[#FF7AD0]/15 text-[#FF7AD0] border border-[#FF7AD0]/30 font-semibold uppercase tracking-wide">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF7AD0] animate-pulse"></span>
+                                    Aktif
+                                  </span>
+                                )}
+
+                                {/* Badge: Akan diaktifkan (pending save) */}
+                                {isPendingChange && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-green-500/15 text-green-400 border border-green-500/30 font-semibold uppercase tracking-wide">
+                                    Akan diaktifkan
+                                  </span>
+                                )}
+
                                 {/* Token Status Badge */}
                                 {tokenStatus.type !== 'unknown' && (
-                                  <span className={statusBadgeClasses.container} title={`Token expires: ${connection.token_expires_at ? new Date(connection.token_expires_at).toLocaleDateString() : 'Unknown'}`}>
+                                  <span
+                                    className={statusBadgeClasses.container}
+                                    title={`Token expires: ${connection.token_expires_at ? new Date(connection.token_expires_at).toLocaleDateString() : 'Unknown'}`}
+                                  >
                                     <span className={statusBadgeClasses.icon}>{tokenStatus.icon}</span>
                                     <span>{tokenStatus.label}</span>
                                   </span>
@@ -550,13 +607,32 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 ml-3">
-                              {isSelected && (
-                                <div className="w-5 h-5 rounded-full bg-[#44273D] border border-[#44273D] flex items-center justify-center">
-                                  <svg className="w-3 h-3 text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                </div>
-                              )}
+                              {/* Radio indicator: bedakan visual aktif vs pending */}
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                                  isSelected
+                                    ? isActiveInThisChat
+                                      ? 'bg-[#44273D] border-[#FF7AD0]'
+                                      : 'bg-green-500/20 border-green-500'
+                                    : 'border-white/20 hover:border-white/40'
+                                }`}
+                                title={
+                                  isActiveInThisChat && isSelected
+                                    ? 'Project aktif'
+                                    : isPendingChange
+                                    ? 'Akan menjadi aktif setelah disimpan'
+                                    : 'Klik untuk memilih'
+                                }
+                              >
+                                {isSelected && (
+                                  <div
+                                    className={`w-2 h-2 rounded-full ${
+                                      isActiveInThisChat ? 'bg-[#FF7AD0]' : 'bg-green-500'
+                                    }`}
+                                  ></div>
+                                )}
+                              </div>
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -605,7 +681,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
               {/* Left Actions - Empty now */}
               <div className="flex items-center gap-3">
               </div>
-              
+
               {/* Right Actions */}
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
@@ -637,7 +713,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
                     </button>
                   </>
                 )}
-                
+
                 <button
                   onClick={handleAddNewProject}
                   className="px-5 py-2 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg hover:bg-[#1a1016] transition-all duration-200 text-sm flex items-center gap-2"
