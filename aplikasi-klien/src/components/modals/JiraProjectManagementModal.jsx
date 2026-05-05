@@ -221,7 +221,12 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
         activeProjects[chatId] = connectionId;
         localStorage.setItem('activeProjectsPerChat', JSON.stringify(activeProjects));
-        console.log('💾 [PROJECT-MODAL] Saved to localStorage:', { chatId, connectionId });
+        
+        // CRITICAL FIX: Save timestamp to prevent race condition with cleanupInvalidActiveProjects
+        // This ensures cleanup won't revert our changes for 10 seconds
+        const saveTimestamp = Date.now();
+        localStorage.setItem('activeProjectsPerChat_timestamp', saveTimestamp.toString());
+        console.log('💾 [PROJECT-MODAL] Saved to localStorage with timestamp:', { chatId, connectionId, timestamp: saveTimestamp });
 
         // CRITICAL: Persist to backend API untuk update is_active flag di database
         // Ini memastikan saat refresh, backend akan return project yang benar
