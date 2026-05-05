@@ -75,8 +75,8 @@ const ConfirmationModal = ({
           iconBgColor: '#160D14',
           iconBorderColor: '#44273D',
           iconColor: '#FF7AD0',
-          confirmBgColor: '#FF7AD0',
-          confirmHoverColor: '#ff8fdc'
+          confirmBgColor: '#44273D',
+          confirmHoverColor: '#5a3350'
         };
       case 'info':
         return {
