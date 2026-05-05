@@ -178,7 +178,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       type: 'warning',
       title: 'Ganti Project JIRA',
       message: `Mengganti project aktif ke "${projectName}" akan menghapus Epic yang dipilih untuk chat ini.`,
-      details: 'Anda perlu memilih Epic baru dari project yang baru jika diperlukan. Tindakan ini tidak dapat dibatalkan.',
       confirmText: 'Lanjutkan',
       cancelText: 'Batal'
     });
