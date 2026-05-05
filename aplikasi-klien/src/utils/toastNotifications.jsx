@@ -199,34 +199,24 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
         {/* Content and Close Button */}
         <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Export Berhasil!</div>
-            <div className="flex items-center gap-1.5 text-xs leading-tight mt-2">
-              <span style={{ color: '#C27AFF' }}>{epicName}:</span>
-              <span className="font-mono font-semibold" style={{ color: '#FFFFFF' }}>{issueKey}</span>
-            </div>
-            
-            {/* Action Chip/Button - Smaller */}
+            <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Export Berhasil</div>
             {issueUrl && (
               <a
                 href={issueUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors mt-1.5"
-                style={{ 
-                  backgroundColor: 'rgba(194, 122, 255, 0.2)',
-                  color: '#C27AFF',
-                  border: '1px solid #2C1A43'
-                }}
+                className="inline-flex items-center gap-1.5 text-xs leading-tight mt-2 transition-colors"
+                style={{ color: '#FFFFFF' }}
                 onClick={() => toast.dismiss(t.id)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(194, 122, 255, 0.3)';
+                  e.currentTarget.style.color = '#C27AFF';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(194, 122, 255, 0.2)';
+                  e.currentTarget.style.color = '#FFFFFF';
                 }}
               >
-                <span>Buka di JIRA</span>
-                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span>ProjectName: {epicName}</span>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
