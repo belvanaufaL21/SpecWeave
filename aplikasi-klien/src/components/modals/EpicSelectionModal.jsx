@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { jiraService } from '../../services/jiraService';
 import projectStateManager from '../../utils/managers/ProjectStateManager.js';
-import { 
-  BUTTON_LABELS, 
-  PAGE_TITLES, 
-  FORM_LABELS, 
-  STATUS_MESSAGES, 
+import {
+  BUTTON_LABELS,
+  PAGE_TITLES,
+  FORM_LABELS,
+  STATUS_MESSAGES,
   PLACEHOLDERS,
   CONFIRMATIONS,
   DESCRIPTIONS,
@@ -15,6 +15,65 @@ import {
   formatDate,
   formatRelativeTime
 } from '../../utils/localization/index.js';
+
+/**
+ * Helper konsisten dengan JiraProjectManagementModal & JiraStatusIndicator.
+ * Wajib menghasilkan chatId yang sama agar membaca entry localStorage
+ * `activeProjectsPerChat` yang sama.
+ */
+const getCurrentChatId = () => {
+  const currentPath = window.location.pathname;
+  const pathSegments = currentPath.split('/').filter(Boolean);
+
+  if (currentPath.includes('/chat')) {
+    const chatId = pathSegments[pathSegments.length - 1];
+    return chatId && chatId !== 'chat' ? chatId : 'default-chat';
+  }
+  if (currentPath.includes('/dashboard')) {
+    return 'dashboard-default';
+  }
+  return 'default-chat';
+};
+
+/**
+ * Resolusi project aktif dengan urutan fallback yang sama dengan
+ * JiraStatusIndicator. Ini source of truth tunggal untuk Epic modal.
+ *
+ * Urutan:
+ *   1. Per-chat localStorage (`activeProjectsPerChat[chatId]`)
+ *   2. Connection dengan flag `is_active === true`
+ *   3. Connection dengan project_key cocok dengan `selectedProjectKey` prop
+ *   4. Connection pertama
+ */
+const resolveActiveConnection = (connections, selectedProjectKey) => {
+  if (!Array.isArray(connections) || connections.length === 0) return null;
+
+  // 1. Per-chat localStorage
+  try {
+    const chatId = getCurrentChatId();
+    const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
+    const activeProjectId = activeProjects[chatId];
+    if (activeProjectId) {
+      const found = connections.find(c => c && c.id === activeProjectId);
+      if (found) return found;
+    }
+  } catch (e) {
+    // localStorage parse gagal, lanjut ke fallback
+  }
+
+  // 2. is_active flag
+  const globalActive = connections.find(c => c && c.is_active === true);
+  if (globalActive) return globalActive;
+
+  // 3. selectedProjectKey prop
+  if (selectedProjectKey) {
+    const byKey = connections.find(c => c && c.project_key === selectedProjectKey);
+    if (byKey) return byKey;
+  }
+
+  // 4. fallback connection pertama
+  return connections.find(c => c && c.project_key && c.jira_url) || null;
+};
 
 const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKey = null }) => {
   const [jiraConnections, setJiraConnections] = useState([]);
@@ -35,134 +94,86 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       setSelectedEpic(null);
       setError(null);
       setSearchQuery('');
-      loadJiraConnectionsWithProjectManager();
+      loadActiveConnectionAndEpics();
     }
   }, [isOpen, selectedProjectKey]);
 
-  // Listen for active project changes
+  // Listen for active project changes — reload saat project diganti dari modal lain
   useEffect(() => {
     const handleActiveProjectChange = (event) => {
       console.log('🔔 [EPIC-MODAL] Active project changed:', event.detail);
-      
-      // Reload connections and epics when project changes
       if (isOpen) {
-        loadJiraConnectionsWithProjectManager();
+        loadActiveConnectionAndEpics();
       }
     };
 
     window.addEventListener('activeProjectChanged', handleActiveProjectChange);
     window.addEventListener('activeProjectUpdated', handleActiveProjectChange);
-    
+
     return () => {
       window.removeEventListener('activeProjectChanged', handleActiveProjectChange);
       window.removeEventListener('activeProjectUpdated', handleActiveProjectChange);
     };
   }, [isOpen]);
 
-  // Load JIRA connections using ProjectStateManager for consistency
-  const loadJiraConnectionsWithProjectManager = async () => {
+  /**
+   * Load active connection menggunakan source of truth yang sama dengan
+   * JiraStatusIndicator dan JiraProjectManagementModal.
+   *
+   * Mengganti `loadJiraConnectionsWithProjectManager` lama yang membaca dari
+   * `projectStateManager.getActiveProject()` — yang ternyata tidak ter-sync
+   * dengan localStorage saat user ganti project.
+   */
+  const loadActiveConnectionAndEpics = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // First, validate and fix any inconsistencies - with error handling
-      try {
-        const validationResult = await projectStateManager.validateConsistency();
-        if (validationResult.success && !validationResult.data.consistent) {
-          console.log('🔧 [EPIC-MODAL] Fixing inconsistencies...');
-          await projectStateManager.fixInconsistencies();
-        }
-      } catch (validationError) {
-        console.warn('⚠️ [EPIC-MODAL] Validation failed, continuing anyway:', validationError.message);
-        // Continue even if validation fails
-      }
-      
-      // Get active project from ProjectStateManager (global) - with error handling
-      let activeProjectResult = null;
-      try {
-        activeProjectResult = await projectStateManager.getActiveProject();
-      } catch (projectError) {
-        console.warn('⚠️ [EPIC-MODAL] Failed to get active project:', projectError.message);
-        // Will use fallback below
-      }
-      
-      if (activeProjectResult && activeProjectResult.success && activeProjectResult.data) {
-        const { connection, projectKey, projectName } = activeProjectResult.data;
-
-        console.log('✅ [EPIC-MODAL] Active project loaded:', { projectKey, projectName });
-        setSelectedConnection(connection);
-        setSelectedProject(projectKey);
-        
-        // CRITICAL FIX: Save to database to persist across refresh - with error handling
-        try {
-          await projectStateManager.setActiveProject(connection.id, connection);
-        } catch (saveError) {
-          console.warn('⚠️ [EPIC-MODAL] Failed to save active project:', saveError.message);
-          // Continue anyway
-        }
-        
-        await loadEpics(connection);
-        setStep('epic');
-      } else {
-        // Fallback to loading all connections if no active project
-        console.log('⚠️ [EPIC-MODAL] No active project, using fallback');
-        await loadJiraConnectionsFallback();
-      }
-    } catch (err) {
-      console.error('❌ [EPIC-MODAL] Error loading connections with ProjectStateManager:', err);
-      // Try fallback instead of showing error
-      console.log('🔄 [EPIC-MODAL] Attempting fallback method...');
-      try {
-        await loadJiraConnectionsFallback();
-      } catch (fallbackErr) {
-        console.error('❌ [EPIC-MODAL] Fallback also failed:', fallbackErr);
-        setError(fallbackErr.message || 'Failed to load JIRA connections');
-        setStep('connection');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fallback method for loading connections (original logic)
-  const loadJiraConnectionsFallback = async () => {
-    try {
-      
       const connectionsResult = await jiraService.getConnections();
-      
-      if (connectionsResult.success && connectionsResult.data && connectionsResult.data.length > 0) {
-        const connections = connectionsResult.data;
-        
-        let targetConnection = null;
-        
-        // If selectedProject is provided, find the connection with that project key
-        if (selectedProject) {
-          targetConnection = connections.find(conn => conn.project_key === selectedProject);
-          
-          if (targetConnection) {
-            
-          } else {
-            console.warn(`⚠️ [EPIC-MODAL] No connection found for project key: ${selectedProject}`);
-          }
-        }
-        
-        // Fallback to first connection if no specific project or not found
-        if (!targetConnection) {
-          targetConnection = connections[0];
-          
-        }
-        
-        setSelectedConnection(targetConnection);
-        await loadEpics(targetConnection);
-        setStep('epic');
-      } else {
+
+      if (!connectionsResult.success || !connectionsResult.data || connectionsResult.data.length === 0) {
         setError('No JIRA connections found. Please set up a JIRA connection first.');
         setStep('connection');
+        return;
       }
+
+      const allConnections = connectionsResult.data;
+      setJiraConnections(allConnections);
+
+      const targetConnection = resolveActiveConnection(allConnections, selectedProjectKey);
+
+      if (!targetConnection) {
+        setError('No active JIRA project found. Please select a project first.');
+        setStep('connection');
+        return;
+      }
+
+      console.log('✅ [EPIC-MODAL] Active connection resolved:', {
+        id: targetConnection.id,
+        project_key: targetConnection.project_key,
+        project_name: targetConnection.project_name,
+        source: 'localStorage / is_active'
+      });
+
+      // Best-effort: sinkronkan ke projectStateManager agar konsisten,
+      // tapi tidak diblokir jika gagal
+      try {
+        await projectStateManager.setActiveProject(targetConnection.id, targetConnection);
+      } catch (syncError) {
+        console.warn('⚠️ [EPIC-MODAL] Failed to sync with projectStateManager:', syncError.message);
+      }
+
+      setSelectedConnection(targetConnection);
+      setSelectedProject(targetConnection.project_key);
+
+      await loadEpics(targetConnection);
+      setStep('epic');
     } catch (err) {
-      console.error('❌ [EPIC-MODAL] Error in fallback connection loading:', err);
-      setError(err.message);
+      console.error('❌ [EPIC-MODAL] Error loading connections:', err);
+      setError(err.message || 'Failed to load JIRA connections');
       setStep('connection');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -183,19 +194,19 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       console.log(`🔍 [CLIENT-ENHANCED] Loading Epics for connection:`, {
         id: connection.id,
         project_key: connection.project_key,
-        selectedProject: selectedProject,
         jira_url: connection.jira_url
       });
 
-      // Use selectedProject if available, otherwise use connection.project_key
-      const targetProjectKey = selectedProject || connection.project_key;
+      // Selalu pakai project_key dari connection yang sudah di-resolve.
+      // Tidak lagi pakai selectedProject yang bisa stale.
+      const targetProjectKey = connection.project_key;
 
       const result = await jiraService.getProjectEpics(connection.id, targetProjectKey);
 
       if (result.success) {
         let epicsData = Array.isArray(result.data) ? result.data : [];
         setEpics(epicsData);
-        
+
         if (result.fallback && result.warning) {
           if (result.warning.includes('410') || result.warning.includes('Gone')) {
             setError(`JIRA API endpoint has been deprecated. Your JIRA instance may need to be updated, or the API version is no longer supported. Please contact your JIRA administrator.`);
@@ -214,7 +225,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       } else {
         const errorMsg = result.error || 'Failed to load Epics from JIRA';
         console.error(`❌ [CLIENT-ENHANCED] Epic fetch failed:`, errorMsg);
-        
+
         if (errorMsg.includes('410') || errorMsg.includes('Gone')) {
           setError(`JIRA API endpoint is deprecated. Your JIRA instance may need to be updated. Please contact your JIRA administrator or try updating your JIRA connection.`);
         } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
@@ -226,21 +237,20 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
         } else {
           setError(`Failed to connect to JIRA: ${errorMsg}`);
         }
-        
+
         setEpics([]);
       }
     } catch (err) {
       const errorMsg = err.message || 'Network error while loading Epics';
       console.error('❌ [CLIENT-ENHANCED] Epic loading error:', err);
-      
-      // Handle network and other errors
+
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('Network')) {
         setError(`Network error: Cannot connect to JIRA. Please check your internet connection and JIRA server status.`);
       } else {
         setError(`Unexpected error: ${errorMsg}`);
       }
-      
-      setEpics([]); // Reset to empty array on error
+
+      setEpics([]);
     } finally {
       setLoading(false);
     }
@@ -258,69 +268,6 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       setLoading(true);
       setError(null);
 
-      // CRITICAL: Validate that selected connection matches active project (global)
-      
-      const activeProjectResult = await projectStateManager.getActiveProject();
-      
-      if (activeProjectResult.success) {
-        const activeConnectionId = activeProjectResult.data.connectionId;
-        const selectedConnectionId = selectedConnection.id;
-        
-        if (activeConnectionId !== selectedConnectionId) {
-          console.warn(`⚠️ [EPIC-MODAL] Connection mismatch detected, attempting auto-fix...`, {
-            activeConnectionId,
-            selectedConnectionId,
-            activeProject: activeProjectResult.data.projectKey,
-            selectedProject: selectedConnection.project_key
-          });
-          
-          // Auto-fix: Update active project to match Epic connection (global)
-          try {
-            const fixResult = await projectStateManager.setActiveProject(
-              selectedConnectionId, 
-              selectedConnection
-            );
-            
-            if (fixResult.success) {
-              
-              // Show user-friendly message about the auto-fix
-              setError(`Project switched to "${selectedConnection.project_key}" (${selectedConnection.project_name || 'JIRA Project'}) to match the selected Epic. Continuing...`);
-              
-              // Clear error after 3 seconds
-              setTimeout(() => setError(''), 3000);
-            } else {
-              throw new Error(fixResult.error);
-            }
-          } catch (fixError) {
-            console.error(`❌ [EPIC-MODAL] Failed to auto-fix project mismatch:`, fixError);
-            
-            setError(`Project mismatch detected! Active project is "${activeProjectResult.data.projectKey}" but Epic is from "${selectedConnection.project_key}". Auto-fix failed. Please manually switch projects and try again.`);
-            return;
-          }
-        } else {
-          
-        }
-      }
-
-      // Validate Epic access (optional - don't block if validation fails)
-      try {
-        const validationResult = await jiraService.validateEpicAccess(
-          selectedConnection.id, 
-          selectedEpic.id
-        );
-
-        if (!validationResult.success) {
-          console.warn('⚠️ [EPIC-MODAL] Epic validation failed, but continuing anyway:', validationResult.error);
-          // Don't block - validation is just a check, not a requirement
-        } else {
-          console.log('✅ [EPIC-MODAL] Epic validation successful');
-        }
-      } catch (validationError) {
-        console.warn('⚠️ [EPIC-MODAL] Epic validation error, but continuing anyway:', validationError);
-        // Don't block - validation is just a check, not a requirement
-      }
-
-      // Set Epic context with validated connection
       // Normalize epic data to ensure all required fields exist
       const normalizedEpic = {
         id: selectedEpic.id,
@@ -345,7 +292,6 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       });
 
       if (contextResult.success) {
-        
         onEpicSelected({
           epic: selectedEpic,
           connection: selectedConnection
@@ -368,33 +314,6 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       setLoading(true);
       setError(null);
 
-      // CRITICAL: Validate that selected connection matches active project (global) - with error handling
-      try {
-        const activeProjectResult = await projectStateManager.getActiveProject();
-        
-        if (activeProjectResult.success && activeProjectResult.data) {
-          const activeConnectionId = activeProjectResult.data.connectionId;
-          const selectedConnectionId = selectedConnection.id;
-          
-          if (activeConnectionId !== selectedConnectionId) {
-            console.error(`❌ [EPIC-MODAL] Connection mismatch detected in project-only mode!`, {
-              activeConnectionId,
-              selectedConnectionId,
-              activeProject: activeProjectResult.data.projectKey,
-              selectedProject: selectedConnection.project_key
-            });
-            
-            setError(`Project mismatch detected! Active project is "${activeProjectResult.data.projectKey}" but selection is from "${selectedConnection.project_key}". Please refresh and try again.`);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (validationError) {
-        console.warn('⚠️ [EPIC-MODAL] Validation failed, continuing anyway:', validationError.message);
-        // Continue even if validation fails
-      }
-
-      // Set context without Epic but with validated connection
       console.log('📤 [EPIC-MODAL] Sending workWithoutEpic context:', {
         workWithoutEpic: true,
         connectionId: selectedConnection.id,
@@ -446,13 +365,13 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <motion.div 
+        <motion.div
           className="bg-[#09090A] border border-white/5 rounded-xl max-w-3xl w-full max-h-[85vh] overflow-hidden shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -467,7 +386,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                 {DESCRIPTIONS.SELECT_EPIC_DESCRIPTION}
               </p>
               {selectedConnection && (
-                <motion.div 
+                <motion.div
                   className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-[#120C18] border border-[#2C1A43] rounded-lg w-fit"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -569,31 +488,6 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
           {/* Step 2: Epic Selection */}
           {step === 'epic' && (
             <div>
-              {/* Legacy Project Mismatch Warning */}
-              {selectedConnection && selectedConnection.project_key !== selectedProject && false && (
-                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <span className="text-yellow-300 text-sm font-medium">Project Mismatch</span>
-                  </div>
-                  <p className="text-yellow-200 text-sm mb-3">
-                    Connection default: <span className="font-mono">{selectedConnection.project_key}</span><br/>
-                    Selected project: <span className="font-mono">{selectedProject}</span>
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedProject(selectedConnection.project_key);
-                      loadEpics(selectedConnection);
-                    }}
-                    className="text-xs px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded text-yellow-300 hover:bg-yellow-600/30"
-                  >
-                    Use Connection Default ({selectedConnection.project_key})
-                  </button>
-                </div>
-              )}
-
               {/* Search */}
               <div className="mb-4">
                 <div className="relative">
@@ -641,7 +535,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                         Memuat Epic dari JIRA
                       </div>
                       <div className="text-gray-400 text-sm">
-                        {selectedConnection ? 
+                        {selectedConnection ?
                           `Project: ${selectedConnection.project_name || selectedConnection.project_key}` :
                           'Menghubungkan ke JIRA...'
                         }
@@ -680,7 +574,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                       <p className="text-gray-500 text-sm mb-6">
                         Buat Epic di JIRA terlebih dahulu, atau lanjutkan tanpa Epic.
                       </p>
-                      
+
                       <div className="space-y-3">
                         <button
                           onClick={() => handleWorkWithoutEpic()}
@@ -726,7 +620,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                           </svg>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/5">
                         <div className="flex items-center gap-4">
                           <span>{EPIC_LABELS.EPIC_ASSIGNEE}: {epic.assignee}</span>
@@ -755,7 +649,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
                       </span>
                     </div>
                     <p className="text-sm text-gray-400 mb-3">{selectedEpic.summary}</p>
-                    
+
                     <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
                       <div>
                         <span className="text-gray-400">{EPIC_LABELS.EPIC_ASSIGNEE}:</span> {selectedEpic.assignee}
