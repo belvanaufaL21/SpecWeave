@@ -314,6 +314,8 @@ export const showJiraExportFailedToast = () => {
       position: 'top-right',
       style: {
         ...baseStyle,
+        background: '#140D0C',
+        border: '1px solid #3E2827',
         width: 'fit-content',
         maxWidth: '400px',
         paddingLeft: '10px',
