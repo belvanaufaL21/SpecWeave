@@ -420,6 +420,52 @@ export const checkConnectionHealth = async (req, res) => {
 };
 
 /**
+ * Validate project configuration
+ * GET /api/jira/connections/:connectionId/validate
+ */
+export const validateProjectConfiguration = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { connectionId } = req.params;
+    
+    cleanLogger.info('JIRA-CONTROLLER', 'Validating project configuration', {
+      connectionId,
+      userId
+    });
+    
+    const result = await jiraService.validateProjectConfiguration(connectionId, userId);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        details: result.details
+      });
+    }
+  } catch (error) {
+    cleanLogger.error('JIRA-CONTROLLER', 'Validate project configuration error', { 
+      error: error.message 
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to validate project configuration'
+    });
+  }
+};
+
+/**
  * Check all connections health
  * GET /api/jira/connections/health/all
  */
@@ -698,6 +744,7 @@ export default {
   validateEpicAccess,
   searchEpics,
   checkConnectionHealth,
+  validateProjectConfiguration,
   checkAllConnectionsHealth,
   createUserStory,
   createSubtasks,

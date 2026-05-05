@@ -96,6 +96,16 @@ router.get('/connections/:connectionId/health', authenticate, [
 ], jiraController.checkConnectionHealth);
 
 /**
+ * Validate project configuration
+ * GET /api/jira/connections/:connectionId/validate
+ */
+router.get('/connections/:connectionId/validate', authenticate, [
+  param('connectionId')
+    .notEmpty()
+    .withMessage('Valid connection ID is required')
+], jiraController.validateProjectConfiguration);
+
+/**
  * Check health for all user connections
  * GET /api/jira/connections/health-check
  */

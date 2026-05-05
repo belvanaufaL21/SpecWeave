@@ -242,6 +242,144 @@ class JiraService {
   }
 
   /**
+   * Validate project configuration and required fields
+   * This helps identify why export might fail for specific projects
+   */
+  async validateProjectConfiguration(connectionId, userId) {
+    const requestId = `validate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      console.log(`🔍 [JIRA-SERVICE][${requestId}] Validating project configuration`);
+      
+      const connections = await this.getUserJiraConnections(userId);
+      const connection = connections.find(conn => conn.id === connectionId);
+      
+      if (!connection) {
+        return {
+          success: false,
+          error: 'Connection not found'
+        };
+      }
+
+      const auth = Buffer.from(`${connection.jira_email}:${connection.jira_api_token}`).toString('base64');
+      
+      // Get project metadata
+      const projectResponse = await axios.get(
+        `${connection.jira_url}/rest/api/3/project/${connection.project_key}`,
+        {
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+      
+      console.log(`✅ [JIRA-SERVICE][${requestId}] Project found: ${projectResponse.data.name}`);
+      
+      // Get create metadata for Story issue type
+      const metadataResponse = await axios.get(
+        `${connection.jira_url}/rest/api/3/issue/createmeta`,
+        {
+          params: {
+            projectKeys: connection.project_key,
+            issuetypeNames: 'Story',
+            expand: 'projects.issuetypes.fields'
+          },
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Accept': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
+      
+      const project = metadataResponse.data.projects[0];
+      
+      if (!project) {
+        return {
+          success: false,
+          error: `Project ${connection.project_key} not found in metadata`
+        };
+      }
+      
+      const storyIssueType = project.issuetypes?.find(it => it.name === 'Story');
+      
+      if (!storyIssueType) {
+        console.error(`❌ [JIRA-SERVICE][${requestId}] Story issue type not available`);
+        return {
+          success: false,
+          error: 'Story issue type not available in this project',
+          availableIssueTypes: project.issuetypes?.map(it => it.name) || []
+        };
+      }
+      
+      console.log(`✅ [JIRA-SERVICE][${requestId}] Story issue type found`);
+      
+      // Extract required fields
+      const requiredFields = [];
+      const optionalFields = [];
+      
+      Object.entries(storyIssueType.fields).forEach(([fieldKey, fieldData]) => {
+        const fieldInfo = {
+          key: fieldKey,
+          name: fieldData.name,
+          required: fieldData.required,
+          schema: fieldData.schema,
+          hasAllowedValues: !!fieldData.allowedValues,
+          allowedValuesCount: fieldData.allowedValues?.length || 0
+        };
+        
+        if (fieldData.required) {
+          requiredFields.push(fieldInfo);
+          console.log(`⚠️ [JIRA-SERVICE][${requestId}] Required field: ${fieldKey} (${fieldData.name})`);
+        } else {
+          optionalFields.push(fieldInfo);
+        }
+      });
+      
+      console.log(`📊 [JIRA-SERVICE][${requestId}] Total fields: ${Object.keys(storyIssueType.fields).length}`);
+      console.log(`📊 [JIRA-SERVICE][${requestId}] Required fields: ${requiredFields.length}`);
+      
+      return {
+        success: true,
+        data: {
+          connectionId: connectionId,
+          projectKey: connection.project_key,
+          projectName: projectResponse.data.name,
+          projectType: projectResponse.data.projectTypeKey,
+          storyIssueTypeAvailable: true,
+          requiredFields: requiredFields,
+          optionalFields: optionalFields,
+          totalFields: Object.keys(storyIssueType.fields).length,
+          requiredFieldsCount: requiredFields.length,
+          optionalFieldsCount: optionalFields.length
+        }
+      };
+      
+    } catch (error) {
+      console.error(`❌ [JIRA-SERVICE][${requestId}] Validation failed:`, error.message);
+      
+      if (error.response) {
+        console.error(`❌ [JIRA-SERVICE][${requestId}] Status:`, error.response.status);
+        console.error(`❌ [JIRA-SERVICE][${requestId}] Response:`, JSON.stringify(error.response.data, null, 2));
+      }
+      
+      cleanLogger.error('JIRA-SERVICE', 'Failed to validate project configuration', {
+        error: error.message,
+        connectionId,
+        status: error.response?.status
+      });
+      
+      return {
+        success: false,
+        error: error.message,
+        details: error.response?.data
+      };
+    }
+  }
+
+  /**
    * Get project epics
    */
   async getProjectEpics(connectionId, projectKey, userId) {
@@ -648,16 +786,29 @@ class JiraService {
       if (epicId) {
         try {
           cleanLogger.info('JIRA-SERVICE', `[${requestId}] Linking story to Epic`);
+          console.log(`🔗 [JIRA-SERVICE][${requestId}] Attempting to link story ${createdIssue.id} to Epic ${epicId}`);
           await this._linkStoryToEpic(connection, createdIssue.id, epicId, auth);
           cleanLogger.info('JIRA-SERVICE', `[${requestId}] Story linked to Epic successfully`, {
             storyId: createdIssue.id,
             epicId: epicId
           });
+          console.log(`✅ [JIRA-SERVICE][${requestId}] Story linked to Epic successfully`);
         } catch (linkError) {
+          console.error(`🔴 [JIRA-SERVICE][${requestId}] ===== EPIC LINK FAILED =====`);
+          console.error(`🔴 [JIRA-SERVICE][${requestId}] Story ID:`, createdIssue.id);
+          console.error(`🔴 [JIRA-SERVICE][${requestId}] Epic ID:`, epicId);
+          console.error(`🔴 [JIRA-SERVICE][${requestId}] Error:`, linkError.message);
+          
+          if (linkError.response) {
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Status:`, linkError.response.status);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Response:`, JSON.stringify(linkError.response.data, null, 2));
+          }
+          
           cleanLogger.warn('JIRA-SERVICE', `[${requestId}] Failed to link story to Epic (story created successfully)`, {
             storyId: createdIssue.id,
             epicId: epicId,
-            error: linkError.message
+            error: linkError.message,
+            errorDetails: linkError.response?.data
           });
           // Don't fail the whole operation if Epic link fails
         }
@@ -678,19 +829,43 @@ class JiraService {
         errorDetails.status = error.response.status;
         errorDetails.jiraError = error.response.data;
         
+        // ENHANCED: Log full error details for debugging
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] ===== JIRA API ERROR =====`);
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] Status: ${error.response.status} ${error.response.statusText}`);
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] Error Messages:`, error.response.data?.errorMessages);
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] Field Errors:`, error.response.data?.errors);
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] Full Response:`, JSON.stringify(error.response.data, null, 2));
+        
         // Log the full request payload for debugging
         if (error.config?.data) {
           try {
             const requestData = JSON.parse(error.config.data);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] ===== FAILED REQUEST PAYLOAD =====`);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Project Key:`, requestData.fields?.project?.key);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Summary:`, requestData.fields?.summary);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Issue Type:`, requestData.fields?.issuetype?.name);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Has Description:`, !!requestData.fields?.description);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Epic ID:`, epicId);
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] All Fields:`, Object.keys(requestData.fields));
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Full Payload:`, JSON.stringify(requestData, null, 2));
+            
             cleanLogger.error('JIRA-SERVICE', 'Failed request payload', {
               summary: requestData.fields?.summary,
               description: requestData.fields?.description,
-              epicId: requestData.fields?.parent?.id
+              epicId: requestData.fields?.parent?.id,
+              allFields: Object.keys(requestData.fields)
             });
           } catch (parseError) {
-            // Ignore parse errors
+            console.error(`🔴 [JIRA-SERVICE][${requestId}] Could not parse request data:`, parseError.message);
           }
         }
+        
+        // Log connection details (without sensitive data)
+        console.error(`🔴 [JIRA-SERVICE][${requestId}] Connection Details:`, {
+          url: error.config?.baseURL || error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout
+        });
       }
       
       cleanLogger.error('JIRA-SERVICE', 'Failed to create user story', errorDetails);

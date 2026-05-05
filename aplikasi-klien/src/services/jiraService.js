@@ -47,6 +47,37 @@ class JiraService {
     return await JiraConnectionService.deleteConnection(connectionId);
   }
 
+  async validateProjectConfiguration(connectionId) {
+    try {
+      console.log(`🔍 [JIRA-SERVICE] Validating project configuration for connection: ${connectionId}`);
+      
+      const response = await api.get(`/jira/connections/${connectionId}/validate`, {
+        timeout: JIRA_TIMEOUTS.DEFAULT
+      });
+      
+      if (response.data.success) {
+        console.log(`✅ [JIRA-SERVICE] Project validation successful:`, response.data.data);
+        return {
+          success: true,
+          data: response.data.data
+        };
+      } else {
+        console.error(`❌ [JIRA-SERVICE] Project validation failed:`, response.data.error);
+        return {
+          success: false,
+          error: response.data.error,
+          details: response.data.details
+        };
+      }
+    } catch (error) {
+      console.error(`❌ [JIRA-SERVICE] Validate project configuration error:`, error);
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message
+      };
+    }
+  }
+
   // Epic Management
   async getProjectEpics(connectionId, projectKey) {
     return await JiraEpicService.getProjectEpics(connectionId, projectKey);
