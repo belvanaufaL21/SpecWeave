@@ -206,13 +206,13 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs leading-tight mt-2 transition-colors"
-                style={{ color: '#FFFFFF' }}
+                style={{ color: '#C27AFF' }}
                 onClick={() => toast.dismiss(t.id)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#C27AFF';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#FFFFFF';
+                  e.currentTarget.style.color = '#C27AFF';
                 }}
               >
                 <span>{epicName}: {issueKey}</span>
