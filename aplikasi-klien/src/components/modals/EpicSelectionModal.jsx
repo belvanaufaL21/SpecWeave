@@ -85,6 +85,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [step, setStep] = useState('loading'); // 'loading' | 'connection' | 'epic' | 'confirm'
+  const [isLoadingEpics, setIsLoadingEpics] = useState(false); // Guard untuk prevent infinite loop
 
   // Load JIRA connections on modal open
   useEffect(() => {
@@ -102,9 +103,21 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
   useEffect(() => {
     const handleActiveProjectChange = (event) => {
       console.log('🔔 [EPIC-MODAL] Active project changed:', event.detail);
-      if (isOpen) {
-        loadActiveConnectionAndEpics();
+      
+      // GUARD: Jangan reload jika sedang loading atau modal tidak terbuka
+      if (!isOpen || isLoadingEpics) {
+        console.log('⏭️ [EPIC-MODAL] Skipping reload (modal closed or already loading)');
+        return;
       }
+
+      // GUARD: Jika projectId sama dengan selectedConnection, skip reload
+      if (selectedConnection && event.detail?.projectId === selectedConnection.id) {
+        console.log('⏭️ [EPIC-MODAL] Skipping reload (same project)');
+        return;
+      }
+
+      console.log('🔄 [EPIC-MODAL] Reloading due to external project change');
+      loadActiveConnectionAndEpics();
     };
 
     window.addEventListener('activeProjectChanged', handleActiveProjectChange);
@@ -114,7 +127,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       window.removeEventListener('activeProjectChanged', handleActiveProjectChange);
       window.removeEventListener('activeProjectUpdated', handleActiveProjectChange);
     };
-  }, [isOpen]);
+  }, [isOpen, isLoadingEpics, selectedConnection]);
 
   /**
    * Load active connection menggunakan source of truth yang sama dengan
@@ -125,7 +138,14 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
    * dengan localStorage saat user ganti project.
    */
   const loadActiveConnectionAndEpics = async () => {
+    // GUARD: Prevent concurrent loads
+    if (isLoadingEpics) {
+      console.log('⏭️ [EPIC-MODAL] Already loading, skipping...');
+      return;
+    }
+
     try {
+      setIsLoadingEpics(true);
       setLoading(true);
       setError(null);
 
@@ -155,13 +175,10 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
         source: 'localStorage / is_active'
       });
 
-      // Best-effort: sinkronkan ke projectStateManager agar konsisten,
-      // tapi tidak diblokir jika gagal
-      try {
-        await projectStateManager.setActiveProject(targetConnection.id, targetConnection);
-      } catch (syncError) {
-        console.warn('⚠️ [EPIC-MODAL] Failed to sync with projectStateManager:', syncError.message);
-      }
+      // PENTING: Jangan panggil setActiveProject di sini!
+      // Ini akan men-trigger event activeProjectChanged yang menyebabkan infinite loop.
+      // ProjectStateManager sudah di-update oleh JiraProjectManagementModal.
+      // Epic modal hanya perlu MEMBACA state, bukan MENULIS.
 
       setSelectedConnection(targetConnection);
       setSelectedProject(targetConnection.project_key);
@@ -174,6 +191,7 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
       setStep('connection');
     } finally {
       setLoading(false);
+      setIsLoadingEpics(false);
     }
   };
 
