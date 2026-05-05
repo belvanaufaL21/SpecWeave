@@ -5,9 +5,8 @@ import {
   getInitialState,
   getStatusSummary
 } from '../utils/helpers/jiraContextHelpers';
-import { cleanupInvalidActiveProjects, getCurrentChatId } from '../utils/helpers/activeProjectHelpers';
+import { cleanupInvalidActiveProjects } from '../utils/helpers/activeProjectHelpers';
 import initializationManager from '../utils/singletons/InitializationManager.js';
-import UserDataService from '../services/UserDataService.js';
 
 const JiraContext = createContext();
 
@@ -473,67 +472,6 @@ export const JiraProvider = ({ children }) => {
       // Clean up invalid active projects from localStorage
       if (connections.length > 0) {
         cleanupInvalidActiveProjects(connections);
-        
-        // CRITICAL FIX: Validate localStorage consistency with database
-        // This prevents showing old project after refresh
-        try {
-          const chatId = getCurrentChatId();
-          const localActiveProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
-          const localActiveProjectId = localActiveProjects[chatId];
-          
-          if (localActiveProjectId) {
-            const connectionExists = connections.some(conn => conn.id === localActiveProjectId);
-            
-            if (!connectionExists) {
-              console.warn('⚠️ [VALIDATION] localStorage has invalid project, clearing...');
-              delete localActiveProjects[chatId];
-              localStorage.setItem('activeProjectsPerChat', JSON.stringify(localActiveProjects));
-            } else {
-              // ENHANCED: Validate against database active_projects
-              // Only do this if data is not recently saved (to avoid race condition)
-              const savedTimestamp = parseInt(localStorage.getItem('activeProjectsPerChat_timestamp') || '0');
-              const now = Date.now();
-              const recentlySaved = (now - savedTimestamp) < 10000; // 10 seconds
-              
-              if (!recentlySaved) {
-                // Safe to validate against database
-                console.log('🔍 [VALIDATION] Checking localStorage consistency with database...');
-                
-                // Note: We don't await this to avoid blocking initialization
-                // This is a best-effort validation
-                UserDataService.getActiveProject().then(dbActiveProject => {
-                  if (dbActiveProject.success && dbActiveProject.data) {
-                    const dbActiveProjectId = dbActiveProject.data.id;
-                    
-                    if (dbActiveProjectId !== localActiveProjectId) {
-                      console.warn('⚠️ [VALIDATION] localStorage and database mismatch, using database...');
-                      localActiveProjects[chatId] = dbActiveProjectId;
-                      localStorage.setItem('activeProjectsPerChat', JSON.stringify(localActiveProjects));
-                      
-                      // Dispatch event to update UI
-                      window.dispatchEvent(new CustomEvent('activeProjectUpdated', {
-                        detail: {
-                          chatId,
-                          projectId: dbActiveProjectId,
-                          source: 'database_validation',
-                          timestamp: Date.now()
-                        }
-                      }));
-                    } else {
-                      console.log('✅ [VALIDATION] localStorage and database are consistent');
-                    }
-                  }
-                }).catch(err => {
-                  console.warn('⚠️ [VALIDATION] Failed to validate with database:', err.message);
-                });
-              } else {
-                console.log('⏭️ [VALIDATION] Skipping database validation - data recently saved');
-              }
-            }
-          }
-        } catch (validationError) {
-          console.error('❌ [VALIDATION] Error validating localStorage:', validationError);
-        }
       } else {
         // ENHANCED: If no connections, ensure epic context is cleared
         console.log('🧹 [JIRA-CONTEXT] No connections found, ensuring epic context is cleared');

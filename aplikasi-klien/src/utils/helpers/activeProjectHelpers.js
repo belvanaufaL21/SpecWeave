@@ -6,28 +6,9 @@
 /**
  * Clean up invalid project IDs from localStorage
  * Should be called when connections are loaded
- * 
- * CRITICAL FIX: Added timestamp guard to prevent race condition
- * where cleanup reverts recently saved data
  */
 export const cleanupInvalidActiveProjects = (connections) => {
   try {
-    // GUARD: Don't cleanup if data was recently saved (within 10 seconds)
-    // This prevents race condition where:
-    // 1. User saves new active project to localStorage
-    // 2. Backend hasn't updated is_active flag yet
-    // 3. getConnections returns old data
-    // 4. cleanup reverts localStorage to old project
-    const savedTimestamp = parseInt(localStorage.getItem('activeProjectsPerChat_timestamp') || '0');
-    const now = Date.now();
-    const recentlySaved = (now - savedTimestamp) < 10000; // 10 seconds
-    
-    if (recentlySaved) {
-      const timeRemaining = Math.round((10000 - (now - savedTimestamp)) / 1000);
-      console.log(`⏭️ [CLEANUP] Skipping cleanup - data recently saved (${timeRemaining}s remaining)`);
-      return;
-    }
-    
     const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
     const validConnectionIds = connections.map(conn => conn.id);
     let hasChanges = false;
@@ -36,7 +17,6 @@ export const cleanupInvalidActiveProjects = (connections) => {
     Object.keys(activeProjects).forEach(chatId => {
       const projectId = activeProjects[chatId];
       if (projectId && !validConnectionIds.includes(projectId)) {
-        console.log(`🧹 [CLEANUP] Removing invalid project: ${projectId} for chat: ${chatId}`);
         delete activeProjects[chatId];
         hasChanges = true;
       }
@@ -45,12 +25,9 @@ export const cleanupInvalidActiveProjects = (connections) => {
     // Update localStorage if there were changes
     if (hasChanges) {
       localStorage.setItem('activeProjectsPerChat', JSON.stringify(activeProjects));
-      console.log('✅ [CLEANUP] Cleaned up invalid active projects');
-    } else {
-      console.log('✅ [CLEANUP] No invalid projects found');
     }
   } catch (error) {
-    console.error('❌ [CLEANUP] Error cleaning up active projects:', error);
+    console.error('Error cleaning up active projects:', error);
   }
 };
 

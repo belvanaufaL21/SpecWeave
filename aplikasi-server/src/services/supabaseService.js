@@ -758,20 +758,8 @@ class SupabaseService {
    */
   async setActiveProject(userId, connectionId) {
     try {
-      // CRITICAL FIX: Clear all is_active flags first to ensure only one active project
-      // This prevents race condition where multiple projects appear active
-      const { error: clearError } = await this.admin
-        .from('jira_connections')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-      
-      if (clearError) {
-        console.warn('Warning clearing active flags:', clearError.message);
-        // Continue anyway, not critical
-      }
+      // CHANGED: No longer set all connections to inactive
+      // Multiple connections can be active simultaneously
       
       // Set the selected connection to active
       const { data, error } = await this.admin
@@ -787,11 +775,9 @@ class SupabaseService {
       
       if (error) throw error;
       
-      console.log('✅ [SUPABASE] Set active project:', { userId, connectionId, projectKey: data?.project_key });
-      
       return data;
     } catch (error) {
-      console.error('❌ [SUPABASE] Error setting active project:', error);
+      console.error('Error setting active project:', error);
       throw new Error(`Failed to set active project: ${error.message}`);
     }
   }
