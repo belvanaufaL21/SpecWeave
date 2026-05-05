@@ -169,10 +169,10 @@ const JiraExportCTA = ({ scenarioData }) => {
         console.log(`✅ [JIRA-EXPORT][${exportId}] Export successful`);
         const issueKey = result.data.userStory?.key || result.data.issueKey || 'Story';
         const issueUrl = result.data.userStory?.url || result.data.issueUrl;
-        const projectName = connection.custom_fields?.project_info?.name || connection.project_name || connection.project_key || 'Project';
+        const epicName = epicContext.epicData?.epic?.name || epicContext.epicData?.epic?.key || 'Epic';
         
         // Show success notification using helper
-        showJiraExportSuccessToast(issueKey, issueUrl, projectName);
+        showJiraExportSuccessToast(issueKey, issueUrl, epicName);
       } else {
         // Handle timeout specifically
         if (result.isTimeout) {
