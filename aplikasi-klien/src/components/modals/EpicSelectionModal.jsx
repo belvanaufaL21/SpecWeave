@@ -39,6 +39,26 @@ const EpicSelectionModal = ({ isOpen, onClose, onEpicSelected, selectedProjectKe
     }
   }, [isOpen, selectedProjectKey]);
 
+  // Listen for active project changes
+  useEffect(() => {
+    const handleActiveProjectChange = (event) => {
+      console.log('🔔 [EPIC-MODAL] Active project changed:', event.detail);
+      
+      // Reload connections and epics when project changes
+      if (isOpen) {
+        loadJiraConnectionsWithProjectManager();
+      }
+    };
+
+    window.addEventListener('activeProjectChanged', handleActiveProjectChange);
+    window.addEventListener('activeProjectUpdated', handleActiveProjectChange);
+    
+    return () => {
+      window.removeEventListener('activeProjectChanged', handleActiveProjectChange);
+      window.removeEventListener('activeProjectUpdated', handleActiveProjectChange);
+    };
+  }, [isOpen]);
+
   // Load JIRA connections using ProjectStateManager for consistency
   const loadJiraConnectionsWithProjectManager = async () => {
     try {

@@ -32,19 +32,35 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
 
   // Listen for active project changes
   useEffect(() => {
-    const handleActiveProjectChange = () => {
+    const handleActiveProjectChange = (event) => {
+      console.log('🔔 [JIRA-INDICATOR] Active project change detected:', event.detail);
       setForceUpdate(prev => prev + 1);
+      
+      // Force refresh connections dari JiraContext
+      if (window.jiraContext && window.jiraContext.refreshConnections) {
+        window.jiraContext.refreshConnections(true);
+      }
+    };
+
+    const handleStorageChange = (event) => {
+      // Listen for activeProjectsPerChat changes
+      if (event.key === 'activeProjectsPerChat' || event.key?.includes('specweave_active_project')) {
+        console.log('🔔 [JIRA-INDICATOR] Storage change detected:', event.key);
+        setForceUpdate(prev => prev + 1);
+      }
     };
 
     // Listen for storage changes (active project updates)
-    window.addEventListener('storage', handleActiveProjectChange);
+    window.addEventListener('storage', handleStorageChange);
     
     // Listen for custom events from project management modal
     window.addEventListener('activeProjectChanged', handleActiveProjectChange);
+    window.addEventListener('activeProjectUpdated', handleActiveProjectChange);
     
     return () => {
-      window.removeEventListener('storage', handleActiveProjectChange);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('activeProjectChanged', handleActiveProjectChange);
+      window.removeEventListener('activeProjectUpdated', handleActiveProjectChange);
     };
   }, []);
 

@@ -5,7 +5,6 @@ import { useConfirmation } from '../../hooks/useConfirmation';
 import ConfirmationModal from '../common/ConfirmationModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import projectStateManager from '../../utils/managers/ProjectStateManager.js';
-import { getActiveProjectInfo } from '../../utils/helpers/activeProjectHelpers';
 import { calculateTokenStatus, getTokenStatusBadgeClasses } from '../../utils/helpers/jiraTokenHelpers';
 
 const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
@@ -15,7 +14,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   const [success, setSuccess] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [activeProjectPerChat, setActiveProjectPerChat] = useState({});
-  const [pendingActiveProject, setPendingActiveProject] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [connectionToDelete, setConnectionToDelete] = useState(null);
 
@@ -47,12 +45,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         ...prev,
         [chatId]: projectId
       }));
-
-      // Update pending selection if it matches current chat
-      const currentChatId = getCurrentChatId();
-      if (chatId === currentChatId) {
-        setPendingActiveProject(projectId);
-      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -94,8 +86,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           ...prev,
           [chatId]: activeProjectId
         }));
-        // Set pending to current active project
-        setPendingActiveProject(activeProjectId);
       }
     } catch (err) {
       console.warn('Could not load active project context:', err.message);
@@ -179,12 +169,19 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           ...prev,
           [chatId]: connectionId
         }));
-        setPendingActiveProject(connectionId);
+
+        // CRITICAL: Save to localStorage for per-chat active project
+        const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
+        activeProjects[chatId] = connectionId;
+        localStorage.setItem('activeProjectsPerChat', JSON.stringify(activeProjects));
+        console.log('💾 [PROJECT-MODAL] Saved to localStorage:', { chatId, connectionId });
 
         const projectName = result.data.projectName;
 
-        // Dispatch event untuk active project updated (untuk JIRA indicator)
-        console.log('📢 [PROJECT-MODAL] Dispatching activeProjectUpdated event');
+        // Dispatch multiple events untuk memastikan semua komponen terupdate
+        console.log('📢 [PROJECT-MODAL] Dispatching update events');
+        
+        // Event 1: activeProjectUpdated (untuk JIRA indicator)
         window.dispatchEvent(new CustomEvent('activeProjectUpdated', {
           detail: {
             chatId,
@@ -196,10 +193,45 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           }
         }));
 
-        // Force refresh JIRA context (hanya sekali)
-        if (window.jiraContext && window.jiraContext.refreshConnections) {
+        // Event 2: activeProjectChanged (untuk ProjectStateManager listeners)
+        window.dispatchEvent(new CustomEvent('activeProjectChanged', {
+          detail: {
+            projectId: connectionId,
+            projectKey: selectedProject.project_key,
+            projectName: projectName,
+            projectChanged: result.data.projectChanged,
+            timestamp: Date.now()
+          }
+        }));
+
+        // Event 3: storage event (untuk cross-tab sync)
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'activeProjectsPerChat',
+          newValue: JSON.stringify(activeProjects),
+          url: window.location.href
+        }));
+
+        // Force refresh JIRA context (multiple times untuk memastikan)
+        if (window.jiraContext) {
           console.log('🔄 [PROJECT-MODAL] Refreshing JIRA context');
-          await window.jiraContext.refreshConnections(true);
+          
+          // Refresh connections
+          if (window.jiraContext.refreshConnections) {
+            await window.jiraContext.refreshConnections(true);
+          }
+          
+          // Clear epic context jika project berubah
+          if (result.data.projectChanged && window.jiraContext.clearEpicContext) {
+            console.log('🧹 [PROJECT-MODAL] Clearing epic context due to project change');
+            await window.jiraContext.clearEpicContext();
+          }
+          
+          // Force refresh all
+          if (window.jiraContext.refreshAll) {
+            setTimeout(() => {
+              window.jiraContext.refreshAll();
+            }, 100);
+          }
         }
 
         setSuccess(`Project "${projectName}" sekarang aktif!`);
@@ -207,6 +239,9 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         // Close modal after short delay
         setTimeout(() => {
           onClose();
+          
+          // Force page refresh untuk memastikan semua komponen terupdate
+          window.location.reload();
         }, 1500);
 
       } else {
@@ -269,7 +304,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
               ...prev,
               [chatId]: null
             }));
-            setPendingActiveProject(null);
           }
 
           setSuccess(`Connection to "${projectName}" removed successfully`);
@@ -309,7 +343,6 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
               ...prev,
               [chatId]: null
             }));
-            setPendingActiveProject(null);
 
             // Clear from localStorage
             await jiraService.setActiveProjectForChat(chatId, null);
@@ -542,17 +575,17 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 ml-3">
-                              {/* Radio indicator */}
+                              {/* Radio indicator - Enhanced with pink/purple theme */}
                               <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                                   isSelected
-                                    ? 'bg-[#44273D] border-[#FF7AD0]'
+                                    ? 'bg-gradient-to-br from-[#FF7AD0]/20 to-[#FF7AD0]/10 border-[#FF7AD0] shadow-lg shadow-[#FF7AD0]/20'
                                     : 'border-white/20 hover:border-white/40'
                                 }`}
                                 title={isSelected ? 'Project aktif' : 'Klik untuk memilih'}
                               >
                                 {isSelected && (
-                                  <div className="w-2 h-2 rounded-full bg-[#FF7AD0]"></div>
+                                  <div className="w-3 h-3 rounded-full bg-[#FF7AD0] animate-pulse"></div>
                                 )}
                               </div>
 
