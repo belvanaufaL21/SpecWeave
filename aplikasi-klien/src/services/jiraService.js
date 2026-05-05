@@ -325,22 +325,14 @@ class JiraService {
       // CRITICAL: Persist to backend API untuk update is_active flag di database
       if (projectId) {
         try {
-          const response = await fetch(`${API_BASE_URL}/active-projects/${chatId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.getAuthToken()}`
-            },
-            body: JSON.stringify({ connectionId: projectId })
+          const response = await api.post(`/active-projects/${chatId}`, {
+            connectionId: projectId
           });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.warn('⚠️ [JIRA-SERVICE] Backend API failed to set active project:', errorData.error);
-            // Tidak throw error, localStorage sudah tersimpan
+          if (response.data?.success) {
+            console.log('✅ [JIRA-SERVICE] Backend API set active project:', response.data);
           } else {
-            const result = await response.json();
-            console.log('✅ [JIRA-SERVICE] Backend API set active project:', result);
+            console.warn('⚠️ [JIRA-SERVICE] Backend API failed to set active project:', response.data?.error);
           }
         } catch (apiError) {
           console.warn('⚠️ [JIRA-SERVICE] Failed to call backend API:', apiError.message);

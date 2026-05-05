@@ -170,8 +170,21 @@ export const getCurrentChatId = () => {
 
 /**
  * Clear Epic context (global - no chatId needed)
+ * WITH THROTTLING to prevent infinite loops
  */
+let lastClearTime = 0;
+const CLEAR_THROTTLE_MS = 1000; // Minimum 1 second between clears
+
 export const clearEpicContextStorage = () => {
+  const now = Date.now();
+  
+  // THROTTLE: Skip if cleared recently (within 1 second)
+  if (now - lastClearTime < CLEAR_THROTTLE_MS) {
+    console.log(`⏭️ Skipping Epic clear (throttled - ${CLEAR_THROTTLE_MS - (now - lastClearTime)}ms remaining)`);
+    return;
+  }
+  
+  lastClearTime = now;
   console.log(`🧹 Clearing Epic context (global)`);
   
   // Clear from localStorage
