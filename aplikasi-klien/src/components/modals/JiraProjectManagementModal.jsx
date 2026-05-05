@@ -284,12 +284,17 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
 
         setSuccess(`Project "${resolvedProjectName}" sekarang aktif!`);
 
-        // Close modal after short delay
+        // Close modal after short delay.
+        // CATATAN: window.location.reload() sengaja DIHAPUS. Reload memaksa
+        // re-init state dari sumber yang belum tentu sinkron (race antara
+        // backend save dan cleanupInvalidActiveProjects di JiraContext yang
+        // dapat me-revert localStorage berdasarkan flag is_active lama).
+        // Event yang sudah di-dispatch di atas (activeProjectUpdated,
+        // activeProjectChanged, storage) plus refreshConnections() dan
+        // clearEpicContext() langsung sudah cukup untuk meng-update
+        // JiraStatusIndicator, JiraContext, dan EpicSelectionModal.
         setTimeout(() => {
           onClose();
-
-          // Force page refresh untuk memastikan semua komponen terupdate
-          window.location.reload();
         }, 1500);
 
       } else {
