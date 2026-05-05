@@ -245,24 +245,48 @@ export const JiraProvider = ({ children }) => {
       }
     };
     
+    // Handler untuk project changed event
+    const handleProjectChanged = (event) => {
+      console.log('🔄 [JIRA-CONTEXT] Project changed event received:', event.detail);
+      const { connectionId, connection, projectKey } = event.detail;
+      
+      // Refresh connections to update UI
+      refreshConnections(true);
+      
+      // Clear epic context karena project berubah
+      clearEpicContext();
+    };
+
+    // Handler untuk active project updated event
+    const handleActiveProjectUpdated = (event) => {
+      console.log('🔄 [JIRA-CONTEXT] Active project updated event received:', event.detail);
+      
+      // Refresh connections to update UI
+      refreshConnections(true);
+    };
+    
     window.addEventListener('forceEpicContextClear', handleForceEpicClearEvent);
     window.addEventListener('forceEpicContextRefresh', handleForceEpicRefreshEvent);
     window.addEventListener('forceConnectionsRefresh', handleForceConnectionsRefreshEvent);
     window.addEventListener('jiraConnectionDeleted', handleJiraConnectionDeletedEvent);
+    window.addEventListener('jiraConnectionChanged', handleProjectChanged);
     window.addEventListener('jiraStateChanged', handleJiraStateChangedEvent);
     window.addEventListener('forceUIRefresh', handleForceUIRefreshEvent);
     window.addEventListener('activeProjectChanged', handleActiveProjectChanged);
+    window.addEventListener('activeProjectUpdated', handleActiveProjectUpdated);
     
     return () => {
       window.removeEventListener('forceEpicContextClear', handleForceEpicClearEvent);
       window.removeEventListener('forceEpicContextRefresh', handleForceEpicRefreshEvent);
       window.removeEventListener('forceConnectionsRefresh', handleForceConnectionsRefreshEvent);
       window.removeEventListener('jiraConnectionDeleted', handleJiraConnectionDeletedEvent);
+      window.removeEventListener('jiraConnectionChanged', handleProjectChanged);
       window.removeEventListener('jiraStateChanged', handleJiraStateChangedEvent);
       window.removeEventListener('forceUIRefresh', handleForceUIRefreshEvent);
       window.removeEventListener('activeProjectChanged', handleActiveProjectChanged);
+      window.removeEventListener('activeProjectUpdated', handleActiveProjectUpdated);
     };
-  }, [handleJiraConnectionDeletedEvent]); // Only include handleJiraConnectionDeletedEvent
+  }, [handleJiraConnectionDeletedEvent, refreshConnections, clearEpicContext]);
 
   // ENHANCED: Validation useEffect to ensure epic context consistency
   useEffect(() => {

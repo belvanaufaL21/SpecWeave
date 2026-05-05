@@ -161,10 +161,18 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         return;
       }
 
+      console.log('🔄 [PROJECT-MODAL] Changing project to:', {
+        connectionId,
+        projectName,
+        projectKey: selectedProject.project_key
+      });
+
       // Use ProjectStateManager for consistent state management
       const result = await projectStateManager.setActiveProject(connectionId, selectedProject);
 
       if (result.success) {
+        console.log('✅ [PROJECT-MODAL] Project changed successfully');
+
         // Update local state immediately
         setActiveProjectPerChat(prev => ({
           ...prev,
@@ -178,7 +186,10 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         console.log('🧹 [PROJECT-MODAL] Clearing Epic context due to project change');
         await jiraService.clearEpicContext();
 
-        // Dispatch event to notify other components
+        // Dispatch multiple events to notify all components
+        console.log('📢 [PROJECT-MODAL] Dispatching events to notify components');
+
+        // 1. Epic context cleared event
         window.dispatchEvent(new CustomEvent('epicContextCleared', {
           detail: {
             reason: 'project_changed',
@@ -186,6 +197,35 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
             timestamp: Date.now()
           }
         }));
+
+        // 2. Active project updated event (for JIRA indicator)
+        window.dispatchEvent(new CustomEvent('activeProjectUpdated', {
+          detail: {
+            chatId,
+            projectId: connectionId,
+            projectName: selectedProject.project_name || selectedProject.project_key,
+            projectKey: selectedProject.project_key,
+            connection: selectedProject,
+            timestamp: Date.now()
+          }
+        }));
+
+        // 3. JIRA connection changed event (for Epic modal)
+        window.dispatchEvent(new CustomEvent('jiraConnectionChanged', {
+          detail: {
+            connectionId,
+            connection: selectedProject,
+            projectKey: selectedProject.project_key,
+            projectName: selectedProject.project_name || selectedProject.project_key,
+            timestamp: Date.now()
+          }
+        }));
+
+        // 4. Force refresh JIRA context
+        if (window.jiraContext && window.jiraContext.refreshConnections) {
+          console.log('🔄 [PROJECT-MODAL] Refreshing JIRA context');
+          await window.jiraContext.refreshConnections();
+        }
 
         setSuccess(`Project "${projectName}" sekarang aktif!`);
 
