@@ -46,11 +46,11 @@ const ConfirmationModal = ({
         };
       case 'warning':
         return {
-          iconBg: 'bg-gradient-to-br from-amber-500/20 to-orange-500/20',
-          iconColor: 'text-amber-400',
-          confirmBg: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
-          confirmShadow: 'hover:shadow-amber-500/25',
-          borderColor: 'border-amber-500/20'
+          iconBg: 'bg-[#160D14] border border-[#44273D]',
+          iconColor: 'text-[#FF7AD0]',
+          confirmBg: 'bg-[#44273D] hover:bg-[#5a3350]',
+          confirmShadow: 'hover:shadow-[#44273D]/25',
+          borderColor: 'border-[#44273D]/30'
         };
       case 'info':
         return {
