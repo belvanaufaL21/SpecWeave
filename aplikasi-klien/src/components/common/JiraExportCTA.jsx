@@ -191,6 +191,25 @@ const JiraExportCTA = ({ scenarioData }) => {
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
         
+        // Check for Epic project mismatch
+        if (error.response.data.errorType === 'EPIC_PROJECT_MISMATCH') {
+          errorTitle = 'Epic Tidak Sesuai';
+          errorMessage = error.response.data.error;
+          
+          // Show detailed info
+          if (error.response.data.details) {
+            const details = error.response.data.details;
+            console.error('❌ Epic Mismatch Details:', details);
+            errorMessage = `Epic ${details.epicKey} berasal dari project ${details.epicProject}, tetapi Anda mencoba membuat story di project ${details.targetProject}. Silakan pilih Epic yang sesuai dari project ${details.targetProject}.`;
+          }
+        } else if (error.response.data.errorType === 'EPIC_NOT_FOUND') {
+          errorTitle = 'Epic Tidak Ditemukan';
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.errorType === 'EPIC_ACCESS_DENIED') {
+          errorTitle = 'Akses Epic Ditolak';
+          errorMessage = error.response.data.error;
+        }
+        
         // Log validation details if available
         if (error.response.data.details) {
           console.error('Validation errors:', error.response.data.details);

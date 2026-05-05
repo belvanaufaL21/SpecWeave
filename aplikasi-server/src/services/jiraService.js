@@ -1523,6 +1523,86 @@ class JiraService {
         };
       }
 
+      // CRITICAL: Validate Epic ownership before creating story
+      if (epicId) {
+        console.log(`🔍 [JIRA-SERVICE][${requestId}] Validating Epic ${epicId} for project ${connection.project_key}`);
+        
+        try {
+          const auth = Buffer.from(`${connection.jira_email}:${connection.jira_api_token}`).toString('base64');
+          
+          // Get Epic details to verify it belongs to this project
+          const epicResponse = await axios.get(
+            `${connection.jira_url}/rest/api/3/issue/${epicId}`,
+            {
+              headers: {
+                'Authorization': `Basic ${auth}`,
+                'Accept': 'application/json'
+              },
+              timeout: 10000
+            }
+          );
+          
+          const epicProjectKey = epicResponse.data.fields.project.key;
+          
+          console.log(`🔍 [JIRA-SERVICE][${requestId}] Epic validation:`, {
+            epicId: epicId,
+            epicKey: epicResponse.data.key,
+            epicProjectKey: epicProjectKey,
+            targetProjectKey: connection.project_key,
+            match: epicProjectKey === connection.project_key
+          });
+          
+          if (epicProjectKey !== connection.project_key) {
+            const errorMsg = `Epic ${epicResponse.data.key} belongs to project ${epicProjectKey}, but you're trying to create a story in project ${connection.project_key}. Please select an Epic from the correct project.`;
+            
+            console.error(`❌ [JIRA-SERVICE][${requestId}] Epic project mismatch:`, {
+              epicProject: epicProjectKey,
+              targetProject: connection.project_key,
+              epicKey: epicResponse.data.key
+            });
+            
+            cleanLogger.error('JIRA-SERVICE', `[${requestId}] Epic project mismatch`, {
+              epicProject: epicProjectKey,
+              targetProject: connection.project_key
+            });
+            
+            return {
+              success: false,
+              error: errorMsg,
+              errorType: 'EPIC_PROJECT_MISMATCH',
+              details: {
+                epicKey: epicResponse.data.key,
+                epicProject: epicProjectKey,
+                targetProject: connection.project_key
+              }
+            };
+          }
+          
+          console.log(`✅ [JIRA-SERVICE][${requestId}] Epic validation passed`);
+          
+        } catch (epicValidationError) {
+          console.error(`❌ [JIRA-SERVICE][${requestId}] Epic validation failed:`, epicValidationError.message);
+          
+          if (epicValidationError.response?.status === 404) {
+            return {
+              success: false,
+              error: `Epic ${epicId} not found. Please select a valid Epic from your project.`,
+              errorType: 'EPIC_NOT_FOUND'
+            };
+          } else if (epicValidationError.response?.status === 403) {
+            return {
+              success: false,
+              error: `You don't have permission to access Epic ${epicId}.`,
+              errorType: 'EPIC_ACCESS_DENIED'
+            };
+          }
+          
+          // If validation fails for other reasons, log but continue
+          // (might be network issue, let the actual create attempt handle it)
+          console.warn(`⚠️ [JIRA-SERVICE][${requestId}] Epic validation error (continuing):`, epicValidationError.message);
+        }
+      }
+
       // Prepare story data with scenarios and development tasks
       const completeStoryData = {
         ...storyData,
