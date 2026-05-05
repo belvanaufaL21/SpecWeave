@@ -249,26 +249,19 @@ export const JiraProvider = ({ children }) => {
     const handleProjectChanged = (event) => {
       console.log('🔄 [JIRA-CONTEXT] Project changed event received:', event.detail);
       
-      // Refresh connections to update UI
+      // Refresh connections to update UI (hanya sekali)
       setTimeout(() => {
         if (window.jiraContext && window.jiraContext.refreshConnections) {
           window.jiraContext.refreshConnections(true);
         }
       }, 100);
-      
-      // Clear epic context karena project berubah
-      setTimeout(() => {
-        if (window.jiraContext && window.jiraContext.clearEpicContext) {
-          window.jiraContext.clearEpicContext();
-        }
-      }, 200);
     };
 
     // Handler untuk active project updated event
     const handleActiveProjectUpdated = (event) => {
       console.log('🔄 [JIRA-CONTEXT] Active project updated event received:', event.detail);
       
-      // Refresh connections to update UI
+      // Refresh connections to update UI (hanya sekali)
       setTimeout(() => {
         if (window.jiraContext && window.jiraContext.refreshConnections) {
           window.jiraContext.refreshConnections(true);
