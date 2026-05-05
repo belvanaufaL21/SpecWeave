@@ -722,6 +722,54 @@ class JiraService {
 
       const auth = Buffer.from(`${connection.jira_email}:${connection.jira_api_token}`).toString('base64');
       
+      // CRITICAL: Get available issue types for this project
+      let issueTypeName = 'Story';
+      try {
+        console.log(`🔍 [JIRA-SERVICE][${requestId}] Checking available issue types for project ${connection.project_key}`);
+        
+        const metadataResponse = await axios.get(
+          `${connection.jira_url}/rest/api/3/issue/createmeta`,
+          {
+            params: {
+              projectKeys: connection.project_key,
+              expand: 'projects.issuetypes'
+            },
+            headers: {
+              'Authorization': `Basic ${auth}`,
+              'Accept': 'application/json'
+            },
+            timeout: 10000
+          }
+        );
+        
+        const project = metadataResponse.data.projects[0];
+        if (project && project.issuetypes) {
+          const availableTypes = project.issuetypes.map(it => it.name);
+          console.log(`📋 [JIRA-SERVICE][${requestId}] Available issue types:`, availableTypes);
+          
+          // Priority order: Story > Task > Bug > first available
+          if (availableTypes.includes('Story')) {
+            issueTypeName = 'Story';
+          } else if (availableTypes.includes('Task')) {
+            issueTypeName = 'Task';
+            console.log(`⚠️ [JIRA-SERVICE][${requestId}] 'Story' not available, using 'Task' instead`);
+          } else if (availableTypes.includes('Bug')) {
+            issueTypeName = 'Bug';
+            console.log(`⚠️ [JIRA-SERVICE][${requestId}] 'Story' not available, using 'Bug' instead`);
+          } else if (availableTypes.length > 0) {
+            issueTypeName = availableTypes[0];
+            console.log(`⚠️ [JIRA-SERVICE][${requestId}] 'Story' not available, using '${issueTypeName}' instead`);
+          } else {
+            throw new Error(`No issue types available for project ${connection.project_key}`);
+          }
+        }
+      } catch (metadataError) {
+        console.warn(`⚠️ [JIRA-SERVICE][${requestId}] Could not fetch issue types, will try with 'Story':`, metadataError.message);
+        // Continue with default 'Story'
+      }
+      
+      console.log(`✅ [JIRA-SERVICE][${requestId}] Using issue type: ${issueTypeName}`);
+      
       // Create user story
       const issueData = {
         fields: {
@@ -731,7 +779,7 @@ class JiraService {
           summary: storyData.title || storyData.feature || storyData.featureName || storyData.userStory,
           description: this._formatDescriptionADF(storyData),
           issuetype: {
-            name: 'Story'
+            name: issueTypeName
           }
         }
       };
@@ -888,6 +936,11 @@ class JiraService {
           // Bad request - field validation errors
           const errorMessages = jiraError?.errorMessages || [];
           const fieldErrors = jiraError?.errors || {};
+          
+          // Check for issue type error specifically
+          if (fieldErrors.issuetype) {
+            throw new Error(`Issue type tidak valid untuk project ini. Error: ${fieldErrors.issuetype}. Project mungkin tidak memiliki issue type 'Story'. Silakan hubungi administrator Jira untuk mengaktifkan issue type yang sesuai.`);
+          }
           
           if (errorMessages.length > 0) {
             throw new Error(`Validasi JIRA gagal: ${errorMessages.join(', ')}`);
