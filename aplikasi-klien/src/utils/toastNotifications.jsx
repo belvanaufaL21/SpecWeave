@@ -261,6 +261,70 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
   );
 };
 
+/**
+ * Show JIRA export failed notification
+ * Displays error message with suggestion to check integration
+ */
+export const showJiraExportFailedToast = () => {
+  return toast.error(
+    (t) => (
+      <div className="flex items-start gap-3">
+        {/* Error Icon - Aligned with title */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#4A1A1A', border: '1px solid #4A1A1A' }}>
+          <svg className="w-3 h-3" style={{ color: '#FF6B6B' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        
+        {/* Content and Close Button */}
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Export Gagal</div>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#FF6B6B' }}>
+              Pastikan kembali Integrasi JIRA atau coba ganti Project/Epic Anda
+            </div>
+          </div>
+
+          {/* Close Button - Aligned with title */}
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="flex-shrink-0 w-4 h-4 flex items-center justify-center transition-opacity"
+            style={{ 
+              color: '#FF6B6B',
+              opacity: 0.5
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.5';
+            }}
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      duration: 5000,
+      position: 'top-right',
+      style: {
+        ...baseStyle,
+        width: 'fit-content',
+        maxWidth: '400px',
+        paddingLeft: '10px',
+        paddingRight: '10px'
+      },
+      className: '',
+      icon: null
+    }
+  );
+};
+
 export default {
   success: showSuccessToast,
   error: showErrorToast,
@@ -268,5 +332,6 @@ export default {
   warning: showWarningToast,
   custom: showCustomToast,
   authSuccess: showAuthSuccessToast,
-  jiraExportSuccess: showJiraExportSuccessToast
+  jiraExportSuccess: showJiraExportSuccessToast,
+  jiraExportFailed: showJiraExportFailedToast
 };

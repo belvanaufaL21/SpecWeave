@@ -5,7 +5,7 @@ import { useJira } from '../../contexts/JiraContext';
 import { getCurrentChatId } from '../../utils/helpers/jiraServiceHelpers';
 import UserDataService from '../../services/UserDataService';
 import cleanLogger from '../../config/cleanLogging.js';
-import { showErrorToast, showJiraExportSuccessToast } from '../../utils/toastNotifications.jsx';
+import { showErrorToast, showJiraExportSuccessToast, showJiraExportFailedToast } from '../../utils/toastNotifications.jsx';
 
 const JiraExportCTA = ({ scenarioData }) => {
   const { epicContext, hasEpic, openEpicModal } = useJira();
@@ -184,100 +184,8 @@ const JiraExportCTA = ({ scenarioData }) => {
     } catch (error) {
       console.error(`❌ [JIRA-EXPORT][${exportId}] Export error:`, error);
       
-      let errorTitle = 'Export Gagal';
-      let errorMessage = 'Gagal mengekspor ke JIRA';
-      
-      // Extract more specific error messages
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-        
-        // Check for Epic project mismatch
-        if (error.response.data.errorType === 'EPIC_PROJECT_MISMATCH') {
-          errorTitle = 'Epic Tidak Sesuai';
-          errorMessage = error.response.data.error;
-          
-          // Show detailed info
-          if (error.response.data.details) {
-            const details = error.response.data.details;
-            console.error('❌ Epic Mismatch Details:', details);
-            errorMessage = `Epic ${details.epicKey} berasal dari project ${details.epicProject}, tetapi Anda mencoba membuat story di project ${details.targetProject}. Silakan pilih Epic yang sesuai dari project ${details.targetProject}.`;
-          }
-        } else if (error.response.data.errorType === 'EPIC_NOT_FOUND') {
-          errorTitle = 'Epic Tidak Ditemukan';
-          errorMessage = error.response.data.error;
-        } else if (error.response.data.errorType === 'EPIC_ACCESS_DENIED') {
-          errorTitle = 'Akses Epic Ditolak';
-          errorMessage = error.response.data.error;
-        }
-        
-        // Log validation details if available
-        if (error.response.data.details) {
-          console.error('Validation errors:', error.response.data.details);
-          const validationErrors = error.response.data.details
-            .map(err => err.msg)
-            .join(', ');
-          errorMessage = `Validasi gagal: ${validationErrors}`;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Categorize errors with clear Indonesian messages
-      if (errorMessage.toLowerCase().includes('token') && 
-          (errorMessage.toLowerCase().includes('expired') || 
-           errorMessage.toLowerCase().includes('invalid') ||
-           errorMessage.toLowerCase().includes('kedaluwarsa') ||
-           errorMessage.toLowerCase().includes('kadaluwarsa'))) {
-        errorTitle = 'Export Gagal';
-        errorMessage = 'API Token JIRA telah kedaluwarsa. Silakan perbarui token JIRA Anda di pengaturan koneksi.';
-      } else if (errorMessage.includes('401') || errorMessage.includes('not authenticated') || errorMessage.includes('Unauthorized')) {
-        errorTitle = 'Autentikasi Gagal';
-        errorMessage = 'Kredensial JIRA tidak valid. Periksa kembali email dan API token Anda.';
-      } else if (errorMessage.includes('403') || errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('forbidden')) {
-        errorTitle = 'Akses Ditolak';
-        errorMessage = 'Anda tidak memiliki izin untuk membuat issue di project ini. Hubungi administrator JIRA Anda.';
-      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        errorTitle = 'Resource Tidak Ditemukan';
-        errorMessage = 'Epic atau project JIRA tidak ditemukan. Pastikan Epic masih ada dan Anda memiliki akses.';
-      } else if (errorMessage.toLowerCase().includes('timeout')) {
-        errorTitle = 'Koneksi Timeout';
-        errorMessage = 'Server JIRA tidak merespons. Coba lagi dalam beberapa saat.';
-      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch failed')) {
-        errorTitle = 'Kesalahan Jaringan';
-        errorMessage = 'Tidak dapat terhubung ke server JIRA. Periksa koneksi internet Anda.';
-      } else if (errorMessage.toLowerCase().includes('field') && errorMessage.toLowerCase().includes('required')) {
-        errorTitle = 'Data Tidak Lengkap';
-        errorMessage = 'Beberapa field wajib belum diisi. Pastikan semua data scenario lengkap.';
-      } else if (errorMessage.toLowerCase().includes('validation')) {
-        errorTitle = 'Validasi Gagal';
-        errorMessage = errorMessage; // Keep original validation message
-      }
-      
-      toast.error(
-        (t) => (
-          <div className="flex flex-col gap-2">
-            <div className="font-semibold text-white text-base">{errorTitle}</div>
-            <div className="text-sm text-gray-300 leading-relaxed">{errorMessage}</div>
-          </div>
-        ),
-        {
-          duration: 6000,
-          position: 'top-right',
-          style: {
-            background: 'rgba(10, 10, 15, 0.95)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            color: '#fff',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '12px',
-            boxShadow: '0 10px 40px rgba(239, 68, 68, 0.2)',
-            padding: '18px 24px',
-            minWidth: '320px',
-            maxWidth: '450px'
-          },
-          icon: null
-        }
-      );
+      // Show simple failed notification
+      showJiraExportFailedToast();
     } finally {
       console.log(`🔓 [JIRA-EXPORT][${exportId}] Export unlocking`);
       setIsExporting(false);
