@@ -224,6 +224,16 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         localStorage.setItem('activeProjectsPerChat', JSON.stringify(activeProjects));
         console.log('💾 [PROJECT-MODAL] Saved to localStorage:', { chatId, connectionId });
 
+        // CRITICAL: Persist to backend API untuk update is_active flag di database
+        // Ini memastikan saat refresh, backend akan return project yang benar
+        try {
+          await jiraService.setActiveProjectForChat(chatId, connectionId);
+          console.log('💾 [PROJECT-MODAL] Saved to backend API:', { chatId, connectionId });
+        } catch (apiError) {
+          console.warn('⚠️ [PROJECT-MODAL] Failed to save to backend API:', apiError.message);
+          // Tidak blocking, localStorage sudah tersimpan
+        }
+
         const resolvedProjectName = result.data?.projectName || projectName;
 
         // Dispatch multiple events untuk memastikan semua komponen terupdate
