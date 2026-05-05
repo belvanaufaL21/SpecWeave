@@ -249,7 +249,12 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
       duration: 5000,
       position: 'top-right',
       style: {
-        ...baseStyle
+        ...baseStyle,
+        width: 'fit-content',
+        minWidth: '250px',
+        maxWidth: '400px',
+        paddingLeft: '10px',
+        paddingRight: '10px'
       },
       className: '',
       icon: null
