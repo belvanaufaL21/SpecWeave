@@ -351,6 +351,91 @@ export const JiraProvider = ({ children }) => {
     }
   }, [state.connections.length, state.hasEpic, state.epicContext, state.isLoadingConnections]);
 
+  // AUTO-VALIDATION: Validate all connected projects on page load/refresh
+  useEffect(() => {
+    const validateConnectedProjects = async () => {
+      // Only validate if we have connections and not currently loading
+      if (state.connections.length === 0 || state.isLoadingConnections) {
+        return;
+      }
+
+      // Check if we've already validated in this session
+      const validatedFlag = sessionStorage.getItem('jira_projects_validated');
+      if (validatedFlag === 'true') {
+        console.log('✅ [JIRA-VALIDATION] Projects already validated in this session');
+        return;
+      }
+
+      console.log('🔍 [JIRA-VALIDATION] Starting auto-validation of connected projects...');
+      
+      const invalidConnections = [];
+      
+      // Validate each connection
+      for (const connection of state.connections) {
+        try {
+          const result = await jiraService.validateProjectConfiguration(connection.id);
+          
+          if (!result.success) {
+            console.warn(`❌ [JIRA-VALIDATION] Project ${connection.project_key} validation failed:`, result.error);
+            
+            // Check if it's a 404 error (project not found)
+            if (result.error?.includes('404') || 
+                result.error?.includes('not found') || 
+                result.error?.includes('does not exist')) {
+              invalidConnections.push(connection);
+            }
+          } else {
+            console.log(`✅ [JIRA-VALIDATION] Project ${connection.project_key} is valid`);
+          }
+        } catch (error) {
+          console.error(`❌ [JIRA-VALIDATION] Error validating ${connection.project_key}:`, error);
+        }
+      }
+
+      // Auto-disconnect invalid projects
+      if (invalidConnections.length > 0) {
+        console.log(`🗑️ [JIRA-VALIDATION] Found ${invalidConnections.length} invalid project(s), auto-disconnecting...`);
+        
+        for (const connection of invalidConnections) {
+          try {
+            await jiraService.deleteConnection(connection.id);
+            console.log(`✅ [JIRA-VALIDATION] Auto-disconnected: ${connection.project_key}`);
+            
+            // Show notification
+            if (window.toast) {
+              window.toast.warning(
+                `Project "${connection.project_key}" tidak ditemukan di Atlassian dan telah di-disconnect`,
+                {
+                  duration: 5000,
+                  position: 'top-right'
+                }
+              );
+            }
+          } catch (error) {
+            console.error(`❌ [JIRA-VALIDATION] Failed to auto-disconnect ${connection.project_key}:`, error);
+          }
+        }
+
+        // Refresh connections after cleanup
+        setTimeout(() => {
+          refreshConnections(true);
+        }, 1000);
+      } else {
+        console.log('✅ [JIRA-VALIDATION] All connected projects are valid');
+      }
+
+      // Mark as validated for this session
+      sessionStorage.setItem('jira_projects_validated', 'true');
+    };
+
+    // Run validation after a short delay to ensure everything is loaded
+    const validationTimer = setTimeout(() => {
+      validateConnectedProjects();
+    }, 2000);
+
+    return () => clearTimeout(validationTimer);
+  }, [state.connections, state.isLoadingConnections, refreshConnections]);
+
   /**
    * Load initial data dengan timeout yang reasonable dan duplicate prevention
    */
