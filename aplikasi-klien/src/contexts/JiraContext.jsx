@@ -248,13 +248,20 @@ export const JiraProvider = ({ children }) => {
     // Handler untuk project changed event
     const handleProjectChanged = (event) => {
       console.log('🔄 [JIRA-CONTEXT] Project changed event received:', event.detail);
-      const { connectionId, connection, projectKey } = event.detail;
       
       // Refresh connections to update UI
-      refreshConnections(true);
+      setTimeout(() => {
+        if (window.jiraContext && window.jiraContext.refreshConnections) {
+          window.jiraContext.refreshConnections(true);
+        }
+      }, 100);
       
       // Clear epic context karena project berubah
-      clearEpicContext();
+      setTimeout(() => {
+        if (window.jiraContext && window.jiraContext.clearEpicContext) {
+          window.jiraContext.clearEpicContext();
+        }
+      }, 200);
     };
 
     // Handler untuk active project updated event
@@ -262,7 +269,11 @@ export const JiraProvider = ({ children }) => {
       console.log('🔄 [JIRA-CONTEXT] Active project updated event received:', event.detail);
       
       // Refresh connections to update UI
-      refreshConnections(true);
+      setTimeout(() => {
+        if (window.jiraContext && window.jiraContext.refreshConnections) {
+          window.jiraContext.refreshConnections(true);
+        }
+      }, 100);
     };
     
     window.addEventListener('forceEpicContextClear', handleForceEpicClearEvent);
@@ -286,7 +297,7 @@ export const JiraProvider = ({ children }) => {
       window.removeEventListener('activeProjectChanged', handleActiveProjectChanged);
       window.removeEventListener('activeProjectUpdated', handleActiveProjectUpdated);
     };
-  }, [handleJiraConnectionDeletedEvent, refreshConnections, clearEpicContext]);
+  }, [handleJiraConnectionDeletedEvent]);
 
   // ENHANCED: Validation useEffect to ensure epic context consistency
   useEffect(() => {
