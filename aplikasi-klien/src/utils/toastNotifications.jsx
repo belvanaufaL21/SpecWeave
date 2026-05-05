@@ -180,12 +180,12 @@ export const showAuthSuccessToast = (userName) => {
 
 /**
  * Show JIRA export success notification
- * Notification with action button (chip) to open JIRA
+ * Notification with project name and link to JIRA
  * @param {string} issueKey - JIRA issue key
  * @param {string} issueUrl - JIRA issue URL
- * @param {string} epicName - Epic name
+ * @param {string} projectName - Project name
  */
-export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
+export const showJiraExportSuccessToast = (issueKey, issueUrl, projectName) => {
   return toast.success(
     (t) => (
       <div className="flex items-start gap-3">
@@ -215,7 +215,7 @@ export const showJiraExportSuccessToast = (issueKey, issueUrl, epicName) => {
                   e.currentTarget.style.color = '#FFFFFF';
                 }}
               >
-                <span>ProjectName: {epicName}</span>
+                <span>ProjectName: {projectName}</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
