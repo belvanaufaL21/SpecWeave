@@ -2,9 +2,28 @@ import { useState, useEffect } from 'react';
 import { useJira } from '../../contexts/JiraContext';
 import JiraProjectManagementModal from '../modals/JiraProjectManagementModal';
 
+/**
+ * Helper konsisten dengan JiraProjectManagementModal.
+ * Penting: kedua komponen HARUS menghasilkan chatId yang sama agar
+ * `activeProjectsPerChat[chatId]` yang disimpan modal dapat dibaca indicator.
+ */
+const getCurrentChatId = () => {
+  const currentPath = window.location.pathname;
+  const pathSegments = currentPath.split('/').filter(Boolean);
+
+  if (currentPath.includes('/chat')) {
+    const chatId = pathSegments[pathSegments.length - 1];
+    return chatId && chatId !== 'chat' ? chatId : 'default-chat';
+  }
+  if (currentPath.includes('/dashboard')) {
+    return 'dashboard-default';
+  }
+  return 'default-chat';
+};
+
 const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
-  const { 
-    hasConnection, 
+  const {
+    hasConnection,
     isLoading,
     connections,
     openJiraSetupModal
@@ -12,7 +31,7 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
 
   const [showManagementModal, setShowManagementModal] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0);
+  const [, setForceUpdate] = useState(0);
 
   // Monitor connection errors and handle them silently
   useEffect(() => {
@@ -24,7 +43,7 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
 
     // Listen for network errors
     window.addEventListener('unhandledrejection', handleConnectionError);
-    
+
     return () => {
       window.removeEventListener('unhandledrejection', handleConnectionError);
     };
@@ -35,7 +54,7 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
     const handleActiveProjectChange = (event) => {
       console.log('🔔 [JIRA-INDICATOR] Active project change detected:', event.detail);
       setForceUpdate(prev => prev + 1);
-      
+
       // Force refresh connections dari JiraContext
       if (window.jiraContext && window.jiraContext.refreshConnections) {
         window.jiraContext.refreshConnections(true);
@@ -52,11 +71,11 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
 
     // Listen for storage changes (active project updates)
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Listen for custom events from project management modal
     window.addEventListener('activeProjectChanged', handleActiveProjectChange);
     window.addEventListener('activeProjectUpdated', handleActiveProjectChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('activeProjectChanged', handleActiveProjectChange);
@@ -70,44 +89,39 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
       if (!connections || !Array.isArray(connections) || connections.length === 0) {
         return null;
       }
-      
-      // Get active project for current chat
-      const getCurrentChatId = () => {
-        return window.location.pathname.split('/').pop() || 'default-chat';
-      };
-      
+
       const chatId = getCurrentChatId();
       const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
       const activeProjectId = activeProjects[chatId];
-      
+
       // Find active project for this chat
       if (activeProjectId) {
-        const activeForChat = connections.find(conn => 
-          conn && 
-          typeof conn === 'object' && 
+        const activeForChat = connections.find(conn =>
+          conn &&
+          typeof conn === 'object' &&
           conn.id === activeProjectId
         );
-        
+
         if (activeForChat) return activeForChat;
       }
-      
+
       // Fallback to globally active connection
-      const globalActive = connections.find(conn => 
-        conn && 
-        typeof conn === 'object' && 
+      const globalActive = connections.find(conn =>
+        conn &&
+        typeof conn === 'object' &&
         conn.is_active === true
       );
-      
+
       if (globalActive) return globalActive;
-      
+
       // Fallback to first valid connection
-      const firstValid = connections.find(conn => 
-        conn && 
-        typeof conn === 'object' && 
-        conn.project_key && 
+      const firstValid = connections.find(conn =>
+        conn &&
+        typeof conn === 'object' &&
+        conn.project_key &&
         conn.jira_url
       );
-      
+
       return firstValid || null;
     } catch (error) {
       // Silently handle errors
@@ -178,27 +192,27 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
           )
         };
       }
-      
-      const projectName = (activeConnection?.project_name) 
+
+      const projectName = (activeConnection?.project_name)
         ? activeConnection.project_name
-        : (activeConnection.project_key && typeof activeConnection.project_key === 'string') 
-          ? activeConnection.project_key 
+        : (activeConnection.project_key && typeof activeConnection.project_key === 'string')
+          ? activeConnection.project_key
           : 'Unknown';
-      
-      const jiraUrl = (activeConnection.jira_url && typeof activeConnection.jira_url === 'string') 
-        ? activeConnection.jira_url 
+
+      const jiraUrl = (activeConnection.jira_url && typeof activeConnection.jira_url === 'string')
+        ? activeConnection.jira_url
         : '';
-      
-      const domain = jiraUrl 
-        ? jiraUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0] 
+
+      const domain = jiraUrl
+        ? jiraUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0]
         : 'Unknown';
-      
+
       // Check if we have multiple connections to show count
       const totalConnections = connections?.length || 0;
-      const subtitle = totalConnections > 1 
-        ? `Aktif (${totalConnections} total)` 
+      const subtitle = totalConnections > 1
+        ? `Aktif (${totalConnections} total)`
         : (domain !== 'Unknown' ? domain : 'Terhubung');
-      
+
       return {
         color: 'green',
         text: projectName,
@@ -218,8 +232,8 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
         icon: (
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        )
+            </svg>
+          )
       };
     }
   };
@@ -233,14 +247,14 @@ const JiraStatusIndicator = ({ onSetupJira, compact = false }) => {
         className={`
           flex items-center gap-2 rounded-lg text-xs font-medium transition-all duration-200 border w-full
           ${compact ? 'px-2 py-1 justify-start' : 'px-3 py-1.5'}
-          ${statusConfig.color === 'red' 
-            ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' 
+          ${statusConfig.color === 'red'
+            ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
             : 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20'
           }
         `}
         title={
           !hasConnection || connectionError
-            ? 'Setup integrasi JIRA' 
+            ? 'Setup integrasi JIRA'
             : `Terhubung ke ${statusConfig.text} (${statusConfig.subtitle}). Klik untuk kelola koneksi.`
         }
       >

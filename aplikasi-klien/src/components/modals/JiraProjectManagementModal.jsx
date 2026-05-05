@@ -20,21 +20,30 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
   // Use confirmation modal hook
   const { confirmationState, showConfirmation } = useConfirmation();
 
+  // Load connections saat modal dibuka
   useEffect(() => {
     if (isOpen) {
       loadConnections();
-      loadActiveProjectContext();
       // Clear previous messages when modal opens
       setError(null);
       setSuccess(null);
     }
   }, [isOpen]);
 
+  // Deteksi active project SETELAH connections selesai dimuat
+  useEffect(() => {
+    if (isOpen && connections.length > 0) {
+      detectActiveProject(connections);
+    }
+  }, [isOpen, connections]);
+
   // Listen for storage changes and active project updates
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'activeProjectsPerChat' || e.key?.includes('specweave_active_project')) {
-        loadActiveProjectContext();
+        if (connections.length > 0) {
+          detectActiveProject(connections);
+        }
       }
     };
 
@@ -54,7 +63,7 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('activeProjectUpdated', handleActiveProjectUpdate);
     };
-  }, []);
+  }, [connections]);
 
   const loadConnections = async () => {
     try {
@@ -74,28 +83,67 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
     }
   };
 
-  const loadActiveProjectContext = async () => {
+  /**
+   * Deteksi project aktif dengan urutan fallback:
+   * 1. Per-chat localStorage (`activeProjectsPerChat`)
+   * 2. Connection dengan flag `is_active === true`
+   * 3. Service `getActiveProjectForChat` (best-effort)
+   */
+  const detectActiveProject = async (conns) => {
     try {
-      // Get current chat ID (you might need to get this from context or props)
       const chatId = getCurrentChatId();
-      const result = await jiraService.getActiveProjectForChat(chatId);
+      const activeProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
+      let activeProjectId = activeProjects[chatId];
 
-      if (result.success && result.data) {
-        const activeProjectId = result.data.projectId;
+      // Validasi: pastikan project masih ada di connections
+      if (activeProjectId && !conns.find(c => c.id === activeProjectId)) {
+        activeProjectId = null;
+      }
+
+      // Fallback 1: cari connection dengan is_active === true
+      if (!activeProjectId) {
+        const globalActive = conns.find(c => c.is_active === true);
+        if (globalActive) {
+          activeProjectId = globalActive.id;
+          // Persist ke localStorage agar konsisten dengan indicator
+          const updated = { ...activeProjects, [chatId]: activeProjectId };
+          localStorage.setItem('activeProjectsPerChat', JSON.stringify(updated));
+        }
+      }
+
+      // Fallback 2: tanyakan ke service (best-effort)
+      if (!activeProjectId) {
+        try {
+          const result = await jiraService.getActiveProjectForChat(chatId);
+          if (result.success && result.data) {
+            const candidateId = result.data.projectId;
+            if (conns.find(c => c.id === candidateId)) {
+              activeProjectId = candidateId;
+            }
+          }
+        } catch (svcErr) {
+          // Service call optional, lanjut tanpa error
+        }
+      }
+
+      if (activeProjectId) {
         setActiveProjectPerChat(prev => ({
           ...prev,
           [chatId]: activeProjectId
         }));
+        console.log('✅ [PROJECT-MODAL] Active project detected:', activeProjectId);
+      } else {
+        console.log('ℹ️ [PROJECT-MODAL] No active project detected');
       }
     } catch (err) {
-      console.warn('Could not load active project context:', err.message);
+      console.warn('Could not detect active project:', err.message);
     }
   };
 
   const getCurrentChatId = () => {
     // Get chat ID from URL or use default
     const currentPath = window.location.pathname;
-    const pathSegments = currentPath.split('/');
+    const pathSegments = currentPath.split('/').filter(Boolean);
 
     // For chat pages, use the last segment
     if (currentPath.includes('/chat')) {
@@ -176,11 +224,11 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         localStorage.setItem('activeProjectsPerChat', JSON.stringify(activeProjects));
         console.log('💾 [PROJECT-MODAL] Saved to localStorage:', { chatId, connectionId });
 
-        const projectName = result.data.projectName;
+        const resolvedProjectName = result.data?.projectName || projectName;
 
         // Dispatch multiple events untuk memastikan semua komponen terupdate
         console.log('📢 [PROJECT-MODAL] Dispatching update events');
-        
+
         // Event 1: activeProjectUpdated (untuk JIRA indicator)
         window.dispatchEvent(new CustomEvent('activeProjectUpdated', {
           detail: {
@@ -198,8 +246,8 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           detail: {
             projectId: connectionId,
             projectKey: selectedProject.project_key,
-            projectName: projectName,
-            projectChanged: result.data.projectChanged,
+            projectName: resolvedProjectName,
+            projectChanged: true, // Selalu true karena user memilih project berbeda
             timestamp: Date.now()
           }
         }));
@@ -214,18 +262,18 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
         // Force refresh JIRA context (multiple times untuk memastikan)
         if (window.jiraContext) {
           console.log('🔄 [PROJECT-MODAL] Refreshing JIRA context');
-          
+
           // Refresh connections
           if (window.jiraContext.refreshConnections) {
             await window.jiraContext.refreshConnections(true);
           }
-          
-          // Clear epic context jika project berubah
-          if (result.data.projectChanged && window.jiraContext.clearEpicContext) {
+
+          // Selalu clear Epic context karena user memilih project lain
+          if (window.jiraContext.clearEpicContext) {
             console.log('🧹 [PROJECT-MODAL] Clearing epic context due to project change');
             await window.jiraContext.clearEpicContext();
           }
-          
+
           // Force refresh all
           if (window.jiraContext.refreshAll) {
             setTimeout(() => {
@@ -234,12 +282,12 @@ const JiraProjectManagementModal = ({ isOpen, onClose, onAddNewProject }) => {
           }
         }
 
-        setSuccess(`Project "${projectName}" sekarang aktif!`);
+        setSuccess(`Project "${resolvedProjectName}" sekarang aktif!`);
 
         // Close modal after short delay
         setTimeout(() => {
           onClose();
-          
+
           // Force page refresh untuk memastikan semua komponen terupdate
           window.location.reload();
         }, 1500);
