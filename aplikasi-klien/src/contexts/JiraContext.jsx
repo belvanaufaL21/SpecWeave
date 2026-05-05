@@ -321,31 +321,35 @@ export const JiraProvider = ({ children }) => {
     }
     
     // ENHANCED: Validate epic connection still exists
-    if (state.hasEpic && state.epicContext && state.connections.length > 0) {
+    // GUARD: Only validate if connections are loaded and stable (not during refresh)
+    if (state.hasEpic && state.epicContext && state.connections.length > 0 && !state.isLoadingConnections) {
       const epicConnectionId = state.epicContext.epicData?.connection?.id;
-      const connectionExists = state.connections.some(conn => conn.id === epicConnectionId);
       
-      if (!connectionExists) {
-        console.log('🧹 [JIRA-CONTEXT] Epic connection no longer exists, clearing epic context...');
+      if (epicConnectionId) {
+        const connectionExists = state.connections.some(conn => conn.id === epicConnectionId);
         
-        setState(prev => ({
-          ...prev,
-          epicContext: null,
-          hasEpic: false,
-          isLoadingEpic: false,
-          lastUpdated: new Date()
-        }));
-        
-        // Clear storage
-        localStorage.removeItem('specweave_epic_context');
-        const clearTime = Date.now();
-        localStorage.setItem('epic_context_cleared_at', clearTime.toString());
-        
-        // Dispatch clear events
-        window.dispatchEvent(new CustomEvent('forceEpicContextClear'));
+        if (!connectionExists) {
+          console.log('🧹 [JIRA-CONTEXT] Epic connection no longer exists, clearing epic context...');
+          
+          setState(prev => ({
+            ...prev,
+            epicContext: null,
+            hasEpic: false,
+            isLoadingEpic: false,
+            lastUpdated: new Date()
+          }));
+          
+          // Clear storage
+          localStorage.removeItem('specweave_epic_context');
+          const clearTime = Date.now();
+          localStorage.setItem('epic_context_cleared_at', clearTime.toString());
+          
+          // Dispatch clear events
+          window.dispatchEvent(new CustomEvent('forceEpicContextClear'));
+        }
       }
     }
-  }, [state.connections.length, state.hasEpic, state.epicContext]);
+  }, [state.connections.length, state.hasEpic, state.epicContext, state.isLoadingConnections]);
 
   /**
    * Load initial data dengan timeout yang reasonable dan duplicate prevention

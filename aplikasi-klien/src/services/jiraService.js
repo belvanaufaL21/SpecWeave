@@ -314,13 +314,39 @@ class JiraService {
         timestamp: new Date().toISOString()
       };
       
-      // Store in the new format
+      // Store in the new format (localStorage)
       localStorage.setItem(key, JSON.stringify(projectData));
       
       // ALSO store in the legacy format for backward compatibility
       const legacyActiveProjects = JSON.parse(localStorage.getItem('activeProjectsPerChat') || '{}');
       legacyActiveProjects[chatId] = projectId;
       localStorage.setItem('activeProjectsPerChat', JSON.stringify(legacyActiveProjects));
+
+      // CRITICAL: Persist to backend API untuk update is_active flag di database
+      if (projectId) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/active-projects/${chatId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.getAuthToken()}`
+            },
+            body: JSON.stringify({ connectionId: projectId })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.warn('⚠️ [JIRA-SERVICE] Backend API failed to set active project:', errorData.error);
+            // Tidak throw error, localStorage sudah tersimpan
+          } else {
+            const result = await response.json();
+            console.log('✅ [JIRA-SERVICE] Backend API set active project:', result);
+          }
+        } catch (apiError) {
+          console.warn('⚠️ [JIRA-SERVICE] Failed to call backend API:', apiError.message);
+          // Tidak throw error, localStorage sudah tersimpan
+        }
+      }
 
       return { 
         success: true, 
