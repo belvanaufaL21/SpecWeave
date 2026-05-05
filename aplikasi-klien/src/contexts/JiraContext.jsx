@@ -416,9 +416,11 @@ export const JiraProvider = ({ children }) => {
           }
         }
 
-        // Refresh connections after cleanup
+        // Refresh connections after cleanup using event dispatch
         setTimeout(() => {
-          refreshConnections(true);
+          window.dispatchEvent(new CustomEvent('forceConnectionsRefresh', {
+            detail: { source: 'auto-validation' }
+          }));
         }, 1000);
       } else {
         console.log('✅ [JIRA-VALIDATION] All connected projects are valid');
@@ -434,7 +436,7 @@ export const JiraProvider = ({ children }) => {
     }, 2000);
 
     return () => clearTimeout(validationTimer);
-  }, [state.connections, state.isLoadingConnections, refreshConnections]);
+  }, [state.connections, state.isLoadingConnections]);
 
   /**
    * Load initial data dengan timeout yang reasonable dan duplicate prevention
