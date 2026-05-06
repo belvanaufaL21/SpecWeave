@@ -3,6 +3,7 @@ import QualityBadge from '../common/QualityBadge';
 import JiraExportCTA from '../common/JiraExportCTA';
 import GeneralResponseFormatter from './GeneralResponseFormatter';
 import PatternUsedModal from '../modals/PatternUsedModal';
+import LimitExceededCard from '../common/LimitExceededCard';
 import { useTestResults } from '../../contexts/TestResultsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -559,6 +560,30 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
                   ) : (
                     <div className="px-4 py-3">
                       <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{displayContent}</p>
+                    </div>
+                  )
+                ) : isError ? (
+                  // ✅ Render LimitExceededCard untuk USAGE_LIMIT_EXCEEDED
+                  message.errorCode === 'USAGE_LIMIT_EXCEEDED' && message.limitData ? (
+                    <LimitExceededCard
+                      error={message.limitData}
+                      onSwitchModel={(modelName) => {
+                        // Dispatch event untuk switch model
+                        window.dispatchEvent(new CustomEvent('switchModel', {
+                          detail: { modelName }
+                        }));
+                      }}
+                      onRetry={() => {
+                        // Dispatch event untuk retry
+                        window.dispatchEvent(new CustomEvent('retryAfterCooldown', {
+                          detail: { messageId: message.id }
+                        }));
+                      }}
+                    />
+                  ) : (
+                    // Generic error message
+                    <div className="px-4 py-3">
+                      <p className="text-sm leading-relaxed text-red-200">{message.content}</p>
                     </div>
                   )
                 ) : (

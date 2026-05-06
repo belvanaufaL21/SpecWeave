@@ -74,6 +74,28 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // ✅ Handle 429 USAGE_LIMIT_EXCEEDED - preserve structured error data
+    if (error.response?.status === 429) {
+      const errData = error.response.data?.error;
+      if (errData?.code === 'USAGE_LIMIT_EXCEEDED') {
+        // Buat custom error yang membawa structured data
+        const customError = new Error(errData.message);
+        customError.code = 'USAGE_LIMIT_EXCEEDED';
+        customError.isLimitExceeded = true;
+        customError.limitData = {
+          model: errData.model,
+          displayName: errData.displayName,
+          provider: errData.provider,
+          limit: errData.limit || errData.dailyLimit,
+          used: errData.used,
+          remaining: errData.remaining,
+          resetsAt: errData.resetsAt,
+          alternatives: errData.alternatives || [],
+        };
+        return Promise.reject(customError);
+      }
+    }
+    
     // Handle 401 Unauthorized - but be more careful about when to logout
     if (error.response?.status === 401 && !originalRequest._tokenRefreshed) {
       const recovery = ErrorRecovery.handleAuthError(error, 'API_AUTH');
