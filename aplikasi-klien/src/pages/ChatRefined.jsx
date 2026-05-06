@@ -647,21 +647,11 @@ const ChatRefined = () => {
         duration: 3000,
         position: 'top-center',
       });
-      
-      // Optionally: Auto-retry last message with new model
-      // Uncomment if you want automatic retry on model switch
-      // const currentMessages = contextChats[activeChatId] || [];
-      // const lastUserMessage = currentMessages.findLast(m => m.role === 'user');
-      // if (lastUserMessage) {
-      //   setTimeout(() => {
-      //     handleSendMessage(lastUserMessage.content);
-      //   }, 500);
-      // }
     };
     
     window.addEventListener('switchModel', handleSwitchModel);
     return () => window.removeEventListener('switchModel', handleSwitchModel);
-  }, [activeChatId, contextChats, selectedModel]);
+  }, []); // ✅ Empty deps - handler doesn't need external dependencies
 
   // ✅ Handle retry after cooldown from LimitExceededCard
   useEffect(() => {
@@ -670,43 +660,16 @@ const ChatRefined = () => {
       
       console.log('🔄 [CHAT-REFINED] Retrying after cooldown for message:', messageId);
       
-      // Get last user message before the error
-      const currentMessages = contextChats[activeChatId] || [];
-      const errorIndex = currentMessages.findIndex(m => m.id === messageId);
-      
-      if (errorIndex > 0) {
-        // Find the user message that triggered the error
-        for (let i = errorIndex - 1; i >= 0; i--) {
-          if (currentMessages[i].role === 'user') {
-            const userMessage = currentMessages[i];
-            
-            console.log('🔄 [CHAT-REFINED] Retrying with message:', userMessage.content.substring(0, 50));
-            
-            // Remove error message from chat
-            const messagesWithoutError = currentMessages.filter(m => m.id !== messageId);
-            updateChatMessages(activeChatId, messagesWithoutError);
-            
-            // Retry the message
-            setTimeout(() => {
-              handleSendMessage(userMessage.content);
-            }, 300);
-            
-            break;
-          }
-        }
-      } else {
-        // Fallback: retry last user message
-        const lastUserMessage = currentMessages.findLast(m => m.role === 'user');
-        if (lastUserMessage) {
-          console.log('🔄 [CHAT-REFINED] Retrying last user message');
-          handleSendMessage(lastUserMessage.content);
-        }
-      }
+      // Dispatch custom event that will be handled by handleSendMessage
+      // This avoids circular dependency issues
+      window.dispatchEvent(new CustomEvent('retryMessage', {
+        detail: { messageId }
+      }));
     };
     
     window.addEventListener('retryAfterCooldown', handleRetryAfterCooldown);
     return () => window.removeEventListener('retryAfterCooldown', handleRetryAfterCooldown);
-  }, [activeChatId, contextChats, handleSendMessage, updateChatMessages]);
+  }, []); // ✅ Empty deps - just forwards the event
 
   // Handle initial template message from Dashboard
   useEffect(() => {
@@ -959,6 +922,51 @@ const ChatRefined = () => {
       epicKey: epicData?.epic?.key
     });
   };
+
+  // ✅ Listen for retry message event (from retryAfterCooldown handler)
+  useEffect(() => {
+    const handleRetryMessage = async (event) => {
+      const { messageId } = event.detail;
+      
+      console.log('🔄 [CHAT-REFINED] Processing retry for message:', messageId);
+      
+      // Get current messages
+      const currentMessages = contextChats[activeChatId] || [];
+      const errorIndex = currentMessages.findIndex(m => m.id === messageId);
+      
+      if (errorIndex > 0) {
+        // Find the user message that triggered the error
+        for (let i = errorIndex - 1; i >= 0; i--) {
+          if (currentMessages[i].role === 'user') {
+            const userMessage = currentMessages[i];
+            
+            console.log('🔄 [CHAT-REFINED] Retrying with message:', userMessage.content.substring(0, 50));
+            
+            // Remove error message from chat
+            const messagesWithoutError = currentMessages.filter(m => m.id !== messageId);
+            await updateChatMessages(activeChatId, messagesWithoutError);
+            
+            // Retry the message
+            setTimeout(() => {
+              handleSendMessage(userMessage.content);
+            }, 300);
+            
+            break;
+          }
+        }
+      } else {
+        // Fallback: retry last user message
+        const lastUserMessage = currentMessages.findLast(m => m.role === 'user');
+        if (lastUserMessage) {
+          console.log('🔄 [CHAT-REFINED] Retrying last user message');
+          handleSendMessage(lastUserMessage.content);
+        }
+      }
+    };
+    
+    window.addEventListener('retryMessage', handleRetryMessage);
+    return () => window.removeEventListener('retryMessage', handleRetryMessage);
+  }, [activeChatId, contextChats, updateChatMessages, handleSendMessage]);
 
   // Debug: Monitor epic context changes
   useEffect(() => {
