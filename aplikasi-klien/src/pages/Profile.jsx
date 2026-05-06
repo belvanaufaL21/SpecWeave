@@ -33,7 +33,7 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({
     name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
     email: (user?.email && typeof user.email === 'string') ? user.email : '',
-    avatar: profile?.avatar || null
+    avatar_url: profile?.avatar_url || null
   });
 
   // Avatar picker state
@@ -99,11 +99,11 @@ const Profile = () => {
       setEditForm({
         name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
         email: (user?.email && typeof user.email === 'string') ? user.email : '',
-        avatar: profile?.avatar || null
+        avatar_url: profile?.avatar_url || null
       });
       setIsEditing(true);
     } catch (error) {
-      setEditForm({ name: '', email: '', avatar: null });
+      setEditForm({ name: '', email: '', avatar_url: null });
       setIsEditing(true);
     }
   };
@@ -112,7 +112,7 @@ const Profile = () => {
     try {
       const result = await updateProfile({ 
         name: editForm.name,
-        avatar: editForm.avatar 
+        avatar_url: editForm.avatar_url 
       });
       if (result.error) {
         toast.error('Failed to update profile: ' + result.error.message);
@@ -131,16 +131,16 @@ const Profile = () => {
       setEditForm({
         name: (profile?.name && typeof profile.name === 'string') ? profile.name : '',
         email: (user?.email && typeof user.email === 'string') ? user.email : '',
-        avatar: profile?.avatar || null
+        avatar_url: profile?.avatar_url || null
       });
     } catch (error) {
       setIsEditing(false);
-      setEditForm({ name: '', email: '', avatar: null });
+      setEditForm({ name: '', email: '', avatar_url: null });
     }
   };
 
   const handleAvatarSelect = (emoji) => {
-    setEditForm({ ...editForm, avatar: emoji });
+    setEditForm({ ...editForm, avatar_url: emoji });
     setIsAvatarPickerOpen(false);
   };
 
@@ -589,8 +589,8 @@ const Profile = () => {
                       style={{ backgroundColor: '#160D14', borderColor: '#44273D' }}
                       onClick={() => isEditing && setIsAvatarPickerOpen(true)}
                     >
-                      {editForm.avatar || profile?.avatar ? (
-                        <span>{editForm.avatar || profile?.avatar}</span>
+                      {editForm.avatar_url || profile?.avatar_url ? (
+                        <span>{editForm.avatar_url || profile?.avatar_url}</span>
                       ) : (
                         <span className="text-4xl font-bold" style={{ color: '#FF7AD0' }}>
                           {getInitials(profile?.name, user?.email)}
@@ -735,7 +735,7 @@ const Profile = () => {
       <AnimatePresence>
         {isAvatarPickerOpen && (
           <AvatarPicker
-            currentAvatar={editForm.avatar || profile?.avatar}
+            currentAvatar={editForm.avatar_url || profile?.avatar_url}
             onSelect={handleAvatarSelect}
             onClose={() => setIsAvatarPickerOpen(false)}
           />
