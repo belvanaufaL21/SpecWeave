@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AVATAR_EMOJIS = [
@@ -47,7 +47,7 @@ const AVATAR_EMOJIS = [
   '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🎗',
 ];
 
-const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail }) => {
+const AvatarPicker = ({ currentAvatar, onSelect, onClose, onCancel, userName, userEmail }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -99,6 +99,9 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail })
   
   // Show "Reset to Initials" option only in "All" category
   const showResetOption = selectedCategory === 'all';
+  
+  // Memoize filtered emojis to prevent unnecessary re-renders
+  const memoizedEmojis = useMemo(() => filteredEmojis, [selectedCategory, searchQuery]);
 
   return (
     <motion.div
@@ -196,12 +199,10 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail })
             )}
             
             {/* Emoji Options */}
-            {filteredEmojis.map((emoji, index) => (
-              <motion.button
+            {memoizedEmojis.map((emoji, index) => (
+              <button
                 key={index}
                 onClick={() => onSelect(emoji)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
                 className={`
                   aspect-square rounded-xl flex items-center justify-center text-3xl
                   transition-all cursor-pointer
@@ -212,7 +213,7 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail })
                 `}
               >
                 {emoji}
-              </motion.button>
+              </button>
             ))}
           </div>
         </div>
@@ -221,7 +222,10 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail })
         <div className="p-6 border-t border-white/5">
           <div className="flex gap-3">
             <button
-              onClick={onClose}
+              onClick={() => {
+                if (onCancel) onCancel();
+                onClose();
+              }}
               className="flex-1 px-6 py-3 bg-transparent hover:bg-white/[0.03] border border-white/5 rounded-xl text-white/60 hover:text-white transition-all"
             >
               Cancel

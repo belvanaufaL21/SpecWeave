@@ -39,6 +39,7 @@ const Profile = () => {
 
   // Avatar picker state
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [originalAvatar, setOriginalAvatar] = useState(null); // Store original avatar for cancel
 
   // Delete confirmation state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -141,9 +142,20 @@ const Profile = () => {
   };
 
   const handleAvatarSelect = (emoji) => {
-    // If emoji is null, reset to initials (remove avatar_url)
+    // Update preview immediately (don't close modal yet)
     setEditForm({ ...editForm, avatar_url: emoji });
-    setIsAvatarPickerOpen(false);
+    // Modal will be closed by "Done" button or close button
+  };
+
+  const handleAvatarPickerOpen = () => {
+    // Store original avatar before opening picker
+    setOriginalAvatar(editForm.avatar_url);
+    setIsAvatarPickerOpen(true);
+  };
+
+  const handleAvatarPickerCancel = () => {
+    // Restore original avatar on cancel
+    setEditForm({ ...editForm, avatar_url: originalAvatar });
   };
 
   // Calculate total scenarios from all chats
@@ -592,7 +604,7 @@ const Profile = () => {
                     <div
                       className="w-32 h-32 rounded-3xl border-4 shadow-2xl flex items-center justify-center text-6xl cursor-pointer overflow-hidden"
                       style={{ backgroundColor: '#160D14', borderColor: '#44273D' }}
-                      onClick={() => isEditing && setIsAvatarPickerOpen(true)}
+                      onClick={() => isEditing && handleAvatarPickerOpen()}
                     >
                       {isEmojiAvatar(editForm.avatar_url || profile?.avatar_url) ? (
                         <span>{editForm.avatar_url || profile?.avatar_url}</span>
@@ -606,7 +618,7 @@ const Profile = () => {
                     {/* Edit Avatar Button (only visible when editing) */}
                     {isEditing && (
                       <button
-                        onClick={() => setIsAvatarPickerOpen(true)}
+                        onClick={() => handleAvatarPickerOpen()}
                         className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#09090A] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-white/5"
                       >
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -743,6 +755,7 @@ const Profile = () => {
             currentAvatar={isEmojiAvatar(editForm.avatar_url || profile?.avatar_url) ? (editForm.avatar_url || profile?.avatar_url) : null}
             onSelect={handleAvatarSelect}
             onClose={() => setIsAvatarPickerOpen(false)}
+            onCancel={handleAvatarPickerCancel}
             userName={profile?.name}
             userEmail={user?.email}
           />
