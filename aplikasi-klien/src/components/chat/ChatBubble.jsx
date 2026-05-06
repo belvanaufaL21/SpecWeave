@@ -523,17 +523,12 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
 
             {/* Message Content - Figma Design */}
             <div className="flex-1 flex flex-col gap-2">
-              <div className={`rounded-2xl group ${
-                isUser 
-                  ? 'border' 
-                  : isError 
-                    ? 'bg-gradient-to-br from-red-600/20 to-red-600/20 border border-red-500/30 px-4 py-3' 
-                    : 'bg-[#020203]/60 border p-6'
-              }`}
-              style={isUser ? (isEditingUserMessage ? { backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' } : { backgroundColor: '#160D14', borderColor: '#44273D' }) : (!isError ? { borderColor: 'rgba(255, 255, 255, 0.05)' } : {})}
-              >
-                {isUser ? (
-                  isEditingUserMessage ? (
+              {isUser ? (
+                // User message container
+                <div className={`rounded-2xl group border`}
+                  style={isEditingUserMessage ? { backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' } : { backgroundColor: '#160D14', borderColor: '#44273D' }}
+                >
+                  {isEditingUserMessage ? (
                     <div className="px-4 py-3">
                       <textarea
                         value={editedUserMessage}
@@ -561,35 +556,38 @@ const ChatBubble = ({ message, activeChatId, onUpdateMessage }) => {
                     <div className="px-4 py-3">
                       <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{displayContent}</p>
                     </div>
-                  )
-                ) : isError ? (
-                  // ✅ Render LimitExceededCard untuk USAGE_LIMIT_EXCEEDED
-                  message.errorCode === 'USAGE_LIMIT_EXCEEDED' && message.limitData ? (
-                    <LimitExceededCard
-                      error={message.limitData}
-                      onSwitchModel={(modelName) => {
-                        // Dispatch event untuk switch model
-                        window.dispatchEvent(new CustomEvent('switchModel', {
-                          detail: { modelName }
-                        }));
-                      }}
-                      onRetry={() => {
-                        // Dispatch event untuk retry
-                        window.dispatchEvent(new CustomEvent('retryAfterCooldown', {
-                          detail: { messageId: message.id }
-                        }));
-                      }}
-                    />
-                  ) : (
-                    // Generic error message
-                    <div className="px-4 py-3">
-                      <p className="text-sm leading-relaxed text-red-200">{message.content}</p>
-                    </div>
-                  )
+                  )}
+                </div>
+              ) : isError ? (
+                // ✅ Error handling - NO wrapper untuk USAGE_LIMIT_EXCEEDED
+                message.errorCode === 'USAGE_LIMIT_EXCEEDED' && message.limitData ? (
+                  <LimitExceededCard
+                    error={message.limitData}
+                    onSwitchModel={(modelName) => {
+                      window.dispatchEvent(new CustomEvent('switchModel', {
+                        detail: { modelName }
+                      }));
+                    }}
+                    onRetry={() => {
+                      window.dispatchEvent(new CustomEvent('retryAfterCooldown', {
+                        detail: { messageId: message.id }
+                      }));
+                    }}
+                  />
                 ) : (
-                  renderAIContent(message.content)
-                )}
-              </div>
+                  // Generic error dengan wrapper
+                  <div className="rounded-2xl bg-gradient-to-br from-red-600/20 to-red-600/20 border border-red-500/30 px-4 py-3">
+                    <p className="text-sm leading-relaxed text-red-200">{message.content}</p>
+                  </div>
+                )
+              ) : (
+                // AI message container
+                <div className="rounded-2xl group bg-[#020203]/60 border p-6"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                >
+                  {renderAIContent(message.content)}
+                </div>
+              )}
               
               {/* Previous/Next Navigation for User Messages with Multiple Versions */}
               {isUser && hasMultipleVersions && !isEditingUserMessage && (
