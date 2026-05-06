@@ -132,6 +132,33 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose }) => {
 
         {/* Emoji Grid */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Reset to Initials Option */}
+          <div className="mb-4 pb-4 border-b border-white/5">
+            <button
+              onClick={() => onSelect(null)}
+              className={`
+                w-full p-4 rounded-xl flex items-center gap-4 transition-all
+                ${!currentAvatar || currentAvatar.startsWith('http')
+                  ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border-2 border-purple-500/50'
+                  : 'bg-transparent hover:bg-white/[0.03] border border-white/5'
+                }
+              `}
+            >
+              <div className="w-12 h-12 rounded-xl bg-[#160D14] border border-[#44273D] flex items-center justify-center">
+                <span className="text-sm font-semibold text-[#FF7AD0]">AB</span>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="text-white font-medium">Use Initials</div>
+                <div className="text-sm text-white/60">Show your name initials as avatar</div>
+              </div>
+              {(!currentAvatar || currentAvatar.startsWith('http')) && (
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          </div>
+
           <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 gap-2">
             {filteredEmojis.map((emoji, index) => (
               <motion.button

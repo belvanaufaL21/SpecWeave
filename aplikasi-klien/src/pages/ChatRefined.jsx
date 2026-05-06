@@ -76,6 +76,19 @@ const deriveActiveBranch = (allMessages) => {
   return activeBranch;
 };
 
+/**
+ * Helper function to check if avatar_url is an emoji (not a URL)
+ */
+const isEmojiAvatar = (avatarUrl) => {
+  if (!avatarUrl) return false;
+  // Check if it's a URL (starts with http/https or contains common URL patterns)
+  if (avatarUrl.startsWith('http') || avatarUrl.includes('://') || avatarUrl.includes('.com')) {
+    return false;
+  }
+  // If it's a short string (emoji are typically 1-4 characters), consider it an emoji
+  return avatarUrl.length <= 10;
+};
+
 const ChatRefined = () => {
   // --- HOOKS ---
   const { messages: hookMessages, isLoading, currentChatId: hookChatId, loadingChats, isChatLoading, isAnyLoading, sendMessage, clearMessages, loadMessages } = useChat();
@@ -1895,7 +1908,7 @@ const ChatRefined = () => {
             }}
           >
             <div className="w-8 h-8 rounded-lg flex items-center justify-center border" style={{ backgroundColor: '#160D14', borderColor: '#44273D' }}>
-              {profile?.avatar_url ? (
+              {isEmojiAvatar(profile?.avatar_url) ? (
                 <span className="text-lg">{profile.avatar_url}</span>
               ) : (
                 <span className="text-xs font-semibold" style={{ color: '#FF7AD0' }}>
