@@ -1895,21 +1895,25 @@ const ChatRefined = () => {
             }}
           >
             <div className="w-8 h-8 rounded-lg flex items-center justify-center border" style={{ backgroundColor: '#160D14', borderColor: '#44273D' }}>
-              <span className="text-xs font-semibold" style={{ color: '#FF7AD0' }}>
-                {(() => {
-                  try {
-                    if (profile?.name && typeof profile.name === 'string' && profile.name.trim()) {
-                      return profile.name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+              {profile?.avatar_url ? (
+                <span className="text-lg">{profile.avatar_url}</span>
+              ) : (
+                <span className="text-xs font-semibold" style={{ color: '#FF7AD0' }}>
+                  {(() => {
+                    try {
+                      if (profile?.name && typeof profile.name === 'string' && profile.name.trim()) {
+                        return profile.name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                      }
+                      if (user?.email && typeof user.email === 'string' && user.email.trim()) {
+                        return user.email.trim().slice(0, 2).toUpperCase();
+                      }
+                      return 'U';
+                    } catch (error) {
+                      return 'U';
                     }
-                    if (user?.email && typeof user.email === 'string' && user.email.trim()) {
-                      return user.email.trim().slice(0, 2).toUpperCase();
-                    }
-                    return 'U';
-                  } catch (error) {
-                    return 'U';
-                  }
-                })()}
-              </span>
+                  })()}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium text-white truncate">
