@@ -110,6 +110,14 @@ const Profile = () => {
     }
   };
 
+  // Check if there are any changes in the form
+  const hasChanges = () => {
+    const originalName = (profile?.name && typeof profile.name === 'string') ? profile.name : '';
+    const originalAvatar = profile?.avatar_url || null;
+    
+    return editForm.name !== originalName || editForm.avatar_url !== originalAvatar;
+  };
+
   const handleSave = async () => {
     try {
       const result = await updateProfile({ 
@@ -701,16 +709,23 @@ const Profile = () => {
                           onClick={handleCancel}
                           className="flex-1 px-6 py-4 bg-transparent hover:bg-white/[0.03] border border-white/5 rounded-2xl text-white/60 hover:text-white/80 font-medium transition-all"
                         >
-                          Cancel
+                          Batal
                         </button>
                         <button
                           onClick={handleSave}
-                          className="flex-1 px-6 py-4 bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] rounded-2xl text-white font-medium transition-all flex items-center justify-center gap-2"
+                          disabled={!hasChanges()}
+                          className={`
+                            flex-1 px-6 py-4 rounded-2xl font-medium transition-all flex items-center justify-center gap-2
+                            ${hasChanges()
+                              ? 'bg-[#160D14] hover:bg-[#1a0f18] border border-[#44273D] text-white cursor-pointer'
+                              : 'bg-[#0a0608] border border-[#2a1a24] text-white/30 cursor-not-allowed'
+                            }
+                          `}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          Save Changes
+                          Simpan
                         </button>
                       </>
                     )}
