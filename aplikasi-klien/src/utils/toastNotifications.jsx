@@ -426,7 +426,7 @@ export const showLogoutSuccessToast = () => {
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Logout Berhasil</div>
             <div className="text-xs leading-tight mt-2" style={{ color: '#C27AFF' }}>
-              Anda telah keluar dari SpecWeave
+              Anda keluar dari SpecWeave
             </div>
           </div>
 
