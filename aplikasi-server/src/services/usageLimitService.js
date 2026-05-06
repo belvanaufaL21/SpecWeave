@@ -195,7 +195,8 @@ class UsageLimitService {
         used: row.current_count,
         remaining: row.remaining,
         needsReset: row.needs_reset,
-        lastResetAt: row.last_reset_at
+        lastResetAt: row.last_reset_at,
+        resetsAt: row.resets_at // Add resets_at for countdown timer
       }));
     } catch (error) {
       console.error('Error getting user usage:', error);

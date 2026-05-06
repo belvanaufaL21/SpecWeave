@@ -37,6 +37,26 @@ const RollingNumber = ({ value, className = '' }) => {
   );
 };
 
+// Helper function to format time remaining
+const formatTimeRemaining = (resetsAt) => {
+  if (!resetsAt) return null;
+  
+  const now = new Date();
+  const reset = new Date(resetsAt);
+  const diff = reset - now;
+  
+  if (diff <= 0) return 'Ready to reset';
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours > 0) {
+    return `Resets in ${hours}h ${minutes}m`;
+  } else {
+    return `Resets in ${minutes}m`;
+  }
+};
+
 const ModelSelector = ({
   selectedModel,
   onModelChange,
@@ -210,7 +230,8 @@ const ModelSelector = ({
                         tier: model.tier,
                         used: model.used,
                         remaining: model.remaining,
-                        limit: model.limit
+                        limit: model.limit,
+                        resetsAt: model.resetsAt
                       });
                     }
                   }
@@ -228,9 +249,17 @@ const ModelSelector = ({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white mb-0.5">{model.displayName}</div>
-                    <div className="text-sm text-gray-600">
-                      <RollingNumber value={model.remaining} />/{model.limit} remaining
-                    </div>
+                    {model.remaining === 0 ? (
+                      // Show countdown when credit is exhausted
+                      <div className="text-xs text-amber-400">
+                        {formatTimeRemaining(model.resetsAt) || 'Limit reached'}
+                      </div>
+                    ) : (
+                      // Show remaining count when credit available
+                      <div className="text-sm text-gray-600">
+                        <RollingNumber value={model.remaining} />/{model.limit} remaining
+                      </div>
+                    )}
                   </div>
                   {isSelected && (
                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C27AFF' }} />
