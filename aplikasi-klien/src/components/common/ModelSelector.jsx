@@ -251,7 +251,7 @@ const ModelSelector = ({
                     <div className="text-sm text-white mb-0.5">{model.displayName}</div>
                     {model.remaining === 0 ? (
                       // Show countdown when credit is exhausted
-                      <div className="text-xs text-amber-400">
+                      <div className="text-xs" style={{ color: '#2C1A43' }}>
                         {formatTimeRemaining(model.resetsAt) || 'Limit reached'}
                       </div>
                     ) : (
