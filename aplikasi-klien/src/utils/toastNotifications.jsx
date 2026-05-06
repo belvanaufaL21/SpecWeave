@@ -402,7 +402,7 @@ export const showProfileUpdateSuccessToast = () => {
 
 /**
  * Show logout success notification
- * Custom styling with #160D14 background and #44273D border
+ * Same styling as login success (purple theme)
  */
 export const showLogoutSuccessToast = () => {
   // Use unique ID to prevent duplicate toasts
@@ -415,8 +415,8 @@ export const showLogoutSuccessToast = () => {
     (t) => (
       <div className="flex items-start gap-3">
         {/* Success Icon - Aligned with title */}
-        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
-          <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#2C1A43', border: '1px solid #2C1A43' }}>
+          <svg className="w-3 h-3" style={{ color: '#C27AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
@@ -425,7 +425,7 @@ export const showLogoutSuccessToast = () => {
         <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Logout Berhasil</div>
-            <div className="text-xs leading-tight mt-2" style={{ color: '#FF7AD0' }}>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#C27AFF' }}>
               Anda telah keluar dari SpecWeave
             </div>
           </div>
@@ -435,7 +435,7 @@ export const showLogoutSuccessToast = () => {
             onClick={() => toast.dismiss(t.id)}
             className="flex-shrink-0 w-4 h-4 flex items-center justify-center transition-opacity"
             style={{ 
-              color: '#FF7AD0',
+              color: '#C27AFF',
               opacity: 0.5
             }}
             onMouseEnter={(e) => {
@@ -457,15 +457,7 @@ export const showLogoutSuccessToast = () => {
       duration: 4000,
       position: 'top-right',
       style: {
-        background: '#160D14',
-        color: '#FFFFFF',
-        borderRadius: '12px',
-        padding: '10px 8px',
-        border: '1px solid #44273D',
-        width: 'fit-content',
-        maxWidth: '400px',
-        height: 'fit-content',
-        boxShadow: 'none'
+        ...baseStyle
       },
       className: '',
       icon: null
