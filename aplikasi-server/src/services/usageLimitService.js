@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Usage Limit Service
  * 
- * Manages per-user, per-model daily request limits for LLM usage.
- * Simple system: Each model has its own daily limit, auto-resets at midnight UTC.
+ * Manages per-user, per-model request limits with 24-hour cooldown system.
+ * Reset hanya terjadi 24 jam setelah last_reset_at, bukan tengah malam UTC.
  * 
  * Key responsibilities:
  * - Check if user can make request to a model (checkLimit)
@@ -18,22 +18,9 @@ class UsageLimitService {
   /**
    * Check if user can make request to model
    * 
-   * Uses the database function get_remaining_requests which handles daily reset logic.
-   * 
    * @param {string} userId - User ID
    * @param {string} modelName - Model name (e.g., 'llama-3.1-8b-instant')
-   * @returns {Promise<{
-   *   allowed: boolean,
-   *   modelName: string,
-   *   displayName: string,
-   *   provider: string,
-   *   dailyLimit: number,
-   *   used: number,
-   *   remaining: number,
-   *   modelId: string,
-   *   resetsAt: string,
-   *   alternatives?: Array
-   * }>}
+   * @returns {Promise<Object>}
    */
   async checkLimit(userId, modelName) {
     try {
@@ -54,7 +41,7 @@ class UsageLimitService {
         throw modelError;
       }
 
-      // Get remaining requests using database function
+      // Get remaining requests via database function (sudah handle 24-hour cooldown)
       const { data: remainingData, error: remainingError } = await client
         .rpc('get_remaining_requests', {
           p_user_id: userId,
@@ -65,15 +52,30 @@ class UsageLimitService {
         throw remainingError;
       }
 
-      const remaining = remainingData || model.daily_limit;
+      // ✅ FIX KRITIS: gunakan `??` (nullish coalescing), BUKAN `||` (logical OR).
+      // `||` salah memperlakukan 0 sebagai falsy → fallback ke daily_limit
+      // padahal 0 = limit benar-benar habis.
+      const remaining = remainingData ?? model.daily_limit;
       const used = model.daily_limit - remaining;
       const allowed = remaining > 0;
 
-      // Calculate next reset time (midnight UTC)
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-      tomorrow.setUTCHours(0, 0, 0, 0);
+      // Hitung kapan cooldown berakhir (last_reset_at + 24 jam)
+      // Ambil last_reset_at dari counter untuk perhitungan akurat
+      let resetsAt = null;
+      if (!allowed) {
+        const { data: counter } = await client
+          .from('usage_counters')
+          .select('last_reset_at')
+          .eq('user_id', userId)
+          .eq('model_id', model.id)
+          .single();
+
+        if (counter?.last_reset_at) {
+          const resetTime = new Date(counter.last_reset_at);
+          resetTime.setHours(resetTime.getHours() + 24);
+          resetsAt = resetTime.toISOString();
+        }
+      }
 
       const result = {
         allowed,
@@ -81,13 +83,14 @@ class UsageLimitService {
         displayName: model.display_name,
         provider: model.provider,
         dailyLimit: model.daily_limit,
+        limit: model.daily_limit,        // alias untuk middleware/frontend
         used,
         remaining,
         modelId: model.id,
-        resetsAt: tomorrow.toISOString(),
+        resetsAt,
       };
 
-      // If limit exceeded, fetch alternative models
+      // Jika limit habis, fetch model alternatif
       if (!allowed) {
         result.alternatives = await this.getAlternativeModels(userId, modelName);
       }
@@ -100,26 +103,19 @@ class UsageLimitService {
   }
 
   /**
-   * Increment usage counter with auto-reset
+   * Increment usage counter dengan double-check defensif.
    * 
-   * Uses database function increment_usage_with_reset which handles:
-   * - Auto-reset if last reset was yesterday
-   * - Atomic increment
-   * - Returns new count and remaining
-   * 
-   * @param {string} userId - User ID
-   * @param {string} modelName - Model name
-   * @param {string} requestId - Request ID for tracking
-   * @returns {Promise<{newCount: number, remaining: number, wasReset: boolean}>}
+   * Walaupun middleware sudah memeriksa limit, kita re-check di sini untuk
+   * mencegah race condition dan menjamin counter tidak melebihi daily_limit.
    */
   async incrementUsage(userId, modelName, requestId) {
     try {
       const client = supabaseService.getClient();
 
-      // Get model ID
+      // Get model info
       const { data: modelData, error: modelError } = await client
         .from('models')
-        .select('id')
+        .select('id, daily_limit, display_name')
         .eq('name', modelName)
         .eq('is_active', true)
         .single();
@@ -128,7 +124,26 @@ class UsageLimitService {
         throw modelError;
       }
 
-      // Increment using database function (handles auto-reset)
+      // ✅ Double-check: pastikan masih ada quota sebelum increment
+      const { data: remainingData, error: remainingError } = await client
+        .rpc('get_remaining_requests', {
+          p_user_id: userId,
+          p_model_id: modelData.id
+        });
+
+      if (remainingError) {
+        throw remainingError;
+      }
+
+      const remaining = remainingData ?? modelData.daily_limit;
+
+      if (remaining <= 0) {
+        const err = new Error(`Limit habis untuk model ${modelData.display_name}. Tunggu cooldown 24 jam.`);
+        err.code = 'USAGE_LIMIT_EXCEEDED';
+        throw err;
+      }
+
+      // Increment via database function (handles 24-hour cooldown reset)
       const { data, error } = await client
         .rpc('increment_usage_with_reset', {
           p_user_id: userId,
@@ -139,7 +154,6 @@ class UsageLimitService {
         throw error;
       }
 
-      // data is array with one row
       const result = data[0];
 
       return {
@@ -149,33 +163,17 @@ class UsageLimitService {
       };
     } catch (error) {
       console.error('Error incrementing usage:', error);
-      throw new Error(`Failed to increment usage: ${error.message}`);
+      throw error; // ✅ propagate original error (jangan wrap kalau ada code USAGE_LIMIT_EXCEEDED)
     }
   }
 
   /**
    * Get usage information for all models for a user
-   * 
-   * Uses the user_model_usage view which includes reset status.
-   * 
-   * @param {string} userId - User ID
-   * @returns {Promise<Array<{
-   *   id: string,
-   *   name: string,
-   *   displayName: string,
-   *   provider: string,
-   *   dailyLimit: number,
-   *   used: number,
-   *   remaining: number,
-   *   needsReset: boolean,
-   *   lastResetAt: string
-   * }>>}
    */
   async getUserUsage(userId) {
     try {
       const client = supabaseService.getClient();
 
-      // Use the view for easy access
       const { data, error } = await client
         .from('user_model_usage')
         .select('*')
@@ -186,18 +184,28 @@ class UsageLimitService {
         throw error;
       }
 
-      return data.map(row => ({
-        id: row.model_id,
-        name: row.model_name,
-        displayName: row.display_name,
-        provider: row.provider || 'unknown',
-        dailyLimit: row.daily_limit,
-        used: row.current_count,
-        remaining: row.remaining,
-        needsReset: row.needs_reset,
-        lastResetAt: row.last_reset_at,
-        resetsAt: row.resets_at // Add resets_at for countdown timer
-      }));
+      return data.map(row => {
+        // ✅ Jika needs_reset = true, remaining seharusnya = daily_limit penuh
+        // (cooldown sudah berakhir, request berikutnya akan trigger reset).
+        const effectiveRemaining = row.needs_reset 
+          ? row.daily_limit 
+          : row.remaining;
+        const effectiveUsed = row.needs_reset ? 0 : row.current_count;
+
+        return {
+          id: row.model_id,
+          name: row.model_name,
+          displayName: row.display_name,
+          provider: row.provider || 'unknown',
+          dailyLimit: row.daily_limit,
+          limit: row.daily_limit,
+          used: effectiveUsed,
+          remaining: effectiveRemaining,
+          needsReset: row.needs_reset,
+          lastResetAt: row.last_reset_at,
+          resetsAt: row.resets_at,
+        };
+      });
     } catch (error) {
       console.error('Error getting user usage:', error);
       throw new Error(`Failed to get user usage: ${error.message}`);

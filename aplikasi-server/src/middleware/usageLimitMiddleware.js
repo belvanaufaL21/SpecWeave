@@ -3,62 +3,78 @@ import usageLimitService from '../services/usageLimitService.js';
 /**
  * Usage Limit Middleware
  * 
- * Validates per-user, per-model request limits before processing LLM requests.
- * Returns 429 with alternatives when limit exceeded.
- * Attaches limit info (including provider) to req.usageLimit for controller use.
- * 
- * Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2
+ * Validasi limit per-user, per-model sebelum memproses request LLM.
+ * Mengembalikan 429 dengan alternatif model jika limit terlampaui.
  */
 
 /**
- * Middleware to check usage limits before processing request.
- * 
- * Flow:
- * 1. Skip check for anonymous users (no req.user.id)
- * 2. Extract model from request body (default: 'llama-3.1-8b-instant')
- * 3. Call usageLimitService.checkLimit to validate quota
- * 4. If limit exceeded, return 429 with error details and alternatives
- * 5. If allowed, attach limit info to req.usageLimit for controller
- * 
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
+ * Helper: format waktu cooldown untuk pesan user
  */
+const formatCooldownMessage = (resetsAt) => {
+  if (!resetsAt) return 'Coba lagi dalam 24 jam.';
+
+  const now = new Date();
+  const reset = new Date(resetsAt);
+  const diffMs = reset - now;
+
+  if (diffMs <= 0) return 'Cooldown sudah berakhir, silakan coba lagi.';
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `Reset dalam ${hours} jam ${minutes} menit.`;
+  }
+  return `Reset dalam ${minutes} menit.`;
+};
+
 export const checkUsageLimit = async (req, res, next) => {
-  // Handle anonymous users - skip limit checks
+  // ✅ FIX: jika user tidak terautentikasi, TOLAK request (bukan skip).
+  // Skip check tanpa auth = celah keamanan: user bisa bypass limit
+  // dengan tidak login. Ini terutama penting untuk testingRoutes yang
+  // memakai optionalAuth.
   if (!req.user?.id) {
-    return next();
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'AUTH_REQUIRED',
+        message: 'Autentikasi diperlukan untuk menggunakan model LLM.',
+      },
+    });
   }
 
   try {
-    // Extract model from request body, default to economy tier model
     const modelName = req.body.model || 'llama-3.1-8b-instant';
 
-    // Check if user has remaining quota for this model
     const limitCheck = await usageLimitService.checkLimit(req.user.id, modelName);
 
-    // If limit exceeded, return 429 with alternatives
     if (!limitCheck.allowed) {
+      const cooldownMsg = formatCooldownMessage(limitCheck.resetsAt);
+
       return res.status(429).json({
         success: false,
         error: {
           code: 'USAGE_LIMIT_EXCEEDED',
-          message: `Batas request tercapai untuk model ${limitCheck.displayName} (${limitCheck.tier} tier: ${limitCheck.limit} request).`,
+          // ✅ Pakai dailyLimit, bukan tier/limit yang undefined
+          message: 
+            `Batas request tercapai untuk model ${limitCheck.displayName} ` +
+            `(${limitCheck.used}/${limitCheck.dailyLimit} request). ${cooldownMsg}`,
           model: limitCheck.modelName,
           displayName: limitCheck.displayName,
-          tier: limitCheck.tier,
-          limit: limitCheck.limit,
+          provider: limitCheck.provider,
+          limit: limitCheck.dailyLimit,
+          dailyLimit: limitCheck.dailyLimit,
           used: limitCheck.used,
-          alternatives: limitCheck.alternatives,
+          remaining: limitCheck.remaining,
+          resetsAt: limitCheck.resetsAt,
+          alternatives: limitCheck.alternatives || [],
         },
       });
     }
 
-    // Attach limit info and provider to request for use in controller
     req.usageLimit = limitCheck;
     next();
   } catch (error) {
-    // Pass errors to error handling middleware
     next(error);
   }
 };

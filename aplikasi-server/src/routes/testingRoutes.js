@@ -22,36 +22,34 @@ import { checkUsageLimit } from '../middleware/usageLimitMiddleware.js';
 
 const router = Router();
 
-// Use optional authentication for testing endpoints to allow development/testing
-// Individual test endpoints - these can work without auth for testing purposes
-// Add usage limit middleware to prevent abuse
-router.post('/meteor', optionalAuth, checkUsageLimit, runMeteorTest);
-router.post('/sentence-bert', optionalAuth, checkUsageLimit, runSentenceBertTest);
+// ✅ FIX: endpoint yang konsumsi LLM HARUS pakai `authenticate` (bukan optionalAuth).
+// Dengan optionalAuth, user tanpa token akan lolos middleware checkUsageLimit
+// karena req.user.id kosong → limit bisa di-bypass dengan tidak login.
+router.post('/meteor', authenticate, checkUsageLimit, runMeteorTest);
+router.post('/sentence-bert', authenticate, checkUsageLimit, runSentenceBertTest);
 
-// SSE endpoints for real-time progress (REQUIRE authentication)
+// SSE endpoints — sudah benar pakai authenticate
 router.post('/meteor/stream', authenticate, checkUsageLimit, runMeteorTestSSE);
 router.post('/sentence-bert/stream', authenticate, checkUsageLimit, runSentenceBertTestSSE);
 
-// Batch testing endpoint
-router.post('/batch', optionalAuth, checkUsageLimit, runBatchTest);
+// Batch & dual-evaluation juga harus authenticate
+router.post('/batch', authenticate, checkUsageLimit, runBatchTest);
+router.post('/dual-evaluation', authenticate, checkUsageLimit, runDualEvaluation);
 
-// NEW: Dual evaluation endpoint - runs both METEOR and Sentence-BERT simultaneously
-router.post('/dual-evaluation', optionalAuth, checkUsageLimit, runDualEvaluation);
-
-// Results endpoints - require auth since they're user-specific
+// Results endpoints
 router.get('/results/:scenarioId', authenticate, getTestResults);
 router.get('/results', authenticate, getAllUserTestResults);
 router.delete('/results/:testId', authenticate, deleteTestResult);
 
-// Statistics endpoint - require auth
+// Statistics endpoint
 router.get('/statistics', authenticate, getTestStatistics);
 
-// Scenario reference endpoints - use optional auth for flexibility
+// Scenario reference endpoints — read-only, optionalAuth aman dipertahankan
 router.post('/references', optionalAuth, saveScenarioReference);
 router.get('/references', optionalAuth, getScenarioReferences);
 router.get('/references/last/:scenarioId', optionalAuth, getLastUsedReference);
 
-// Cross-test data endpoint - use optional auth
+// Cross-test data endpoint
 router.get('/cross-test/:scenarioId', optionalAuth, getCrossTestData);
 
 export default router;

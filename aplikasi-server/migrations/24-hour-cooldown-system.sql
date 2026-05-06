@@ -118,35 +118,53 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION increment_usage_with_reset IS 'Increment usage counter with 24-hour cooldown reset';
 
--- Step 4: Update view to use cooldown logic
+-- ============================================================================
+-- Migration Fix: View user_model_usage harus akurat saat cooldown berakhir
+-- ============================================================================
+-- Masalah: view sebelumnya menghitung remaining = daily_limit - request_count
+-- tanpa memperhitungkan cooldown. Akibatnya, ketika cooldown sudah lewat
+-- 24 jam tapi counter belum di-reset (karena belum ada request baru),
+-- view menampilkan remaining = 0 padahal user sebenarnya punya quota penuh.
+-- ============================================================================
+
 CREATE OR REPLACE VIEW user_model_usage AS
 SELECT 
-  u.id as user_id,
+  u.id AS user_id,
   u.email,
-  m.id as model_id,
-  m.name as model_name,
+  m.id AS model_id,
+  m.name AS model_name,
   m.display_name,
+  m.provider,
   m.daily_limit,
-  COALESCE(uc.request_count, 0) as current_count,
-  GREATEST(0, m.daily_limit - COALESCE(uc.request_count, 0)) as remaining,
+  -- Jika cooldown sudah lewat, anggap counter = 0
+  CASE 
+    WHEN uc.last_reset_at IS NULL THEN 0
+    WHEN should_reset_cooldown(uc.last_reset_at) THEN 0
+    ELSE COALESCE(uc.request_count, 0)
+  END AS current_count,
+  -- Remaining yang sudah memperhitungkan cooldown
+  CASE 
+    WHEN uc.last_reset_at IS NULL THEN m.daily_limit
+    WHEN should_reset_cooldown(uc.last_reset_at) THEN m.daily_limit
+    ELSE GREATEST(0, m.daily_limit - COALESCE(uc.request_count, 0))
+  END AS remaining,
   uc.last_reset_at,
   CASE 
     WHEN uc.last_reset_at IS NULL THEN true
     WHEN should_reset_cooldown(uc.last_reset_at) THEN true
     ELSE false
-  END as needs_reset,
-  -- Add cooldown info
+  END AS needs_reset,
   CASE 
     WHEN uc.last_reset_at IS NULL THEN NULL
     WHEN should_reset_cooldown(uc.last_reset_at) THEN NULL
     ELSE uc.last_reset_at + INTERVAL '24 hours'
-  END as resets_at
+  END AS resets_at
 FROM auth.users u
 CROSS JOIN models m
 LEFT JOIN usage_counters uc ON u.id = uc.user_id AND m.id = uc.model_id
 WHERE m.is_active = true;
 
-COMMENT ON VIEW user_model_usage IS 'User usage across all models with 24-hour cooldown info';
+COMMENT ON VIEW user_model_usage IS 'User usage view dengan remaining yang akurat terhadap 24-hour cooldown';
 
 -- ============================================================================
 -- Notes:
