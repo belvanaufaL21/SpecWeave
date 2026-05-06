@@ -742,6 +742,8 @@ const Profile = () => {
             currentAvatar={isEmojiAvatar(editForm.avatar_url || profile?.avatar_url) ? (editForm.avatar_url || profile?.avatar_url) : null}
             onSelect={handleAvatarSelect}
             onClose={() => setIsAvatarPickerOpen(false)}
+            userName={profile?.name}
+            userEmail={user?.email}
           />
         )}
       </AnimatePresence>

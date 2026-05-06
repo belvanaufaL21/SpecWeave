@@ -47,9 +47,26 @@ const AVATAR_EMOJIS = [
   '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🎗',
 ];
 
-const AvatarPicker = ({ currentAvatar, onSelect, onClose }) => {
+const AvatarPicker = ({ currentAvatar, onSelect, onClose, userName, userEmail }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Helper to get user initials
+  const getUserInitials = () => {
+    try {
+      if (userName && typeof userName === 'string' && userName.trim()) {
+        return userName.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      }
+      if (userEmail && typeof userEmail === 'string' && userEmail.trim()) {
+        return userEmail.trim().slice(0, 2).toUpperCase();
+      }
+      return 'U';
+    } catch (error) {
+      return 'U';
+    }
+  };
+
+  const userInitials = getUserInitials();
 
   const categories = [
     { id: 'all', label: 'All', icon: '🎨' },
@@ -156,7 +173,7 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose }) => {
                 <div className="relative">
                   {/* Background Circle */}
                   <div className="w-8 h-8 rounded-lg bg-[#160D14] border border-[#44273D] flex items-center justify-center">
-                    <span className="text-xs font-bold text-[#FF7AD0]">AB</span>
+                    <span className="text-xs font-bold text-[#FF7AD0]">{userInitials}</span>
                   </div>
                   
                   {/* Checkmark when selected */}
