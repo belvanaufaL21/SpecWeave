@@ -6,6 +6,7 @@ import { useJira } from '../contexts/JiraContext';
 import { useChat as useChatContext } from '../contexts/ChatContext';
 import { useTestResults } from '../contexts/TestResultsContext';
 import toast from 'react-hot-toast';
+import toastNotifications from '../utils/toastNotifications';
 import Logo from '../components/common/Logo';
 import CompactChatItem from '../components/chat/CompactChatItem';
 import ChatCountIndicator from '../components/chat/ChatCountIndicator';
@@ -117,7 +118,7 @@ const Profile = () => {
       if (result.error) {
         toast.error('Failed to update profile: ' + result.error.message);
       } else {
-        toast.success('Profile updated successfully!');
+        toastNotifications.profileUpdateSuccess();
         setIsEditing(false);
       }
     } catch (error) {

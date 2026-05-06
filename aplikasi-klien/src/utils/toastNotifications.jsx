@@ -327,6 +327,78 @@ export const showJiraExportFailedToast = () => {
   );
 };
 
+/**
+ * Show profile update success notification
+ * Custom styling with #160D14 background and #44273D border
+ */
+export const showProfileUpdateSuccessToast = () => {
+  // Use unique ID to prevent duplicate toasts
+  const toastId = 'profile-update-success-toast';
+  
+  // Dismiss any existing profile update toast first
+  toast.dismiss(toastId);
+  
+  return toast.success(
+    (t) => (
+      <div className="flex items-start gap-3">
+        {/* Success Icon - Aligned with title */}
+        <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: '#44273D', border: '1px solid #44273D' }}>
+          <svg className="w-3 h-3" style={{ color: '#FF7AD0' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        
+        {/* Content and Close Button in same row */}
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Edit Berhasil</div>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#44273D' }}>
+              Profile telah diperbarui
+            </div>
+          </div>
+
+          {/* Close Button - Aligned with title */}
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="flex-shrink-0 w-4 h-4 flex items-center justify-center transition-opacity"
+            style={{ 
+              color: '#FF7AD0',
+              opacity: 0.5
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.5';
+            }}
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      id: toastId, // Use unique ID to prevent duplicates
+      duration: 4000,
+      position: 'top-right',
+      style: {
+        background: '#160D14',
+        color: '#FFFFFF',
+        borderRadius: '12px',
+        padding: '10px 8px',
+        border: '1px solid #44273D',
+        width: '250px',
+        height: 'fit-content',
+        boxShadow: 'none'
+      },
+      className: '',
+      icon: null
+    }
+  );
+};
+
 export default {
   success: showSuccessToast,
   error: showErrorToast,
@@ -335,5 +407,6 @@ export default {
   custom: showCustomToast,
   authSuccess: showAuthSuccessToast,
   jiraExportSuccess: showJiraExportSuccessToast,
-  jiraExportFailed: showJiraExportFailedToast
+  jiraExportFailed: showJiraExportFailedToast,
+  profileUpdateSuccess: showProfileUpdateSuccessToast
 };
