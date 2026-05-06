@@ -79,6 +79,9 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose }) => {
   };
 
   const filteredEmojis = getFilteredEmojis();
+  
+  // Show "Reset to Initials" option only in "All" category
+  const showResetOption = selectedCategory === 'all';
 
   return (
     <motion.div
@@ -132,34 +135,50 @@ const AvatarPicker = ({ currentAvatar, onSelect, onClose }) => {
 
         {/* Emoji Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Reset to Initials Option */}
-          <div className="mb-4 pb-4 border-b border-white/5">
-            <button
-              onClick={() => onSelect(null)}
-              className={`
-                w-full p-4 rounded-xl flex items-center gap-4 transition-all
-                ${!currentAvatar || currentAvatar.startsWith('http')
-                  ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border-2 border-purple-500/50'
-                  : 'bg-transparent hover:bg-white/[0.03] border border-white/5'
-                }
-              `}
-            >
-              <div className="w-12 h-12 rounded-xl bg-[#160D14] border border-[#44273D] flex items-center justify-center">
-                <span className="text-sm font-semibold text-[#FF7AD0]">AB</span>
-              </div>
-              <div className="flex-1 text-left">
-                <div className="text-white font-medium">Use Initials</div>
-                <div className="text-sm text-white/60">Show your name initials as avatar</div>
-              </div>
-              {(!currentAvatar || currentAvatar.startsWith('http')) && (
-                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-          </div>
-
           <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 gap-2">
+            {/* Reset to Initials Option - Only show in "All" tab as first item */}
+            {showResetOption && (
+              <motion.button
+                onClick={() => onSelect(null)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`
+                  aspect-square rounded-xl flex flex-col items-center justify-center
+                  transition-all cursor-pointer relative group
+                  ${!currentAvatar || currentAvatar.startsWith('http')
+                    ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border-2 border-purple-500/50 shadow-lg'
+                    : 'bg-transparent hover:bg-white/[0.03] border border-white/5'
+                  }
+                `}
+                title="Use Initials (Default)"
+              >
+                {/* Icon Container */}
+                <div className="relative">
+                  {/* Background Circle */}
+                  <div className="w-8 h-8 rounded-lg bg-[#160D14] border border-[#44273D] flex items-center justify-center">
+                    <span className="text-xs font-bold text-[#FF7AD0]">AB</span>
+                  </div>
+                  
+                  {/* Checkmark when selected */}
+                  {(!currentAvatar || currentAvatar.startsWith('http')) && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Tooltip on hover */}
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  <div className="bg-black/90 text-white text-xs px-2 py-1 rounded">
+                    Default
+                  </div>
+                </div>
+              </motion.button>
+            )}
+            
+            {/* Emoji Options */}
             {filteredEmojis.map((emoji, index) => (
               <motion.button
                 key={index}
