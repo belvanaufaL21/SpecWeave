@@ -352,7 +352,7 @@ export const showProfileUpdateSuccessToast = () => {
         <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm leading-tight" style={{ color: '#FFFFFF' }}>Edit Berhasil</div>
-            <div className="text-xs leading-tight mt-2" style={{ color: '#44273D' }}>
+            <div className="text-xs leading-tight mt-2" style={{ color: '#FF7AD0' }}>
               Profile telah diperbarui
             </div>
           </div>
@@ -389,7 +389,8 @@ export const showProfileUpdateSuccessToast = () => {
         borderRadius: '12px',
         padding: '10px 8px',
         border: '1px solid #44273D',
-        width: '250px',
+        width: 'fit-content',
+        maxWidth: '400px',
         height: 'fit-content',
         boxShadow: 'none'
       },
