@@ -109,6 +109,14 @@ class EnhancedSpecWeaveService {
         throw new Error(response.data.error || 'Failed to generate Gherkin');
       }
     } catch (error) {
+      // ✅ Handle USAGE_LIMIT_EXCEEDED specially - preserve limitData
+      if (error.isLimitExceeded && error.limitData) {
+        cleanLogger.generationFailed(error.message);
+        
+        // Re-throw the error with limitData intact
+        throw error;
+      }
+      
       // Check if this is a validation error (400) with server message
       if (error.response?.status === 400 && error.response?.data?.error?.message) {
         const serverMessage = error.response.data.error.message;
