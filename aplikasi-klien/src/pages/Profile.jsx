@@ -238,7 +238,11 @@ const Profile = () => {
   const confirmLogout = async () => {
     try {
       await signOut();
-      navigate('/', { replace: true });
+      toastNotifications.logoutSuccess();
+      // Small delay to show notification before navigation
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 500);
     } catch (error) {
       console.error('Sign out error:', error);
       navigate('/', { replace: true });
