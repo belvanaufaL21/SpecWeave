@@ -2,6 +2,7 @@ import express from 'express';
 import { body, param, query } from 'express-validator';
 import subtaskController from '../controllers/subtaskController.js';
 import { authenticate } from '../middlewares/auth.js';
+import { checkUsageLimit } from '../middleware/usageLimitMiddleware.js';
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.use(authenticate);
  * Generate subtasks from scenario
  * POST /api/subtasks/generate
  */
-router.post('/generate', [
+router.post('/generate', checkUsageLimit, [
   body('scenarioId')
     .isUUID()
     .withMessage('Valid scenario ID is required'),
@@ -33,7 +34,7 @@ router.post('/generate', [
  * Create subtasks for existing user story
  * POST /api/subtasks/create
  */
-router.post('/create', [
+router.post('/create', checkUsageLimit, [
   body('userStoryId')
     .notEmpty()
     .withMessage('User story ID is required'),

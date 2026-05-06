@@ -18,23 +18,25 @@ import {
   runSentenceBertTestSSE
 } from '../controllers/testingControllerSSE.js';
 import { authenticate, optionalAuth } from '../middlewares/auth.js';
+import { checkUsageLimit } from '../middleware/usageLimitMiddleware.js';
 
 const router = Router();
 
 // Use optional authentication for testing endpoints to allow development/testing
 // Individual test endpoints - these can work without auth for testing purposes
-router.post('/meteor', optionalAuth, runMeteorTest);
-router.post('/sentence-bert', optionalAuth, runSentenceBertTest);
+// Add usage limit middleware to prevent abuse
+router.post('/meteor', optionalAuth, checkUsageLimit, runMeteorTest);
+router.post('/sentence-bert', optionalAuth, checkUsageLimit, runSentenceBertTest);
 
 // SSE endpoints for real-time progress (REQUIRE authentication)
-router.post('/meteor/stream', authenticate, runMeteorTestSSE);
-router.post('/sentence-bert/stream', authenticate, runSentenceBertTestSSE);
+router.post('/meteor/stream', authenticate, checkUsageLimit, runMeteorTestSSE);
+router.post('/sentence-bert/stream', authenticate, checkUsageLimit, runSentenceBertTestSSE);
 
 // Batch testing endpoint
-router.post('/batch', optionalAuth, runBatchTest);
+router.post('/batch', optionalAuth, checkUsageLimit, runBatchTest);
 
 // NEW: Dual evaluation endpoint - runs both METEOR and Sentence-BERT simultaneously
-router.post('/dual-evaluation', optionalAuth, runDualEvaluation);
+router.post('/dual-evaluation', optionalAuth, checkUsageLimit, runDualEvaluation);
 
 // Results endpoints - require auth since they're user-specific
 router.get('/results/:scenarioId', authenticate, getTestResults);
