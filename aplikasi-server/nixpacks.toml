@@ -2,8 +2,8 @@
 # This file tells Railway how to build and run the backend server
 
 [phases.setup]
-# Add gcc and stdenv for C++ libraries needed by NumPy/PyTorch
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc", "stdenv.cc.cc.lib"]
+# Add gcc and glibc for C++ libraries needed by NumPy/PyTorch
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc", "glibc"]
 
 [phases.install]
 cmds = [
@@ -19,8 +19,5 @@ cmds = [
 ]
 
 [start]
-cmd = "npm start"
-
-# Environment variables for runtime
-[variables]
-LD_LIBRARY_PATH = "/nix/store/*-gcc-*/lib"
+# Set LD_LIBRARY_PATH to include glibc lib directory before starting
+cmd = "export LD_LIBRARY_PATH=/nix/store/*-glibc-*/lib:$LD_LIBRARY_PATH && npm start"
