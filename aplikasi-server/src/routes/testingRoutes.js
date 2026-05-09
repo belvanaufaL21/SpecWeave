@@ -23,25 +23,27 @@ import { sseMiddlewareWrapper } from '../middlewares/sseErrorHandler.js';
 
 const router = Router();
 
-// ✅ FIX: endpoint yang konsumsi LLM HARUS pakai `authenticate` (bukan optionalAuth).
-// Dengan optionalAuth, user tanpa token akan lolos middleware checkUsageLimit
-// karena req.user.id kosong → limit bisa di-bypass dengan tidak login.
-router.post('/meteor', authenticate, checkUsageLimit, runMeteorTest);
-router.post('/sentence-bert', authenticate, checkUsageLimit, runSentenceBertTest);
+// ⚠️ IMPORTANT: METEOR & Sentence-BERT testing TIDAK menggunakan LLM
+// Mereka hanya menjalankan Python script untuk evaluasi
+// Jadi TIDAK PERLU checkUsageLimit middleware
 
-// SSE endpoints — gunakan SSE wrapper untuk handle errors via SSE stream
+// Regular testing endpoints (non-SSE) - NO usage limit check
+router.post('/meteor', authenticate, runMeteorTest);
+router.post('/sentence-bert', authenticate, runSentenceBertTest);
+
+// SSE endpoints - NO usage limit check, hanya authenticate
 router.post('/meteor/stream', 
-  sseMiddlewareWrapper(authenticate, checkUsageLimit),
+  sseMiddlewareWrapper(authenticate),
   runMeteorTestSSE
 );
 router.post('/sentence-bert/stream', 
-  sseMiddlewareWrapper(authenticate, checkUsageLimit),
+  sseMiddlewareWrapper(authenticate),
   runSentenceBertTestSSE
 );
 
-// Batch & dual-evaluation juga harus authenticate
-router.post('/batch', authenticate, checkUsageLimit, runBatchTest);
-router.post('/dual-evaluation', authenticate, checkUsageLimit, runDualEvaluation);
+// Batch & dual-evaluation juga tidak pakai LLM, hanya evaluasi
+router.post('/batch', authenticate, runBatchTest);
+router.post('/dual-evaluation', authenticate, runDualEvaluation);
 
 // Results endpoints
 router.get('/results/:scenarioId', authenticate, getTestResults);
