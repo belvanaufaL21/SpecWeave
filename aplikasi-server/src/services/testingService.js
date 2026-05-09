@@ -971,18 +971,28 @@ class TestingService {
     return new Promise((resolve, reject) => {
       const pythonScriptPath = path.join(__dirname, '../python/meteor_calculator.py');
       
-      console.log('Starting METEOR calculation with progress:', {
+      console.log('🐍 [METEOR-PYTHON] Starting METEOR calculation with progress:', {
         scriptPath: pythonScriptPath,
+        scriptExists: require('fs').existsSync(pythonScriptPath),
         generatedLength: generatedText?.length || 0,
-        referenceLength: referenceText?.length || 0
+        referenceLength: referenceText?.length || 0,
+        pythonCommand: process.env.PYTHON_PATH || 'python3'
       });
       
       const pythonCommand = process.env.PYTHON_PATH || 'python3';
-      const pythonProcess = spawn(pythonCommand, [
-        pythonScriptPath,
-        generatedText,
-        referenceText
-      ]);
+      
+      let pythonProcess;
+      try {
+        pythonProcess = spawn(pythonCommand, [
+          pythonScriptPath,
+          generatedText,
+          referenceText
+        ]);
+      } catch (spawnError) {
+        console.error('❌ [METEOR-PYTHON] Failed to spawn Python process:', spawnError);
+        reject(new Error(`Failed to spawn Python process: ${spawnError.message}. Make sure Python is installed and accessible via '${pythonCommand}' command.`));
+        return;
+      }
       
       let result = '';
       let errorOutput = '';
@@ -1011,37 +1021,39 @@ class TestingService {
             }
           } else if (line.trim()) {
             // Regular stderr logging
-            console.error('Python stderr:', line);
+            console.error('🐍 [METEOR-PYTHON] stderr:', line);
           }
         }
       });
       
       pythonProcess.on('close', (code) => {
-        console.log('Python process closed with code:', code);
+        console.log(`🐍 [METEOR-PYTHON] Process closed with code: ${code}`);
         if (code === 0) {
           try {
             const parsedResult = JSON.parse(result);
             if (parsedResult.error) {
-              console.error('METEOR calculation error:', parsedResult.error);
+              console.error('❌ [METEOR-PYTHON] Calculation error:', parsedResult.error);
               reject(new Error(`METEOR calculation error: ${parsedResult.error}`));
             } else {
-              console.log('METEOR calculation successful, score:', parsedResult.score);
+              console.log('✅ [METEOR-PYTHON] Calculation successful, score:', parsedResult.score);
               resolve(parsedResult);
             }
           } catch (parseError) {
-            console.error('Failed to parse METEOR result:', parseError.message);
+            console.error('❌ [METEOR-PYTHON] Failed to parse result:', parseError.message);
             console.error('Raw result:', result);
-            reject(new Error(`Failed to parse METEOR result: ${parseError.message}`));
+            console.error('Error output:', errorOutput);
+            reject(new Error(`Failed to parse METEOR result: ${parseError.message}. Raw output: ${result.substring(0, 200)}`));
           }
         } else {
-          console.error('METEOR calculation failed:', errorOutput);
-          reject(new Error(`METEOR calculation failed with code ${code}: ${errorOutput}`));
+          console.error('❌ [METEOR-PYTHON] Calculation failed with code', code);
+          console.error('Error output:', errorOutput);
+          reject(new Error(`METEOR calculation failed with code ${code}: ${errorOutput || 'No error output'}`));
         }
       });
       
       pythonProcess.on('error', (error) => {
-        console.error('Failed to start METEOR calculation:', error);
-        reject(new Error(`Failed to start METEOR calculation: ${error.message}`));
+        console.error('❌ [METEOR-PYTHON] Process error:', error);
+        reject(new Error(`Failed to start METEOR calculation: ${error.message}. Make sure Python is installed and accessible.`));
       });
     });
   }

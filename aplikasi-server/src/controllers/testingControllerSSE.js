@@ -6,6 +6,12 @@ import { AppError } from '../middlewares/errorHandler.js';
  * POST /api/testing/meteor/stream
  */
 export const runMeteorTestSSE = async (req, res, next) => {
+  // Set up SSE headers FIRST before any validation
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+  
   try {
     const { scenarioId, generatedText, referenceText } = req.body;
     const userId = req.user?.id;
@@ -20,20 +26,28 @@ export const runMeteorTestSSE = async (req, res, next) => {
       authHeaderPreview: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'NONE'
     });
     
-    // Validate required fields
+    // Validate required fields - send error via SSE instead of throwing
     if (!scenarioId || !generatedText || !referenceText) {
-      throw new AppError('scenarioId, generatedText, and referenceText are required', 400);
+      const errorMessage = {
+        stage: 'error',
+        progress: 0,
+        error: 'scenarioId, generatedText, and referenceText are required'
+      };
+      res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+      res.end();
+      return;
     }
     
     if (!generatedText.trim() || !referenceText.trim()) {
-      throw new AppError('generatedText and referenceText cannot be empty', 400);
+      const errorMessage = {
+        stage: 'error',
+        progress: 0,
+        error: 'generatedText and referenceText cannot be empty'
+      };
+      res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+      res.end();
+      return;
     }
-    
-    // Set up SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
     
     // Helper function to send progress updates
     const sendProgress = (stage, progress, data = {}) => {
@@ -98,17 +112,26 @@ export const runMeteorTestSSE = async (req, res, next) => {
       
     } catch (error) {
       // Send error through SSE
+      console.error('❌ [METEOR-SSE] Inner error:', error);
       const errorMessage = {
         stage: 'error',
         progress: 0,
-        error: error.message
+        error: error.message || 'An unexpected error occurred during calculation'
       };
       res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
       res.end();
     }
     
   } catch (error) {
-    next(error);
+    // Send error through SSE (outer catch for validation errors)
+    console.error('❌ [METEOR-SSE] Outer error:', error);
+    const errorMessage = {
+      stage: 'error',
+      progress: 0,
+      error: error.message || 'An unexpected error occurred'
+    };
+    res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+    res.end();
   }
 };
 
@@ -117,24 +140,38 @@ export const runMeteorTestSSE = async (req, res, next) => {
  * POST /api/testing/sentence-bert/stream
  */
 export const runSentenceBertTestSSE = async (req, res, next) => {
+  // Set up SSE headers FIRST before any validation
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  
   try {
     const { scenarioId, generatedText, referenceText } = req.body;
     const userId = req.user?.id;
     
-    // Validate required fields
+    // Validate required fields - send error via SSE instead of throwing
     if (!scenarioId || !generatedText || !referenceText) {
-      throw new AppError('scenarioId, generatedText, and referenceText are required', 400);
+      const errorMessage = {
+        stage: 'error',
+        progress: 0,
+        error: 'scenarioId, generatedText, and referenceText are required'
+      };
+      res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+      res.end();
+      return;
     }
     
     if (!generatedText.trim() || !referenceText.trim()) {
-      throw new AppError('generatedText and referenceText cannot be empty', 400);
+      const errorMessage = {
+        stage: 'error',
+        progress: 0,
+        error: 'generatedText and referenceText cannot be empty'
+      };
+      res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+      res.end();
+      return;
     }
-    
-    // Set up SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
     
     const sendProgress = (stage, progress, data = {}) => {
       const message = {
@@ -196,17 +233,25 @@ export const runSentenceBertTestSSE = async (req, res, next) => {
       res.end();
       
     } catch (error) {
+      console.error('❌ [SBERT-SSE] Inner error:', error);
       const errorMessage = {
         stage: 'error',
         progress: 0,
-        error: error.message
+        error: error.message || 'An unexpected error occurred during calculation'
       };
       res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
       res.end();
     }
     
   } catch (error) {
-    next(error);
+    console.error('❌ [SBERT-SSE] Outer error:', error);
+    const errorMessage = {
+      stage: 'error',
+      progress: 0,
+      error: error.message || 'An unexpected error occurred'
+    };
+    res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+    res.end();
   }
 };
 
