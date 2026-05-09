@@ -1,9 +1,15 @@
-# Nixpacks configuration for SpecWeave Backend
-# This file tells Railway how to build and run the backend server
-
+# nixpacks.toml
 [phases.setup]
-# gcc-unwrapped menyertakan libstdc++.so.6 yang dibutuhkan numpy/sentence-transformers
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc-unwrapped"]
+# Sertakan numpy dari nix agar punya RPATH yang benar + zlib + gcc
+nixPkgs = [
+  "nodejs_20",
+  "python311",
+  "python311Packages.pip",
+  "python311Packages.numpy",
+  "gcc-unwrapped",
+  "zlib",
+  "glibc"
+]
 
 [phases.install]
 cmds = [
@@ -12,21 +18,25 @@ cmds = [
 
 [phases.build]
 cmds = [
-  # Install PyTorch CPU-only version first (lighter, more compatible)
-  "pip3 install --user --break-system-packages torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu",
-  # Install other Python dependencies
-  "pip3 install --user --break-system-packages -r src/python/requirements.txt",
-  # Download NLTK data
+  # Install sentence-transformers & deps TANPA reinstall numpy (sudah dari nix)
+  "pip3 install --user --break-system-packages --no-deps sentence-transformers",
+  "pip3 install --user --break-system-packages transformers tqdm huggingface-hub safetensors tokenizers filelock packaging requests",
+  # torch CPU-only (jauh lebih ringan, cukup untuk inference)
+  "pip3 install --user --break-system-packages torch --index-url https://download.pytorch.org/whl/cpu",
+  # Install dependencies lain untuk METEOR
+  "pip3 install --user --break-system-packages nltk deep-translator langdetect scikit-learn",
+  # NLTK data untuk METEOR
   "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
-  # Simpan path libstdc++ ke file agar bisa dibaca saat start
-  "find /nix/store -maxdepth 4 -name 'libstdc++.so.6' -exec dirname {} \\; 2>/dev/null | head -1 > /tmp/libstdcxx_path.txt",
-  "echo 'libstdc++ path:' && cat /tmp/libstdcxx_path.txt"
+  # Pre-download model sentence-transformers agar tidak timeout saat runtime
+  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\"",
+  # Debug: print semua lib yang ditemukan
+  "find /nix/store -maxdepth 4 -name 'libz.so*' -o -name 'libstdc++.so*' 2>/dev/null | head -20"
 ]
 
 [start]
-# Resolve path libstdc++ secara dinamis — wildcard tidak bekerja di variables
-cmd = "export LD_LIBRARY_PATH=$(find /nix/store -maxdepth 4 -name 'libstdc++.so.6' -exec dirname {} \\; 2>/dev/null | head -1):$LD_LIBRARY_PATH && npm start"
+# Collect SEMUA lib path dari nix store secara dinamis — tidak hardcode path
+cmd = """export LD_LIBRARY_PATH=$(find /nix/store -maxdepth 4 \\( -name 'libstdc++.so.6' -o -name 'libz.so.1' -o -name 'libgcc_s.so.1' -o -name 'libm.so.6' \\) -exec dirname {} \\; 2>/dev/null | sort -u | paste -sd ':' -):$LD_LIBRARY_PATH && npm start"""
 
 [variables]
-# Set PYTHONPATH untuk Python packages
-PYTHONPATH = "/root/.local/lib/python3.11/site-packages"
+# Gunakan numpy dari nix, bukan dari ~/.local
+PYTHONPATH = "/run/current-system/sw/lib/python3.11/site-packages:/root/.local/lib/python3.11/site-packages"
