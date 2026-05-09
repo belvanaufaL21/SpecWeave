@@ -11,9 +11,10 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "pip3 install --user --break-system-packages torch --index-url https://download.pytorch.org/whl/cpu",
-  "pip3 install --user --break-system-packages sentence-transformers nltk scikit-learn --extra-index-url https://download.pytorch.org/whl/cpu",
-  "python3 -c \"import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')\""
+  # Install Python dependencies from requirements.txt
+  "pip3 install --user --break-system-packages -r src/python/requirements.txt",
+  # Download NLTK data
+  "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('wordnet'); nltk.download('omw-1.4')\""
 ]
 
 [start]
