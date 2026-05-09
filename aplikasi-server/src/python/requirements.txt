@@ -1,19 +1,34 @@
-# Core dependencies for METEOR evaluation
-nltk>=3.8
-deep-translator>=1.11.4
-langdetect>=1.0.9
+# ===== CORE ML STACK (tested compatible versions) =====
+# PyTorch 2.3.1 CPU-only (lighter, no CUDA, compatible with transformers 4.41.2)
+torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu
+# Transformers 4.41.2 (compatible with torch 2.3.1, has register_pytree_node)
+transformers==4.41.2
+# Sentence-transformers 3.0.1 (latest stable, compatible with above)
+sentence-transformers==3.0.1
 
-# Sentence-BERT dependencies - pinned to lighter versions for Railway compatibility
-# PyTorch CPU-only version (lighter, no CUDA)
-torch==2.1.0
-# Sentence-transformers compatible version
-sentence-transformers==2.7.0
-# NumPy pinned to 1.26.4 (compatible with torch 2.1.0, avoids libstdc++ issues)
+# ===== NUMPY =====
+# NumPy 1.26.4 (stable, compatible with torch 2.3.1, no libstdc++ issues)
 numpy==1.26.4
 
-# ML utilities
+# ===== SENTENCE-TRANSFORMERS DEPENDENCIES =====
+huggingface-hub==0.23.4
+tokenizers==0.19.1
+safetensors==0.4.3
+tqdm==4.66.4
+filelock==3.15.4
+packaging==24.1
+requests==2.32.3
+PyYAML==6.0.1
+regex==2024.5.15
+
+# ===== NLTK (for METEOR evaluation) =====
+nltk==3.8.1
+deep-translator==1.11.4
+langdetect==1.0.9
+
+# ===== ML UTILITIES =====
 scikit-learn>=1.3.0
 
-# Testing dependencies (optional)
+# ===== TESTING (optional) =====
 hypothesis>=6.0.0
 pytest>=7.0.0

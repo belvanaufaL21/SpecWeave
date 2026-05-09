@@ -17,17 +17,24 @@ cmds = [
 
 [phases.build]
 cmds = [
-  # Install Python dependencies (numpy 1.26.4 pinned for compatibility)
+  # Install Python dependencies (pinned compatible versions)
   "pip3 install --user --break-system-packages -r src/python/requirements.txt",
   # Download NLTK data for METEOR
   "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
+  # Verify installed versions
+  "python3 -c \"import torch; import transformers; import sentence_transformers; print('✅ torch:', torch.__version__); print('✅ transformers:', transformers.__version__); print('✅ sentence-transformers:', sentence_transformers.__version__)\"",
   # Pre-download Sentence-BERT model to avoid runtime timeout
-  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\" || echo 'Model pre-download failed, will download at runtime'"
+  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\" || echo '⚠️ Model pre-download failed, will download at runtime'",
+  # Create startup wrapper script with LD_LIBRARY_PATH
+  "printf '#!/bin/bash\\nLIBS=$(find /nix/store -maxdepth 4 \\( -name libstdc++.so.6 -o -name libz.so.1 \\) -exec dirname {} \\\\; 2>/dev/null | sort -u | paste -sd : -)\\nexport LD_LIBRARY_PATH=\"$LIBS:$LD_LIBRARY_PATH\"\\necho \"🔧 LD_LIBRARY_PATH set: $LD_LIBRARY_PATH\"\\nexec npm start\\n' > /app/start.sh",
+  "chmod +x /app/start.sh",
+  # Verify wrapper script
+  "cat /app/start.sh"
 ]
 
 [start]
-# Simple start - LD_LIBRARY_PATH is handled in Node.js spawn
-cmd = "npm start"
+# Use wrapper script that sets LD_LIBRARY_PATH before starting Node.js
+cmd = "bash /app/start.sh"
 
 [variables]
 PYTHONPATH = "/root/.local/lib/python3.11/site-packages"
