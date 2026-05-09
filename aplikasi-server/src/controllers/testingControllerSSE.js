@@ -4,14 +4,10 @@ import { AppError } from '../middlewares/errorHandler.js';
 /**
  * SSE endpoint for METEOR test with real-time progress
  * POST /api/testing/meteor/stream
+ * 
+ * NOTE: SSE headers already set by sseMiddlewareWrapper in routes
  */
 export const runMeteorTestSSE = async (req, res, next) => {
-  // Set up SSE headers FIRST before any validation
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
-  
   try {
     const { scenarioId, generatedText, referenceText } = req.body;
     const userId = req.user?.id;
@@ -138,14 +134,10 @@ export const runMeteorTestSSE = async (req, res, next) => {
 /**
  * SSE endpoint for Sentence-BERT test with real-time progress
  * POST /api/testing/sentence-bert/stream
+ * 
+ * NOTE: SSE headers already set by sseMiddlewareWrapper in routes
  */
 export const runSentenceBertTestSSE = async (req, res, next) => {
-  // Set up SSE headers FIRST before any validation
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  
   try {
     const { scenarioId, generatedText, referenceText } = req.body;
     const userId = req.user?.id;

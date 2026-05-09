@@ -19,6 +19,7 @@ import {
 } from '../controllers/testingControllerSSE.js';
 import { authenticate, optionalAuth } from '../middlewares/auth.js';
 import { checkUsageLimit } from '../middleware/usageLimitMiddleware.js';
+import { sseMiddlewareWrapper } from '../middlewares/sseErrorHandler.js';
 
 const router = Router();
 
@@ -28,9 +29,15 @@ const router = Router();
 router.post('/meteor', authenticate, checkUsageLimit, runMeteorTest);
 router.post('/sentence-bert', authenticate, checkUsageLimit, runSentenceBertTest);
 
-// SSE endpoints — sudah benar pakai authenticate
-router.post('/meteor/stream', authenticate, checkUsageLimit, runMeteorTestSSE);
-router.post('/sentence-bert/stream', authenticate, checkUsageLimit, runSentenceBertTestSSE);
+// SSE endpoints — gunakan SSE wrapper untuk handle errors via SSE stream
+router.post('/meteor/stream', 
+  sseMiddlewareWrapper(authenticate, checkUsageLimit),
+  runMeteorTestSSE
+);
+router.post('/sentence-bert/stream', 
+  sseMiddlewareWrapper(authenticate, checkUsageLimit),
+  runSentenceBertTestSSE
+);
 
 // Batch & dual-evaluation juga harus authenticate
 router.post('/batch', authenticate, checkUsageLimit, runBatchTest);
