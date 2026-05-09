@@ -2,8 +2,8 @@
 # This file tells Railway how to build and run the backend server
 
 [phases.setup]
-# Add gcc and glibc for C++ libraries needed by NumPy/PyTorch
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc", "glibc"]
+# gcc-unwrapped menyertakan libstdc++.so.6 yang dibutuhkan numpy/sentence-transformers
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc-unwrapped"]
 
 [phases.install]
 cmds = [
@@ -12,12 +12,19 @@ cmds = [
 
 [phases.build]
 cmds = [
-  # Install Python dependencies from requirements.txt
+  # Install Python dependencies
   "pip3 install --user --break-system-packages -r src/python/requirements.txt",
-  # Download NLTK data (including punkt_tab for newer NLTK versions)
-  "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\""
+  # Download NLTK data
+  "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
+  # Simpan path libstdc++ ke file agar bisa dibaca saat start
+  "find /nix/store -maxdepth 4 -name 'libstdc++.so.6' -exec dirname {} \\; 2>/dev/null | head -1 > /tmp/libstdcxx_path.txt",
+  "echo 'libstdc++ path:' && cat /tmp/libstdcxx_path.txt"
 ]
 
 [start]
-# Set LD_LIBRARY_PATH to include glibc lib directory before starting
-cmd = "export LD_LIBRARY_PATH=/nix/store/*-glibc-*/lib:$LD_LIBRARY_PATH && npm start"
+# Resolve path libstdc++ secara dinamis — wildcard tidak bekerja di variables
+cmd = "export LD_LIBRARY_PATH=$(find /nix/store -maxdepth 4 -name 'libstdc++.so.6' -exec dirname {} \\; 2>/dev/null | head -1):$LD_LIBRARY_PATH && npm start"
+
+[variables]
+# Set PYTHONPATH untuk Python packages
+PYTHONPATH = "/root/.local/lib/python3.11/site-packages"
