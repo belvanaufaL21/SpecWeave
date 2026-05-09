@@ -1,6 +1,6 @@
 # ===== CORE ML STACK (tested compatible versions) =====
-# PyTorch 2.3.1 CPU-only (lighter, no CUDA, compatible with transformers 4.41.2)
-torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu
+# PyTorch 2.3.1 CPU-only - INSTALLED SEPARATELY in nixpacks.toml
+# (--index-url tidak bisa inline di requirements.txt)
 # Transformers 4.41.2 (compatible with torch 2.3.1, has register_pytree_node)
 transformers==4.41.2
 # Sentence-transformers 3.0.1 (latest stable, compatible with above)
