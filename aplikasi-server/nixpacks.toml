@@ -27,8 +27,7 @@ cmds = [
   "pip3 install --user --break-system-packages nltk deep-translator langdetect scikit-learn",
   # NLTK data untuk METEOR
   "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
-  # Pre-download model sentence-transformers agar tidak timeout saat runtime
-  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\"",
+  # SKIP pre-download model - akan download saat runtime setelah LD_LIBRARY_PATH di-set
   # Debug: print semua lib yang ditemukan
   "find /nix/store -maxdepth 4 -name 'libz.so*' -o -name 'libstdc++.so*' 2>/dev/null | head -20"
 ]
