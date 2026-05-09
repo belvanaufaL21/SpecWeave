@@ -23,10 +23,9 @@ cmds = [
   "pip3 install --user --break-system-packages -r src/python/requirements.txt",
   # Download NLTK data for METEOR
   "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
-  # Verify installed versions
-  "python3 -c \"import torch; import transformers; import sentence_transformers; print('✅ torch:', torch.__version__); print('✅ transformers:', transformers.__version__); print('✅ sentence-transformers:', sentence_transformers.__version__)\"",
-  # Pre-download Sentence-BERT model to avoid runtime timeout
-  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\" || echo '⚠️ Model pre-download failed, will download at runtime'",
+  # SKIP verifikasi torch di build time (libstdc++ belum tersedia)
+  # Verifikasi akan dilakukan di runtime setelah LD_LIBRARY_PATH di-set
+  "echo '⏭️ Skipping torch verification at build time (will verify at runtime)'",
   # Create startup wrapper script with LD_LIBRARY_PATH
   "printf '#!/bin/bash\\nLIBS=$(find /nix/store -maxdepth 4 \\( -name libstdc++.so.6 -o -name libz.so.1 \\) -exec dirname {} \\\\; 2>/dev/null | sort -u | paste -sd : -)\\nexport LD_LIBRARY_PATH=\"$LIBS:$LD_LIBRARY_PATH\"\\necho \"🔧 LD_LIBRARY_PATH set: $LD_LIBRARY_PATH\"\\nexec npm start\\n' > /app/start.sh",
   "chmod +x /app/start.sh",
