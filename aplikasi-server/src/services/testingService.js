@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import supabaseService from './supabaseService.js';
 
 // Handle __dirname for ES modules
@@ -973,7 +974,7 @@ class TestingService {
       
       console.log('🐍 [METEOR-PYTHON] Starting METEOR calculation with progress:', {
         scriptPath: pythonScriptPath,
-        scriptExists: require('fs').existsSync(pythonScriptPath),
+        scriptExists: fs.existsSync(pythonScriptPath),
         generatedLength: generatedText?.length || 0,
         referenceLength: referenceText?.length || 0,
         pythonCommand: process.env.PYTHON_PATH || 'python3'
