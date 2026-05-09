@@ -1,11 +1,10 @@
-# nixpacks.toml
+# Nixpacks configuration for SpecWeave Backend
 [phases.setup]
-# Sertakan numpy dari nix agar punya RPATH yang benar + zlib + gcc
+# Include essential build tools and Python
 nixPkgs = [
   "nodejs_20",
   "python311",
   "python311Packages.pip",
-  "python311Packages.numpy",
   "gcc-unwrapped",
   "zlib",
   "glibc"
@@ -18,24 +17,17 @@ cmds = [
 
 [phases.build]
 cmds = [
-  # Install sentence-transformers & deps TANPA reinstall numpy (sudah dari nix)
-  "pip3 install --user --break-system-packages --no-deps sentence-transformers",
-  "pip3 install --user --break-system-packages transformers tqdm huggingface-hub safetensors tokenizers filelock packaging requests",
-  # torch CPU-only (jauh lebih ringan, cukup untuk inference)
-  "pip3 install --user --break-system-packages torch --index-url https://download.pytorch.org/whl/cpu",
-  # Install dependencies lain untuk METEOR
-  "pip3 install --user --break-system-packages nltk deep-translator langdetect scikit-learn",
-  # NLTK data untuk METEOR
+  # Install Python dependencies (numpy 1.26.4 pinned for compatibility)
+  "pip3 install --user --break-system-packages -r src/python/requirements.txt",
+  # Download NLTK data for METEOR
   "python3 -c \"import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('wordnet'); nltk.download('omw-1.4')\"",
-  # SKIP pre-download model - akan download saat runtime setelah LD_LIBRARY_PATH di-set
-  # Debug: print semua lib yang ditemukan
-  "find /nix/store -maxdepth 4 -name 'libz.so*' -o -name 'libstdc++.so*' 2>/dev/null | head -20"
+  # Pre-download Sentence-BERT model to avoid runtime timeout
+  "python3 -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')\" || echo 'Model pre-download failed, will download at runtime'"
 ]
 
 [start]
-# Collect SEMUA lib path dari nix store secara dinamis — tidak hardcode path
-cmd = """export LD_LIBRARY_PATH=$(find /nix/store -maxdepth 4 \\( -name 'libstdc++.so.6' -o -name 'libz.so.1' -o -name 'libgcc_s.so.1' -o -name 'libm.so.6' \\) -exec dirname {} \\; 2>/dev/null | sort -u | paste -sd ':' -):$LD_LIBRARY_PATH && npm start"""
+# Simple start - LD_LIBRARY_PATH is handled in Node.js spawn
+cmd = "npm start"
 
 [variables]
-# Gunakan numpy dari nix, bukan dari ~/.local
-PYTHONPATH = "/run/current-system/sw/lib/python3.11/site-packages:/root/.local/lib/python3.11/site-packages"
+PYTHONPATH = "/root/.local/lib/python3.11/site-packages"

@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -12,6 +12,42 @@ try {
 } catch (error) {
   // Fallback for CommonJS environments (like Jest)
   __dirname = path.dirname(__filename);
+}
+
+/**
+ * Get nix library paths for Python dependencies
+ * This is critical for Railway/Nixpacks deployment where numpy needs libstdc++.so.6
+ */
+function getNixLibPath() {
+  try {
+    const result = execSync(
+      `find /nix/store -maxdepth 4 \\( -name 'libstdc++.so.6' -o -name 'libz.so.1' -o -name 'libgcc_s.so.1' -o -name 'libm.so.6' \\) -exec dirname {} \\; 2>/dev/null | sort -u | paste -sd ':' -`,
+      { encoding: 'utf8', timeout: 10000 }
+    ).trim();
+    console.log('🔧 [NIX-LIB-PATH] Found nix library paths:', result.substring(0, 200) + '...');
+    return result;
+  } catch (e) {
+    console.warn('⚠️ [NIX-LIB-PATH] Could not find nix lib path (not on nixpacks?):', e.message);
+    return '';
+  }
+}
+
+// Cache path agar tidak di-find setiap kali spawn Python
+const NIX_LIB_PATH = getNixLibPath();
+
+/**
+ * Create environment for Python subprocess with proper library paths
+ */
+function getPythonEnv() {
+  const env = { ...process.env };
+  
+  if (NIX_LIB_PATH) {
+    // Inject nix lib paths FIRST, then append existing LD_LIBRARY_PATH
+    env.LD_LIBRARY_PATH = NIX_LIB_PATH + ':' + (process.env.LD_LIBRARY_PATH || '');
+    console.log('🐍 [PYTHON-ENV] LD_LIBRARY_PATH set:', env.LD_LIBRARY_PATH.substring(0, 200) + '...');
+  }
+  
+  return env;
 }
 
 /**
@@ -41,7 +77,9 @@ class TestingService {
         pythonScriptPath,
         generatedText,
         referenceText
-      ]);
+      ], {
+        env: getPythonEnv() // Inject nix lib paths
+      });
       
       let result = '';
       let errorOutput = '';
@@ -102,7 +140,9 @@ class TestingService {
         pythonScriptPath,
         generatedText,
         referenceText
-      ]);
+      ], {
+        env: getPythonEnv() // Inject nix lib paths
+      });
       
       let result = '';
       let errorOutput = '';
@@ -988,7 +1028,9 @@ class TestingService {
           pythonScriptPath,
           generatedText,
           referenceText
-        ]);
+        ], {
+          env: getPythonEnv() // Inject nix lib paths
+        });
       } catch (spawnError) {
         console.error('❌ [METEOR-PYTHON] Failed to spawn Python process:', spawnError);
         reject(new Error(`Failed to spawn Python process: ${spawnError.message}. Make sure Python is installed and accessible via '${pythonCommand}' command.`));
@@ -1077,7 +1119,9 @@ class TestingService {
         pythonScriptPath,
         generatedText,
         referenceText
-      ]);
+      ], {
+        env: getPythonEnv() // Inject nix lib paths
+      });
       
       let result = '';
       let errorOutput = '';
