@@ -266,6 +266,16 @@ class TestingService {
         user_id: userId,
         scenario_id: scenarioId,
         meteor_score: meteorResult.score ?? 0,
+        
+        // Overall metrics (dari full-text evaluation) - ADDED
+        precision: detailedMetrics.precision ?? null,
+        recall: detailedMetrics.recall ?? null,
+        f_mean: detailedMetrics.f_mean ?? null,
+        penalty: detailedMetrics.penalty ?? null,
+        chunks: detailedMetrics.chunks ?? null,
+        matches: detailedMetrics.matches ?? null,
+        generated_tokens: detailedMetrics.generated_tokens ?? null,
+        reference_tokens: detailedMetrics.reference_tokens ?? null,
 
         // Given section
         given_score: g.meteor_score ?? null,
