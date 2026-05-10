@@ -722,13 +722,38 @@ const MeteorStepAnalysis = ({ stepName, testResult }) => {
 
   const precision = detailedMetrics.precision ?? details.precision ?? 0;
   const recall = detailedMetrics.recall ?? details.recall ?? 0;
-  const fMean = detailedMetrics.f_mean ?? details.f_mean ?? 0;
+  let fMean = detailedMetrics.f_mean ?? details.f_mean ?? 0;
+  
+  // Fallback: hitung F-Mean jika tidak ada di data (formula METEOR: 10*P*R / (9*P + R))
+  if (fMean === 0 && (precision > 0 || recall > 0)) {
+    const denominator = (9 * precision) + recall;
+    fMean = denominator > 0 ? (10 * precision * recall) / denominator : 0;
+    console.log('🔧 [F-Mean Fallback] Calculated:', {
+      precision,
+      recall,
+      calculated_f_mean: fMean,
+      formula: '10 * P * R / (9*P + R)'
+    });
+  }
+  
   const penalty = detailedMetrics.penalty ?? details.penalty ?? 0;
   const matches = detailedMetrics.matches ?? details.matches ?? 0;
   const generatedTokens = detailedMetrics.generated_tokens ?? details.generated_tokens ?? 0;
   const referenceTokens = detailedMetrics.reference_tokens ?? details.reference_tokens ?? 0;
   const chunks = detailedMetrics.chunks ?? details.chunks ?? 0;
   const meteorScore = testResult?.score ?? 0;
+
+  // Debug log untuk F-Mean step
+  if (stepName === 'F-Mean (F-Score)') {
+    console.log('📊 [F-Mean Debug]', {
+      precision,
+      recall,
+      fMean,
+      detailedMetrics_f_mean: detailedMetrics.f_mean,
+      details_f_mean: details.f_mean,
+      testResult_keys: Object.keys(testResult || {})
+    });
+  }
 
   if (stepName === 'Presisi (Precision)') {
     return (
