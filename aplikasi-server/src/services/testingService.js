@@ -589,7 +589,7 @@ class TestingService {
 
   /**
    * Helper: transform row dari meteor_test_results jadi format yang dipakai frontend.
-   * Overall metrics di-rekonstruksi sebagai rata-rata section (lihat catatan di atas).
+   * FIXED: Gunakan overall metrics dari database (bukan rata-rata section)
    */
   static _transformMeteorRow(result) {
     const buildSection = (prefix) => {
@@ -614,11 +614,27 @@ class TestingService {
       then: buildSection('then'),
     };
 
-    const sections = [section_metrics.given, section_metrics.when, section_metrics.then].filter(Boolean);
-    const avg = (key) => sections.length > 0
-      ? sections.reduce((sum, s) => sum + (s[key] || 0), 0) / sections.length
-      : 0;
-    const sum = (key) => sections.reduce((s, x) => s + (x[key] || 0), 0);
+    // FIXED: Gunakan overall metrics dari database (kolom tanpa prefix)
+    // Ini adalah metrics dari full-text evaluation, bukan rata-rata section
+    const overallMetrics = {
+      precision: result.precision ?? 0,
+      recall: result.recall ?? 0,
+      f_mean: result.f_mean ?? 0,
+      penalty: result.penalty ?? 0,
+      chunks: result.chunks ?? 0,
+      matches: result.matches ?? 0,
+      generated_tokens: result.generated_tokens ?? 0,
+      reference_tokens: result.reference_tokens ?? 0,
+    };
+
+    console.log('✅ [_transformMeteorRow] Using OVERALL metrics from DB:', {
+      id: result.id,
+      precision: overallMetrics.precision,
+      recall: overallMetrics.recall,
+      matches: overallMetrics.matches,
+      generated_tokens: overallMetrics.generated_tokens,
+      reference_tokens: overallMetrics.reference_tokens,
+    });
 
     return {
       id: result.id,
@@ -627,13 +643,8 @@ class TestingService {
       test_type: 'meteor',
       score: result.meteor_score,
       test_details: {
-        // Approximate overall metrics (rata-rata section, untuk display)
-        precision: avg('precision'),
-        recall: avg('recall'),
-        f_mean: avg('f_mean'),
-        penalty: avg('penalty'),
-        chunks: sum('chunks'),
-        matches: sum('matches'),
+        // FIXED: Overall metrics dari full-text evaluation (bukan rata-rata section)
+        ...overallMetrics,
         section_metrics,
         translation_info: result.translation_info,
       },

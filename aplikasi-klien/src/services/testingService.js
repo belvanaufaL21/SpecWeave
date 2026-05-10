@@ -243,6 +243,16 @@ class TestingService {
         console.log('✅ Parsing METEOR test result');
         console.log('📦 Raw test_details:', details);
         console.log('📦 test_details keys:', Object.keys(details));
+        console.log('📦 Overall metrics from test_details:', {
+          precision: details.precision,
+          recall: details.recall,
+          f_mean: details.f_mean,
+          penalty: details.penalty,
+          chunks: details.chunks,
+          matches: details.matches,
+          generated_tokens: details.generated_tokens,
+          reference_tokens: details.reference_tokens,
+        });
         console.log('📦 section_metrics check:', {
           hasSection: !!details.section_metrics,
           sectionKeys: details.section_metrics ? Object.keys(details.section_metrics) : []
@@ -251,21 +261,15 @@ class TestingService {
         // Try multiple paths for METEOR score
         const score = testResult.score ?? testResult.meteor_score ?? details.score ?? 0;
         
-        // Try multiple paths for precision
-        const precision = details.precision ?? testResult.precision ?? details.meteor_precision ?? 0;
-        
-        // Try multiple paths for recall
-        const recall = details.recall ?? testResult.recall ?? details.meteor_recall ?? 0;
-        
-        // Try multiple paths for f_score
-        const f_score = details.f_score ?? details.fScore ?? testResult.f_score ?? testResult.fScore ?? 0;
-        
-        // Try multiple paths for penalty
-        const penalty = details.penalty ?? details.fragmentation_penalty ?? testResult.penalty ?? 0;
-        
-        // Try multiple paths for chunks and matches
+        // FIXED: Use overall metrics from test_details (from backend _transformMeteorRow)
+        const precision = details.precision ?? testResult.precision ?? 0;
+        const recall = details.recall ?? testResult.recall ?? 0;
+        const f_mean = details.f_mean ?? testResult.f_mean ?? 0;
+        const penalty = details.penalty ?? testResult.penalty ?? 0;
         const chunks = details.chunks ?? testResult.chunks ?? 0;
         const matches = details.matches ?? testResult.matches ?? 0;
+        const generated_tokens = details.generated_tokens ?? testResult.generated_tokens ?? 0;
+        const reference_tokens = details.reference_tokens ?? testResult.reference_tokens ?? 0;
         
         // IMPORTANT: Get section_metrics from test_details
         const section_metrics = details.section_metrics || {};
@@ -274,13 +278,26 @@ class TestingService {
         const detailedMetrics = {
           precision,
           recall,
-          f_mean: f_score,
+          f_mean,
           penalty,
           chunks,
           matches,
+          generated_tokens,
+          reference_tokens,
           section_metrics: section_metrics, // Add section_metrics here!
           ...(details.detailed_metrics || {}) // Merge any other detailed_metrics
         };
+        
+        console.log('✅ [METEOR] Overall metrics extracted:', {
+          precision,
+          recall,
+          f_mean,
+          matches,
+          generated_tokens,
+          reference_tokens,
+          calculation_check: `${matches} / ${generated_tokens} = ${matches / generated_tokens}`,
+          expected_precision: matches / generated_tokens,
+        });
         
         console.log('🔍 Section metrics found:', {
           hasSection: !!section_metrics,
@@ -293,11 +310,14 @@ class TestingService {
         formattedDetails = {
           precision,
           recall,
-          f_score,
+          f_score: f_mean,
+          f_mean,
           fragmentation_penalty: penalty,
           penalty,
           chunks,
           matches,
+          generated_tokens,
+          reference_tokens,
           section_metrics: section_metrics, // Add here too
           detailed_metrics: detailedMetrics
         };
@@ -319,10 +339,13 @@ class TestingService {
           meteor_score: score,
           precision: precision,
           recall: recall,
-          f_score: f_score,
+          f_score: f_mean,
+          f_mean: f_mean,
           penalty: penalty,
           chunks: chunks,
-          matches: matches
+          matches: matches,
+          generated_tokens: generated_tokens,
+          reference_tokens: reference_tokens,
         };
         console.log('📋 Formatted METEOR testResult:', formatted);
         return formatted;

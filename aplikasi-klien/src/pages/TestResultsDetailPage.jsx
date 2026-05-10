@@ -777,6 +777,17 @@ const MeteorStepAnalysis = ({ stepName, testResult }) => {
   }
 
   if (stepName === 'Presisi (Precision)') {
+    // Debug log untuk verifikasi perhitungan presisi
+    console.log('🔍 [Precision Calculation]', {
+      precision,
+      matches,
+      generatedTokens,
+      calculation: `${matches} / ${generatedTokens} = ${precision}`,
+      expected: matches / generatedTokens,
+      detailedMetrics,
+      details
+    });
+    
     return (
       <RatioVisualization
         label="Precision"
