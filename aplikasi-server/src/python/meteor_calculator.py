@@ -323,11 +323,27 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
     try:
         download_nltk_data()
 
+        # ===== Stage 0: Parse Gherkin (remove Given/When/Then keywords) =====
+        print(f"\n=== Parsing Gherkin ===", file=sys.stderr)
+        print(f"Original generated_text: {generated_text[:100]}...", file=sys.stderr)
+        print(f"Original reference_text: {reference_text[:100]}...", file=sys.stderr)
+        
+        # Parse untuk mendapatkan isi tanpa keyword Given/When/Then
+        gen_parts = parse_gherkin_scenario(generated_text)
+        ref_parts = parse_gherkin_scenario(reference_text)
+        
+        # Gabungkan isi section (tanpa keyword) untuk full-text evaluation
+        generated_text_clean = ' '.join([gen_parts['given'], gen_parts['when'], gen_parts['then']]).strip()
+        reference_text_clean = ' '.join([ref_parts['given'], ref_parts['when'], ref_parts['then']]).strip()
+        
+        print(f"Cleaned generated_text: {generated_text_clean[:100]}...", file=sys.stderr)
+        print(f"Cleaned reference_text: {reference_text_clean[:100]}...", file=sys.stderr)
+
         # ===== Stage 1: Language detection & preprocessing =====
         send_progress('precision', 15, 'Mendeteksi bahasa dan preprocessing teks')
 
-        gen_lang = detect_language(generated_text)
-        ref_lang = detect_language(reference_text)
+        gen_lang = detect_language(generated_text_clean)
+        ref_lang = detect_language(reference_text_clean)
         is_indonesian = (gen_lang == 'id' or ref_lang == 'id'
                          or target_language == 'id')
 
@@ -338,8 +354,9 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
 
         send_progress('precision', 20, 'Tokenisasi dan stemming teks')
 
-        gen_pre = preprocess_text(generated_text, gen_lang, target_language)
-        ref_pre = preprocess_text(reference_text, ref_lang, target_language)
+        # FIXED: Gunakan teks yang sudah dibersihkan dari keyword Given/When/Then
+        gen_pre = preprocess_text(generated_text_clean, gen_lang, target_language)
+        ref_pre = preprocess_text(reference_text_clean, ref_lang, target_language)
         gen_tokens, ref_tokens = gen_pre['tokens'], ref_pre['tokens']
 
         print(f"Generated tokens ({len(gen_tokens)}): {gen_tokens[:15]}{'...' if len(gen_tokens) > 15 else ''}",
