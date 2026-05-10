@@ -616,7 +616,7 @@ class TestingService {
 
     // FIXED: Gunakan overall metrics dari database (kolom tanpa prefix)
     // Ini adalah metrics dari full-text evaluation, bukan rata-rata section
-    const overallMetrics = {
+    let overallMetrics = {
       precision: result.precision ?? 0,
       recall: result.recall ?? 0,
       f_mean: result.f_mean ?? 0,
@@ -626,6 +626,33 @@ class TestingService {
       generated_tokens: result.generated_tokens ?? 0,
       reference_tokens: result.reference_tokens ?? 0,
     };
+
+    // FALLBACK: Jika generated_tokens atau reference_tokens = 0 (data lama),
+    // hitung dari teks dengan tokenisasi sederhana
+    if (overallMetrics.generated_tokens === 0 && result.generated_text) {
+      // Tokenisasi sederhana: split by whitespace, filter empty
+      const tokens = result.generated_text.toLowerCase()
+        .split(/\s+/)
+        .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
+      overallMetrics.generated_tokens = tokens.length;
+      console.log('⚠️ [FALLBACK] Calculated generated_tokens from text:', {
+        id: result.id,
+        generated_tokens: overallMetrics.generated_tokens,
+        text_preview: result.generated_text.substring(0, 100)
+      });
+    }
+
+    if (overallMetrics.reference_tokens === 0 && result.reference_text) {
+      const tokens = result.reference_text.toLowerCase()
+        .split(/\s+/)
+        .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
+      overallMetrics.reference_tokens = tokens.length;
+      console.log('⚠️ [FALLBACK] Calculated reference_tokens from text:', {
+        id: result.id,
+        reference_tokens: overallMetrics.reference_tokens,
+        text_preview: result.reference_text.substring(0, 100)
+      });
+    }
 
     console.log('✅ [_transformMeteorRow] Using OVERALL metrics from DB:', {
       id: result.id,

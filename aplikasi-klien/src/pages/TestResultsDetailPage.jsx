@@ -759,10 +759,34 @@ const MeteorStepAnalysis = ({ stepName, testResult }) => {
   
   const penalty = detailedMetrics.penalty ?? details.penalty ?? 0;
   const matches = detailedMetrics.matches ?? details.matches ?? 0;
-  const generatedTokens = detailedMetrics.generated_tokens ?? details.generated_tokens ?? 0;
-  const referenceTokens = detailedMetrics.reference_tokens ?? details.reference_tokens ?? 0;
+  let generatedTokens = detailedMetrics.generated_tokens ?? details.generated_tokens ?? 0;
+  let referenceTokens = detailedMetrics.reference_tokens ?? details.reference_tokens ?? 0;
   const chunks = detailedMetrics.chunks ?? details.chunks ?? 0;
   const meteorScore = testResult?.score ?? 0;
+
+  // FALLBACK: Jika generated_tokens atau reference_tokens = 0 (data lama),
+  // hitung dari teks dengan tokenisasi sederhana
+  if (generatedTokens === 0 && testResult?.generatedText) {
+    const tokens = testResult.generatedText.toLowerCase()
+      .split(/\s+/)
+      .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
+    generatedTokens = tokens.length;
+    console.log('⚠️ [FALLBACK] Calculated generated_tokens from text:', {
+      generatedTokens,
+      text_preview: testResult.generatedText.substring(0, 100)
+    });
+  }
+
+  if (referenceTokens === 0 && testResult?.referenceText) {
+    const tokens = testResult.referenceText.toLowerCase()
+      .split(/\s+/)
+      .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
+    referenceTokens = tokens.length;
+    console.log('⚠️ [FALLBACK] Calculated reference_tokens from text:', {
+      referenceTokens,
+      text_preview: testResult.referenceText.substring(0, 100)
+    });
+  }
 
   // Debug log untuk F-Mean step
   if (stepName === 'F-Mean (F-Score)') {
@@ -783,7 +807,7 @@ const MeteorStepAnalysis = ({ stepName, testResult }) => {
       matches,
       generatedTokens,
       calculation: `${matches} / ${generatedTokens} = ${precision}`,
-      expected: matches / generatedTokens,
+      expected: generatedTokens > 0 ? matches / generatedTokens : 0,
       detailedMetrics,
       details
     });
