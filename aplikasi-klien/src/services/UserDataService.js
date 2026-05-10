@@ -595,41 +595,155 @@ class UserDataService {
   }
   
   /**
-   * Get all test results for current user
+   * Get all test results for current user from new dual-evaluation tables
+   * Combines results from meteor_test_results and sentence_bert_test_results
    */
   static async getAllTestResults() {
     try {
-      const { data, error } = await supabase
-        .from('test_results')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('User not authenticated, returning empty results');
+        return { success: true, data: [] };
+      }
+
+      // Fetch from both new tables in parallel
+      const [meteorResponse, sbertResponse] = await Promise.all([
+        supabase
+          .from('meteor_test_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('sentence_bert_test_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+      ]);
+
+      if (meteorResponse.error) throw new Error(`METEOR query error: ${meteorResponse.error.message}`);
+      if (sbertResponse.error) throw new Error(`Sentence-BERT query error: ${sbertResponse.error.message}`);
+
+      const meteorResults = meteorResponse.data || [];
+      const sbertResults = sbertResponse.data || [];
+
+      // Group by scenario_id to combine METEOR + Sentence-BERT results
+      const combinedMap = {};
+
+      // Process METEOR results
+      meteorResults.forEach(meteor => {
+        const scenarioId = meteor.scenario_id;
+        if (!combinedMap[scenarioId]) {
+          combinedMap[scenarioId] = {
+            scenario_id: scenarioId,
+            user_id: meteor.user_id,
+            generated_text: meteor.generated_text,
+            reference_text: meteor.reference_text,
+            created_at: meteor.created_at,
+            test_type: 'dual-evaluation', // Mark as dual evaluation
+            score: meteor.meteor_score, // Use METEOR score as primary score
+            test_details: {
+              meteor: {
+                score: meteor.meteor_score,
+                given_score: meteor.given_score,
+                when_score: meteor.when_score,
+                then_score: meteor.then_score,
+                given_precision: meteor.given_precision,
+                given_recall: meteor.given_recall,
+                given_f_mean: meteor.given_f_mean,
+                given_penalty: meteor.given_penalty,
+                when_precision: meteor.when_precision,
+                when_recall: meteor.when_recall,
+                when_f_mean: meteor.when_f_mean,
+                when_penalty: meteor.when_penalty,
+                then_precision: meteor.then_precision,
+                then_recall: meteor.then_recall,
+                then_f_mean: meteor.then_f_mean,
+                then_penalty: meteor.then_penalty,
+                translation_info: meteor.translation_info
+              }
+            }
+          };
+        }
+      });
+
+      // Process Sentence-BERT results and merge with METEOR
+      sbertResults.forEach(sbert => {
+        const scenarioId = sbert.scenario_id;
+        if (combinedMap[scenarioId]) {
+          // Merge with existing METEOR result
+          combinedMap[scenarioId].test_details.sentence_bert = {
+            score: sbert.similarity_score,
+            given_score: sbert.given_score,
+            when_score: sbert.when_score,
+            then_score: sbert.then_score,
+            details: sbert.details
+          };
+        } else {
+          // Sentence-BERT only (no METEOR result)
+          combinedMap[scenarioId] = {
+            scenario_id: scenarioId,
+            user_id: sbert.user_id,
+            generated_text: sbert.generated_text,
+            reference_text: sbert.reference_text,
+            created_at: sbert.created_at,
+            test_type: 'sentence-bert-only',
+            score: sbert.similarity_score,
+            test_details: {
+              sentence_bert: {
+                score: sbert.similarity_score,
+                given_score: sbert.given_score,
+                when_score: sbert.when_score,
+                then_score: sbert.then_score,
+                details: sbert.details
+              }
+            }
+          };
+        }
+      });
+
+      // Convert map to array and sort by created_at
+      const combinedResults = Object.values(combinedMap).sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      console.log(`✅ [USER-DATA] Loaded ${combinedResults.length} test results (${meteorResults.length} METEOR, ${sbertResults.length} Sentence-BERT)`);
       
-      if (error) throw error;
-      
-      return { success: true, data: data || [] };
+      return { success: true, data: combinedResults };
     } catch (error) {
-      console.error('Error getting all test results:', error);
+      console.error('❌ [USER-DATA] Error getting all test results:', error);
       return { success: false, error: error.message };
     }
   }
   
   /**
-   * Delete test result
+   * Delete test result from both meteor_test_results and sentence_bert_test_results tables
    */
   static async deleteTestResult(scenarioId) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
       
-      const { error } = await supabase
-        .from('test_results')
-        .delete()
-        .eq('scenario_id', scenarioId)
-        .eq('user_id', user.id);
+      // Delete from both tables in parallel
+      const [meteorDelete, sbertDelete] = await Promise.all([
+        supabase
+          .from('meteor_test_results')
+          .delete()
+          .eq('scenario_id', scenarioId)
+          .eq('user_id', user.id),
+        supabase
+          .from('sentence_bert_test_results')
+          .delete()
+          .eq('scenario_id', scenarioId)
+          .eq('user_id', user.id)
+      ]);
       
-      if (error) throw error;
+      if (meteorDelete.error) console.warn('METEOR delete error:', meteorDelete.error.message);
+      if (sbertDelete.error) console.warn('Sentence-BERT delete error:', sbertDelete.error.message);
       
-      return { success: true };
+      // Consider success if at least one delete succeeded
+      const success = !meteorDelete.error || !sbertDelete.error;
+      
+      return { success };
     } catch (error) {
       console.error('Error deleting test result:', error);
       return { success: false, error: error.message };

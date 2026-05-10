@@ -35,19 +35,46 @@ export const TestResultsProvider = ({ children }) => {
           // Use scenario_id as key
           const scenarioId = testResult.scenario_id;
           
+          // Extract METEOR and Sentence-BERT details
+          const meteorDetails = testResult.test_details?.meteor || {};
+          const sbertDetails = testResult.test_details?.sentence_bert || {};
+          
           resultsMap[scenarioId] = {
-            // Spread test_details if it exists
-            ...(testResult.test_details || {}),
-            // Override with database fields
             scenarioId: testResult.scenario_id,
-            messageId: testResult.message_id,
-            scenarioIndex: testResult.scenario_index,
-            meteor_score: testResult.score, // Use score field from test_results
-            score: testResult.score,
+            messageId: testResult.message_id || scenarioId.split('-')[0], // Extract from scenario_id if not present
+            scenarioIndex: testResult.scenario_index || parseInt(scenarioId.split('-')[1]) || 0,
             testType: testResult.test_type,
-            timestamp: testResult.test_details?.timestamp || testResult.created_at,
+            timestamp: testResult.created_at,
             generatedText: testResult.generated_text,
-            referenceText: testResult.reference_text
+            referenceText: testResult.reference_text,
+            
+            // Primary score (METEOR if available, otherwise Sentence-BERT)
+            score: testResult.score,
+            meteor_score: meteorDetails.score || testResult.score,
+            
+            // METEOR metrics
+            meteor: meteorDetails.score ? {
+              success: true,
+              score: meteorDetails.score,
+              given_score: meteorDetails.given_score,
+              when_score: meteorDetails.when_score,
+              then_score: meteorDetails.then_score,
+              precision: (meteorDetails.given_precision + meteorDetails.when_precision + meteorDetails.then_precision) / 3,
+              recall: (meteorDetails.given_recall + meteorDetails.when_recall + meteorDetails.then_recall) / 3,
+              f_mean: (meteorDetails.given_f_mean + meteorDetails.when_f_mean + meteorDetails.then_f_mean) / 3,
+              penalty: (meteorDetails.given_penalty + meteorDetails.when_penalty + meteorDetails.then_penalty) / 3,
+              translation_info: meteorDetails.translation_info
+            } : null,
+            
+            // Sentence-BERT metrics
+            sentence_bert: sbertDetails.score ? {
+              success: true,
+              score: sbertDetails.score,
+              given_score: sbertDetails.given_score,
+              when_score: sbertDetails.when_score,
+              then_score: sbertDetails.then_score,
+              details: sbertDetails.details
+            } : null
           };
         });
         
