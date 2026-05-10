@@ -396,7 +396,28 @@ const TestResultDetails = ({ result, testType, tabConfig }) => {
       const generated_tokens = detailedMetrics.generated_tokens ?? details.generated_tokens ?? 0;
       const reference_tokens = detailedMetrics.reference_tokens ?? details.reference_tokens ?? 0;
       const matches = detailedMetrics.matches ?? details.matches ?? 0;
+      const chunks = detailedMetrics.chunks ?? details.chunks ?? 0;
       const meteorScore = result.score ?? 0;
+
+      // Debug log untuk memastikan data tidak dummy
+      console.log('🔍 [METEOR Data Check]', {
+        source: 'getTestingSteps',
+        detailedMetrics_keys: Object.keys(detailedMetrics),
+        details_keys: Object.keys(details),
+        values: {
+          precision,
+          recall,
+          f_mean,
+          penalty,
+          generated_tokens,
+          reference_tokens,
+          matches,
+          chunks,
+          meteorScore
+        },
+        raw_detailedMetrics: detailedMetrics,
+        raw_details: details
+      });
 
       return [
         {
@@ -437,7 +458,7 @@ const TestResultDetails = ({ result, testType, tabConfig }) => {
           formula: 'Penalti = 0.5 × (Chunks / Matches)³',
           actualData: {
             penalty,
-            chunks: detailedMetrics.chunks ?? details.chunks ?? 0,
+            chunks,
             matches,
           },
         },
