@@ -511,13 +511,13 @@ const TestResultDetails = ({ result, testType, tabConfig }) => {
   );
 
   return (
-    <div className="mt-8 space-y-8">
+    <div className="mt-8 space-y-8 pb-16">
       {/* Perbandingan Teks */}
       <div>
         <div className="mb-4">
           <h3 className="text-lg font-bold text-white">Perbandingan Teks</h3>
           {testType === 'meteor' ? (
-            <div className="h-1 w-10 rounded-full mt-1" style={{ backgroundColor: '#120C18' }}></div>
+            <div className="h-1 w-10 rounded-full mt-1" style={{ backgroundColor: '#C27AFF' }}></div>
           ) : (
             <div className={`h-1 w-10 bg-${tabConfig.color}-500 rounded-full mt-1`}></div>
           )}
@@ -535,7 +535,7 @@ const TestResultDetails = ({ result, testType, tabConfig }) => {
         <div className="mb-6">
           <h3 className="text-lg font-bold text-white">Tahapan Pengujian {tabConfig.label}</h3>
           {testType === 'meteor' ? (
-            <div className="h-1 w-10 rounded-full mt-1" style={{ backgroundColor: '#120C18' }}></div>
+            <div className="h-1 w-10 rounded-full mt-1" style={{ backgroundColor: '#C27AFF' }}></div>
           ) : (
             <div className={`h-1 w-10 bg-${tabConfig.color}-500 rounded-full mt-1`}></div>
           )}
