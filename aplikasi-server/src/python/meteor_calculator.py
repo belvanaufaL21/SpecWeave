@@ -288,20 +288,6 @@ def parse_gherkin_scenario(text):
     }
 
 
-def get_matched_words(gen_tokens, ref_tokens):
-    """Ambil kata-kata yang match untuk highlighting di UI (count-aware)."""
-    matched = []
-    counter = {}
-    for w in gen_tokens:
-        if w in ref_tokens:
-            max_m = min(gen_tokens.count(w), ref_tokens.count(w))
-            cur = counter.get(w, 0)
-            if cur < max_m:
-                matched.append({'generated': w, 'reference': w})
-                counter[w] = cur + 1
-    return matched
-
-
 def send_progress(stage, progress, message):
     """Send progress update to Node.js via stderr."""
     payload = {'type': 'progress', 'stage': stage, 'progress': progress, 'message': message}
@@ -393,49 +379,6 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
 
         send_progress('penalty', 82, 'Penalti dihitung')
         send_progress('meteor', 87, 'Menghitung skor akhir METEOR')
-
-        # ===== Stage 3: Per-section diagnostics =====
-        gen_parts = parse_gherkin_scenario(generated_text)
-        ref_parts = parse_gherkin_scenario(reference_text)
-        section_metrics = {}
-
-        for section in ('given', 'when', 'then'):
-            gp_text, rp_text = gen_parts[section], ref_parts[section]
-
-            if not (gp_text and rp_text):
-                section_metrics[section] = {
-                    'precision': 0.0, 'recall': 0.0, 'f_mean': 0.0,
-                    'matches': 0, 'chunks': 0, 'penalty': 0.0, 'meteor_score': 0.0,
-                    'generated_tokens': 0, 'reference_tokens': 0, 'matched_words': []
-                }
-                continue
-
-            gp = preprocess_text(gp_text, gen_lang, target_language)
-            rp = preprocess_text(rp_text, ref_lang, target_language)
-            gp_tokens, rp_tokens = gp['tokens'], rp['tokens']
-
-            sec_score = nltk_meteor(gp_tokens, rp_tokens,
-                                    use_identity_stemmer=use_identity)
-            sec_diag = calculate_diagnostic_metrics(gp_tokens, rp_tokens)
-
-            print(f"Section {section.upper():5s}: NLTK={sec_score:.3f} | "
-                  f"P={sec_diag['precision']:.2f} R={sec_diag['recall']:.2f} "
-                  f"F={sec_diag['f_mean']:.2f} Pen={sec_diag['penalty']:.2f}",
-                  file=sys.stderr)
-
-            section_metrics[section] = {
-                'precision': sec_diag['precision'],
-                'recall': sec_diag['recall'],
-                'f_mean': sec_diag['f_mean'],
-                'matches': sec_diag['matches'],
-                'chunks': sec_diag['chunks'],
-                'penalty': sec_diag['penalty'],
-                'meteor_score': sec_score,
-                'generated_tokens': len(gp_tokens),
-                'reference_tokens': len(rp_tokens),
-                'matched_words': get_matched_words(gp_tokens, rp_tokens),
-            }
-
         send_progress('meteor', 95, 'Skor METEOR selesai dihitung')
 
         # ===== Build response =====
@@ -459,7 +402,6 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
                 'penalty': diagnostic['penalty'],
                 'generated_tokens': len(gen_tokens),
                 'reference_tokens': len(ref_tokens),
-                'section_metrics': section_metrics,
                 'explanation': {
                     'precision_desc': (
                         f"Proporsi token hipotesis yang teralinasi: "
@@ -483,14 +425,6 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
                         f"METEOR = NLTK meteor_score (teks utuh) = {official_score:.4f}. "
                         f"Cross-check diagnostik: F·(1-Pen) = {diagnostic['meteor_score']:.4f}"
                     ),
-                    'section_scores': {
-                        'given': section_metrics['given']['meteor_score'],
-                        'when': section_metrics['when']['meteor_score'],
-                        'then': section_metrics['then']['meteor_score'],
-                        'note': ('Section scores adalah DIAGNOSTIK error analysis, '
-                                 'BUKAN skor utama. Skor utama dihitung pada teks utuh '
-                                 'sesuai standar Banerjee & Lavie (2005).')
-                    }
                 }
             },
             'details': {

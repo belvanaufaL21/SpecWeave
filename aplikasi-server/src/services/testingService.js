@@ -251,15 +251,11 @@ class TestingService {
   /**
    * Simpan hasil METEOR ke meteor_test_results.
    * Catatan: meteorResult.score sekarang dari NLTK full-text (Banerjee & Lavie 2005),
-   * bukan rata-rata section. Per-section disimpan untuk diagnostik.
+   * bukan rata-rata section. Per-section computation sudah dihapus untuk efisiensi.
    */
   static async saveMeteorResult(userId, scenarioId, generatedText, referenceText, meteorResult) {
     try {
       const detailedMetrics = meteorResult.detailed_metrics || {};
-      const sectionMetrics = detailedMetrics.section_metrics || {};
-      const g = sectionMetrics.given || {};
-      const w = sectionMetrics.when || {};
-      const t = sectionMetrics.then || {};
 
       // Pakai ?? bukan || supaya nilai 0 (legitimate) tidak di-coerce ke null
       const meteorData = {
@@ -267,7 +263,7 @@ class TestingService {
         scenario_id: scenarioId,
         meteor_score: meteorResult.score ?? 0,
         
-        // Overall metrics (dari full-text evaluation) - ADDED
+        // Overall metrics (dari full-text evaluation)
         precision: detailedMetrics.precision ?? null,
         recall: detailedMetrics.recall ?? null,
         f_mean: detailedMetrics.f_mean ?? null,
@@ -276,39 +272,6 @@ class TestingService {
         matches: detailedMetrics.matches ?? null,
         generated_tokens: detailedMetrics.generated_tokens ?? null,
         reference_tokens: detailedMetrics.reference_tokens ?? null,
-
-        // Given section
-        given_score: g.meteor_score ?? null,
-        given_precision: g.precision ?? null,
-        given_recall: g.recall ?? null,
-        given_f_mean: g.f_mean ?? null,
-        given_penalty: g.penalty ?? null,
-        given_chunks: g.chunks ?? null,
-        given_matches: g.matches ?? null,
-        given_generated_tokens: g.generated_tokens ?? null,
-        given_reference_tokens: g.reference_tokens ?? null,
-
-        // When section
-        when_score: w.meteor_score ?? null,
-        when_precision: w.precision ?? null,
-        when_recall: w.recall ?? null,
-        when_f_mean: w.f_mean ?? null,
-        when_penalty: w.penalty ?? null,
-        when_chunks: w.chunks ?? null,
-        when_matches: w.matches ?? null,
-        when_generated_tokens: w.generated_tokens ?? null,
-        when_reference_tokens: w.reference_tokens ?? null,
-
-        // Then section
-        then_score: t.meteor_score ?? null,
-        then_precision: t.precision ?? null,
-        then_recall: t.recall ?? null,
-        then_f_mean: t.f_mean ?? null,
-        then_penalty: t.penalty ?? null,
-        then_chunks: t.chunks ?? null,
-        then_matches: t.matches ?? null,
-        then_generated_tokens: t.generated_tokens ?? null,
-        then_reference_tokens: t.reference_tokens ?? null,
 
         generated_text: generatedText,
         reference_text: referenceText,
@@ -335,21 +298,16 @@ class TestingService {
    * Simpan hasil Sentence-BERT ke sentence_bert_test_results.
    * Catatan: similarity_score sekarang dari cosine similarity teks utuh
    * (Reimers & Gurevych 2019), bukan rata-rata section.
+   * Per-section computation sudah dihapus untuk efisiensi.
    */
   static async saveSentenceBertResult(userId, scenarioId, generatedText, referenceText, sentenceBertResult) {
     try {
       const details = sentenceBertResult.details || {};
-      const sectionScores = details.section_scores || details.sentence_bert_scores || {};
 
       const sbertData = {
         user_id: userId,
         scenario_id: scenarioId,
         similarity_score: sentenceBertResult.score ?? 0,
-
-        // Section scores per Given/When/Then (?? supaya 0 tidak jadi null)
-        given_score: sectionScores.given ?? null,
-        when_score: sectionScores.when ?? null,
-        then_score: sectionScores.then ?? null,
 
         generated_text: generatedText,
         reference_text: referenceText,
@@ -358,13 +316,10 @@ class TestingService {
           embedding_dimension: details.embedding_dimension,
           model: details.model,
           method: details.method,
-          section_embeddings: details.section_embeddings || null,
-          section_details: details.section_details || null,
           overall_embeddings: details.overall_embeddings || null,
           dot_product: details.dot_product,
           magnitude_a: details.magnitude_a,
           magnitude_b: details.magnitude_b,
-          sections_present: details.sections_present || null,
         },
 
         created_at: new Date().toISOString(),
@@ -589,33 +544,10 @@ class TestingService {
 
   /**
    * Helper: transform row dari meteor_test_results jadi format yang dipakai frontend.
-   * FIXED: Gunakan overall metrics dari database (bukan rata-rata section)
+   * Menggunakan overall metrics dari database (full-text evaluation).
    */
   static _transformMeteorRow(result) {
-    const buildSection = (prefix) => {
-      const score = result[`${prefix}_score`];
-      if (score == null) return null;
-      return {
-        meteor_score: score,
-        precision: result[`${prefix}_precision`],
-        recall: result[`${prefix}_recall`],
-        f_mean: result[`${prefix}_f_mean`],
-        penalty: result[`${prefix}_penalty`],
-        chunks: result[`${prefix}_chunks`],
-        matches: result[`${prefix}_matches`],
-        generated_tokens: result[`${prefix}_generated_tokens`],
-        reference_tokens: result[`${prefix}_reference_tokens`],
-      };
-    };
-
-    const section_metrics = {
-      given: buildSection('given'),
-      when: buildSection('when'),
-      then: buildSection('then'),
-    };
-
-    // FIXED: Gunakan overall metrics dari database (kolom tanpa prefix)
-    // Ini adalah metrics dari full-text evaluation, bukan rata-rata section
+    // Overall metrics dari full-text evaluation
     let overallMetrics = {
       precision: result.precision ?? 0,
       recall: result.recall ?? 0,
@@ -635,11 +567,6 @@ class TestingService {
         .split(/\s+/)
         .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
       overallMetrics.generated_tokens = tokens.length;
-      console.log('⚠️ [FALLBACK] Calculated generated_tokens from text:', {
-        id: result.id,
-        generated_tokens: overallMetrics.generated_tokens,
-        text_preview: result.generated_text.substring(0, 100)
-      });
     }
 
     if (overallMetrics.reference_tokens === 0 && result.reference_text) {
@@ -647,21 +574,7 @@ class TestingService {
         .split(/\s+/)
         .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
       overallMetrics.reference_tokens = tokens.length;
-      console.log('⚠️ [FALLBACK] Calculated reference_tokens from text:', {
-        id: result.id,
-        reference_tokens: overallMetrics.reference_tokens,
-        text_preview: result.reference_text.substring(0, 100)
-      });
     }
-
-    console.log('✅ [_transformMeteorRow] Using OVERALL metrics from DB:', {
-      id: result.id,
-      precision: overallMetrics.precision,
-      recall: overallMetrics.recall,
-      matches: overallMetrics.matches,
-      generated_tokens: overallMetrics.generated_tokens,
-      reference_tokens: overallMetrics.reference_tokens,
-    });
 
     return {
       id: result.id,
@@ -670,9 +583,7 @@ class TestingService {
       test_type: 'meteor',
       score: result.meteor_score,
       test_details: {
-        // FIXED: Overall metrics dari full-text evaluation (bukan rata-rata section)
         ...overallMetrics,
-        section_metrics,
         translation_info: result.translation_info,
       },
       generated_text: result.generated_text,
@@ -690,17 +601,7 @@ class TestingService {
       score: result.similarity_score,
       test_details: {
         cosine_similarity: result.similarity_score,
-        section_scores: {
-          given: result.given_score,
-          when: result.when_score,
-          then: result.then_score,
-        },
         ...(result.details || {}),
-        sentence_bert_scores: {
-          given: result.given_score,
-          when: result.when_score,
-          then: result.then_score,
-        },
       },
       generated_text: result.generated_text,
       reference_text: result.reference_text,

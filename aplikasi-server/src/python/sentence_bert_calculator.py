@@ -103,17 +103,6 @@ def embedding_components(emb_a, emb_b):
     }
 
 
-def empty_section_metrics():
-    """Default metrics untuk section yang tidak ada di salah satu teks."""
-    return {
-        'cosine_similarity': 0.0,
-        'dot_product': 0.0,
-        'magnitude_a': 0.0,
-        'magnitude_b': 0.0,
-        'is_present': False,
-    }
-
-
 # ========================
 # Main Calculation
 # ========================
@@ -123,7 +112,13 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
     Hitung Sentence-BERT cosine similarity sesuai Reimers & Gurevych (2019).
 
     Skor utama  : Cosine similarity pada embedding TEKS UTUH (standar paper).
-    Diagnostik  : Per-section breakdown untuk error analysis (Bab IV).
+    
+    CATATAN PREPROCESSING:
+    Tidak seperti METEOR yang strip keyword Gherkin, Sentence-BERT menggunakan
+    raw text dengan keyword karena:
+    1. Semantic embedding model robust terhadap keyword (tidak inflate skor)
+    2. Keyword memberikan konteks struktural yang berguna untuk embedding
+    3. Konsisten dengan paper asli yang tidak melakukan text preprocessing khusus
     """
     try:
         # ===== Stage 1: Load model =====
@@ -139,35 +134,21 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
                 'details': {'method': 'Sentence-BERT', 'model': model_name},
             }
 
-        # ===== Stage 2: Parse Gherkin sections =====
-        send_progress('tokenizing', 20, 'Parsing struktur Gherkin (Given/When/Then)')
-
-        gen_parts = parse_gherkin_scenario(generated_text)
-        ref_parts = parse_gherkin_scenario(reference_text)
-
-        # ===== Stage 3: Batch encoding =====
-        # Encode dalam 2 panggilan batch (1 untuk gen, 1 untuk ref) alih-alih
-        # 8 panggilan terpisah. Empty section diisi placeholder ' ' untuk
-        # menjaga indeks; kehadiran section di-track via flag is_present.
+        # ===== Stage 2: Encoding full text only =====
+        # Per-section computation dihapus karena tidak digunakan di frontend
+        # dan hanya menambah overhead (6 extra embeddings per evaluation)
+        send_progress('tokenizing', 20, 'Encoding embeddings untuk teks utuh')
         send_progress('tokenizing', 26, 'Encoding embeddings (batch)')
 
-        gen_texts = [generated_text,
-                     gen_parts['given'], gen_parts['when'], gen_parts['then']]
-        ref_texts = [reference_text,
-                     ref_parts['given'], ref_parts['when'], ref_parts['then']]
-
-        gen_to_encode = [t if t else ' ' for t in gen_texts]
-        ref_to_encode = [t if t else ' ' for t in ref_texts]
-
-        gen_embs = model.encode(gen_to_encode, show_progress_bar=False)
-        ref_embs = model.encode(ref_to_encode, show_progress_bar=False)
-        # gen_embs[0]=full, [1]=given, [2]=when, [3]=then (sama untuk ref_embs)
+        # Encode hanya full text (tidak perlu per-section lagi)
+        gen_embs = model.encode([generated_text], show_progress_bar=False)
+        ref_embs = model.encode([reference_text], show_progress_bar=False)
 
         send_progress('attention', 31, 'Menghitung self-attention layers')
         send_progress('attention', 40, 'Hubungan antar kata dalam konteks')
         send_progress('attention', 46, 'Self-attention selesai')
 
-        # ===== Stage 4: Skor utama (full-text cosine similarity) =====
+        # ===== Stage 3: Skor utama (full-text cosine similarity) =====
         # Sesuai standar Reimers & Gurevych (2019)
         send_progress('ffn', 51, 'Transformasi feed-forward network')
 
@@ -175,37 +156,6 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
         overall_similarity = overall['cosine_similarity']
 
         send_progress('ffn', 58, 'Residual connections + layer normalization')
-
-        # ===== Stage 5: Per-section diagnostik =====
-        section_keys = ['given', 'when', 'then']
-        section_scores = {}
-        section_embeddings = {}
-        section_details = {}
-
-        for i, section in enumerate(section_keys, start=1):
-            gen_part = gen_parts[section]
-            ref_part = ref_parts[section]
-            is_present = bool(gen_part and ref_part)
-
-            if is_present:
-                gen_emb = gen_embs[i]
-                ref_emb = ref_embs[i]
-                comps = embedding_components(gen_emb, ref_emb)
-
-                section_scores[section] = comps['cosine_similarity']
-                section_embeddings[section] = {
-                    'generated': gen_emb.tolist(),
-                    'reference': ref_emb.tolist(),
-                }
-                section_details[section] = {
-                    **comps,
-                    'is_present': True,
-                }
-            else:
-                section_scores[section] = 0.0
-                section_embeddings[section] = {'generated': None, 'reference': None}
-                section_details[section] = empty_section_metrics()
-
         send_progress('ffn', 66, 'Layer normalization selesai')
         send_progress('pooling', 71, 'Representasi vektor kalimat')
         send_progress('pooling', 78, 'Mean pooling token embeddings')
@@ -214,16 +164,11 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
         send_progress('similarity', 95, 'Cosine similarity selesai')
 
         # ===== Logging =====
-        present_sections = [k for k in section_keys
-                            if section_details[k]['is_present']]
         print(f"\n=== SENTENCE-BERT RESULT ===", file=sys.stderr)
         print(f"Model: {model_name}", file=sys.stderr)
         print(f"Skor utama (full text): {overall_similarity:.4f}", file=sys.stderr)
-        print(f"Sections present: {present_sections}", file=sys.stderr)
-        for k in section_keys:
-            tag = 'OK' if section_details[k]['is_present'] else 'MISSING'
-            print(f"  Section {k.upper():5s} [{tag}]: "
-                  f"{section_scores[k]:.4f}", file=sys.stderr)
+        print(f"Generated text length: {len(generated_text)}", file=sys.stderr)
+        print(f"Reference text length: {len(reference_text)}", file=sys.stderr)
 
         return {
             'success': True,
@@ -234,10 +179,6 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
                 'method': 'Sentence-BERT (Reimers & Gurevych 2019) + Cosine Similarity',
                 'generated_text_length': len(generated_text),
                 'reference_text_length': len(reference_text),
-                'section_scores': section_scores,
-                'sentence_bert_scores': section_scores,  # alias backward-compat
-                'section_embeddings': section_embeddings,
-                'section_details': section_details,
                 'overall_embeddings': {
                     'generated': gen_embs[0].tolist(),
                     'reference': ref_embs[0].tolist(),
@@ -246,7 +187,6 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
                 'dot_product': overall['dot_product'],
                 'magnitude_a': overall['magnitude_a'],
                 'magnitude_b': overall['magnitude_b'],
-                'sections_present': present_sections,
                 'explanation': {
                     'main_score_desc': (
                         f"Cosine similarity pada embedding teks utuh = "
@@ -257,11 +197,6 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
                         f"{overall['dot_product']:.4f} / "
                         f"({overall['magnitude_a']:.4f}·{overall['magnitude_b']:.4f}) = "
                         f"{overall_similarity:.4f}"
-                    ),
-                    'note': (
-                        'Section scores adalah DIAGNOSTIK error analysis, '
-                        'BUKAN skor utama. Skor utama dihitung pada teks utuh '
-                        'sesuai standar Reimers & Gurevych (2019).'
                     ),
                 },
             },
