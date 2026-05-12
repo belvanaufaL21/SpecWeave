@@ -70,15 +70,19 @@ export const generateGherkin = async (req, res, next) => {
           type: p.type,
           category: p.category,
           examplesCount: p.examples?.length || 0,
-          exampleTitles: p.examples?.map(e => e.title) || []
+          exampleTitles: p.examples?.map(e => e.title) || [],
+          exampleIds: p.examples?.map(e => e.id) || []  // Log IDs for debugging
         })),
-        uniqueReferenceTitles: usedReferences.map(r => r.title)
+        uniqueReferenceTitles: usedReferences.map(r => r.title),
+        uniqueReferenceIds: usedReferences.map(r => r.id)  // Log IDs for debugging
       });
     }
     
     console.log('📚 [GHERKIN-CONTROLLER] Final references for response:', {
       usedReferencesCount: usedReferences.length,
-      titles: usedReferences.map(r => r.title)
+      titles: usedReferences.map(r => r.title),
+      ids: usedReferences.map(r => r.id),  // Log IDs for debugging
+      hasIds: usedReferences.every(r => r.id)  // Check if all have IDs
     });
     
     // IMPORTANT: Use originalUserStory for format detection, not the enhanced prompt

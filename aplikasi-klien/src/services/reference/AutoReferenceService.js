@@ -136,6 +136,7 @@ class AutoReferenceService {
     const selectedExamples = refsToUse.slice(0, 2).map(ref => {
       usedReferenceIds.add(ref.id); // Mark as used
       return {
+        id: ref.id,  // IMPORTANT: Include ID for tracking
         title: ref.title,
         gherkinContent: ref.gherkinContent
       };
@@ -172,6 +173,7 @@ class AutoReferenceService {
     const selectedExamples = refsToUse.slice(0, 1).map(ref => {
       usedReferenceIds.add(ref.id); // Mark as used
       return {
+        id: ref.id,  // IMPORTANT: Include ID for tracking
         title: ref.title,
         gherkinContent: ref.gherkinContent,
         category: ref.category
@@ -338,6 +340,7 @@ class AutoReferenceService {
       const patterns = [{
         type: 'random-selection',
         examples: selectedReferences.map(ref => ({
+          id: ref.id,  // IMPORTANT: Include ID for tracking
           title: ref.title,
           gherkinContent: ref.gherkinContent
         })),
