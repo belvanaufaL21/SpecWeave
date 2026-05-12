@@ -83,6 +83,23 @@ export const convertToGherkin = async (userStory, options = {}) => {
         tokensInput: response.tokensInput,
         tokensOutput: response.tokensOutput
       });
+      
+      // Store usage and model info for later use
+      const usageInfo = {
+        prompt_tokens: response.tokensInput || 0,
+        completion_tokens: response.tokensOutput || 0,
+        total_tokens: (response.tokensInput || 0) + (response.tokensOutput || 0)
+      };
+      
+      const modelInfo = {
+        name: options.modelName,
+        provider: options.provider
+      };
+      
+      // Store in options for access in return statements
+      options._usage = usageInfo;
+      options._model = modelInfo;
+      
     } catch (providerError) {
       console.error('❌ [AI-SERVICE] Provider error:', {
         provider: options.provider,
@@ -103,7 +120,9 @@ export const convertToGherkin = async (userStory, options = {}) => {
           type: 'gherkin',
           content: cleanJson,
           formatDetection,
-          isConnextra: true
+          isConnextra: true,
+          usage: options._usage || null,
+          model: options._model?.name || null
         };
       } else {
         console.warn("⚠️ Warning: AI tidak mengembalikan format JSON yang valid.");
@@ -111,7 +130,9 @@ export const convertToGherkin = async (userStory, options = {}) => {
           type: 'gherkin',
           content: text,
           formatDetection,
-          isConnextra: true
+          isConnextra: true,
+          usage: options._usage || null,
+          model: options._model?.name || null
         };
       }
     } else {
@@ -120,7 +141,9 @@ export const convertToGherkin = async (userStory, options = {}) => {
         type: 'general',
         content: text,
         formatDetection,
-        isConnextra: false
+        isConnextra: false,
+        usage: options._usage || null,
+        model: options._model?.name || null
       };
     }
 

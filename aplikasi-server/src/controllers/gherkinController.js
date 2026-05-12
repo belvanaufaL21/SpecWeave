@@ -233,7 +233,15 @@ export const generateGherkin = async (req, res, next) => {
           generation_time_ms: performanceMetrics?.durationMs || null,
           quality_level: qualityAssessment?.level || null,
           jira_epic_id: jiraEpicId,
-          tags: ['ai-generated']
+          tags: ['ai-generated'],
+          // Reference library tracking
+          reference_library_ids: usedReferences.map(r => r.id).filter(Boolean) || [],
+          // Token usage tracking (if available from AI response)
+          prompt_tokens: aiResponse.usage?.prompt_tokens || null,
+          completion_tokens: aiResponse.usage?.completion_tokens || null,
+          total_tokens: aiResponse.usage?.total_tokens || null,
+          // Model information (if available from AI response)
+          model_used: aiResponse.model || null
         };
 
         savedScenario = await supabaseService.createScenario(scenarioData);

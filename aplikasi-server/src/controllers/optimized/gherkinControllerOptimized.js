@@ -193,7 +193,15 @@ export const generateGherkin = async (req, res, next) => {
           jira_epic_id: jiraEpicId,
           tags: ['ai-generated'],
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          // Reference library tracking (empty for optimized path - no few-shot)
+          reference_library_ids: [],
+          // Token usage tracking (if available from AI response)
+          prompt_tokens: aiResponse.usage?.prompt_tokens || null,
+          completion_tokens: aiResponse.usage?.completion_tokens || null,
+          total_tokens: aiResponse.usage?.total_tokens || null,
+          // Model information (if available from AI response)
+          model_used: aiResponse.model || null
         };
 
         // Save scenario using optimized database service
