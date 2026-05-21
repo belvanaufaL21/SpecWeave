@@ -478,6 +478,91 @@ class AuthService {
   }
 
   /**
+   * Sign up dengan full name dan password (tanpa email)
+   * Generate email internal untuk uniqueness
+   * @param {string} fullName - Full name
+   * @param {string} password - Password
+   * @returns {Promise<Object>} - Sign up result
+   */
+  static async signUpWithFullName(fullName, password) {
+    try {
+      // Generate unique internal email
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const sanitizedName = fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const internalEmail = `${sanitizedName}_${timestamp}_${randomStr}@specweave.internal`;
+
+      const { data, error } = await supabase.auth.signUp({
+        email: internalEmail,
+        password,
+        options: {
+          data: {
+            name: fullName,
+            full_name: fullName,
+            auth_method: 'username' // Mark as username-based auth
+          }
+        }
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Sign in dengan full name dan password
+   * Find user by full_name and verify password
+   * @param {string} fullName - Full name
+   * @param {string} password - Password
+   * @returns {Promise<Object>} - Sign in result
+   */
+  static async signInWithFullName(fullName, password) {
+    try {
+      // First, find users with matching full_name
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, email, name')
+        .eq('name', fullName);
+
+      if (profileError) throw profileError;
+
+      if (!profiles || profiles.length === 0) {
+        throw new Error('User not found with this full name');
+      }
+
+      // Try to sign in with each email until one succeeds
+      let lastError = null;
+      for (const profile of profiles) {
+        // Skip Google OAuth users (they don't have password)
+        if (!profile.email.includes('@specweave.internal')) {
+          continue;
+        }
+
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: profile.email,
+            password
+          });
+
+          if (!error && data) {
+            return { data, error: null };
+          }
+          lastError = error;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      // If we get here, no password matched
+      throw lastError || new Error('Invalid password');
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  /**
    * Send OTP to email for verification
    * @param {string} email - Email address
    * @returns {Promise<Object>} - Result with error if any

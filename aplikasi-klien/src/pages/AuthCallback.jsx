@@ -204,21 +204,31 @@ const AuthCallback = () => {
           setMessage('');
           setValidationComplete(true);
           
-          // Navigate first, then show notification after page loads
-          setTimeout(() => {
-            navigate('/chat', { replace: true });
-            
-            // Show success notification AFTER navigation - ONLY ONCE
-            if (!notificationShown) {
-              // Delay notification to ensure chat page is fully loaded
-              setTimeout(() => {
-                // Get user name from profile (database) first, fallback to Google metadata
-                const userName = profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-                showAuthSuccessToast(userName);
-                setNotificationShown(true);
-              }, 500); // Show notification 500ms after navigation
-            }
-          }, 2000);
+          // Check if Google user needs to set full name
+          const needsProfileSetup = !profile?.name || profile.name === user.email;
+          
+          if (needsProfileSetup) {
+            // Redirect to profile setup
+            setTimeout(() => {
+              navigate('/profile-setup', { replace: true });
+            }, 1000);
+          } else {
+            // Navigate to chat and show notification
+            setTimeout(() => {
+              navigate('/chat', { replace: true });
+              
+              // Show success notification AFTER navigation - ONLY ONCE
+              if (!notificationShown) {
+                // Delay notification to ensure chat page is fully loaded
+                setTimeout(() => {
+                  // Get user name from profile (database) first, fallback to Google metadata
+                  const userName = profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+                  showAuthSuccessToast(userName);
+                  setNotificationShown(true);
+                }, 500); // Show notification 500ms after navigation
+              }
+            }, 2000);
+          }
         }
 
       } catch (error) {

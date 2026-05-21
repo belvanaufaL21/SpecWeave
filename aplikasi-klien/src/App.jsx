@@ -15,6 +15,7 @@ import { initializeAutoSaveSettings } from './utils/autoSaveSettings';
 
 import Landing from './pages/Landing';
 import LoginSignup from './pages/LoginSignup';
+import ProfileSetup from './pages/ProfileSetup';
 import ChatRefined from './pages/ChatRefined';
 import Profile from './pages/Profile';
 import JiraCallback from './pages/JiraCallback';
@@ -75,6 +76,16 @@ function App() {
                 <AuthCallback />
               </PageTransition>
             } />
+            <Route 
+              path="/profile-setup" 
+              element={
+                <ProtectedRoute>
+                  <PageTransition>
+                    <ProfileSetup />
+                  </PageTransition>
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/auth/jira/callback" 
               element={
