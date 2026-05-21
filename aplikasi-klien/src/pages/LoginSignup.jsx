@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import EmailAuthModal from '../components/auth/EmailAuthModal';
 
 const LoginSignup = () => {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ const LoginSignup = () => {
   const { user, signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showEmailAuthModal, setShowEmailAuthModal] = useState(false);
 
   // Get initial message from landing page if any
   const initialMessage = location.state?.initialMessage || '';
@@ -87,6 +89,11 @@ const LoginSignup = () => {
     }
   };
 
+  const handleEmailAuthSuccess = () => {
+    setShowEmailAuthModal(false);
+    // Navigation will be handled by AuthContext after successful auth
+  };
+
   return (
     <div className="min-h-screen bg-[#020203] text-white overflow-hidden relative">
       {/* Background gradients - sama dengan Dashboard */}
@@ -128,8 +135,8 @@ const LoginSignup = () => {
               </div>
             )}
 
-            {/* Google Sign In Button with description */}
-            <div className="space-y-3">
+            {/* Google Sign In Button */}
+            <div className="space-y-3 mb-4">
               <button
                 onClick={handleGoogleAuth}
                 disabled={isLoading}
@@ -149,8 +156,39 @@ const LoginSignup = () => {
                 )}
               </button>
 
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-400 text-center">
                 Use your Google account to Login/Sign up
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-[#020203] text-gray-400">or</span>
+              </div>
+            </div>
+
+            {/* Email Sign In Button */}
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowEmailAuthModal(true)}
+                disabled={isLoading}
+                className="w-full flex items-center justify-between px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group border"
+                style={{ backgroundColor: '#0D1117', borderColor: '#30363D', color: '#58A6FF' }}
+              >
+                <span className="text-left flex-1">
+                  Login/Sign up with Email
+                </span>
+                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#58A6FF' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+
+              <p className="text-sm text-gray-400 text-center">
+                Use your email and password to Login/Sign up
               </p>
             </div>
 
@@ -164,6 +202,13 @@ const LoginSignup = () => {
           </div>
         </div>
       </div>
+
+      {/* Email Auth Modal */}
+      <EmailAuthModal
+        isOpen={showEmailAuthModal}
+        onClose={() => setShowEmailAuthModal(false)}
+        onSuccess={handleEmailAuthSuccess}
+      />
     </div>
   );
 };
