@@ -211,9 +211,9 @@ const LoginSignup = () => {
             )}
 
             {/* Manual Auth Form Container */}
-            <div className="bg-[#0D0D0D] border border-white/10 rounded-2xl p-6 mb-6">
+            <div className="bg-transparent border border-white/5 rounded-2xl p-6 mb-6">
               {/* Tabs */}
-              <div className="flex border-b border-white/10 mb-6">
+              <div className="flex border-b border-white/5 mb-6">
                 <button
                   onClick={() => handleTabSwitch('login')}
                   className={`flex-1 py-3 text-sm font-semibold transition-all ${
