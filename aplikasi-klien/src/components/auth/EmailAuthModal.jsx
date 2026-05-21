@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FormInput } from '../common/FormField';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Check } from 'lucide-react';
+import AuthService from '../../services/auth/AuthService';
 
 const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
-  const { signInWithEmail, signUp } = useAuth();
+  const { signInWithEmail } = useAuth();
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'signup'
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Sign up steps (1: email, 2: verification code, 3: password, 4: full name)
+  const [signupStep, setSignupStep] = useState(1);
 
   // Form data
   const [loginData, setLoginData] = useState({
@@ -18,10 +22,10 @@ const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
   });
 
   const [signupData, setSignupData] = useState({
-    fullName: '',
     email: '',
+    verificationCode: '',
     password: '',
-    confirmPassword: ''
+    fullName: ''
   });
 
   // Validation errors
@@ -34,6 +38,7 @@ const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
     setError(null);
     setLoginErrors({});
     setSignupErrors({});
+    setSignupStep(1); // Reset signup step
   };
 
   // Validate email format
@@ -62,32 +67,38 @@ const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Validate signup form
-  const validateSignup = () => {
+  // Validate signup form based on current step
+  const validateSignupStep = (step) => {
     const errors = {};
     
-    if (!signupData.fullName) {
-      errors.fullName = 'Full name is required';
-    } else if (signupData.fullName.length < 2) {
-      errors.fullName = 'Name must be at least 2 characters';
-    }
-    
-    if (!signupData.email) {
-      errors.email = 'Email is required';
-    } else if (!isValidEmail(signupData.email)) {
-      errors.email = 'Invalid email format';
-    }
-    
-    if (!signupData.password) {
-      errors.password = 'Password is required';
-    } else if (signupData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (!signupData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-    } else if (signupData.password !== signupData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+    if (step === 1) {
+      // Step 1: Email validation
+      if (!signupData.email) {
+        errors.email = 'Email is required';
+      } else if (!isValidEmail(signupData.email)) {
+        errors.email = 'Invalid email format';
+      }
+    } else if (step === 2) {
+      // Step 2: Verification code validation
+      if (!signupData.verificationCode) {
+        errors.verificationCode = 'Verification code is required';
+      } else if (signupData.verificationCode.length !== 6) {
+        errors.verificationCode = 'Verification code must be 6 digits';
+      }
+    } else if (step === 3) {
+      // Step 3: Password validation
+      if (!signupData.password) {
+        errors.password = 'Password is required';
+      } else if (signupData.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+    } else if (step === 4) {
+      // Step 4: Full name validation
+      if (!signupData.fullName) {
+        errors.fullName = 'Full name is required';
+      } else if (signupData.fullName.length < 2) {
+        errors.fullName = 'Name must be at least 2 characters';
+      }
     }
     
     setSignupErrors(errors);
@@ -124,37 +135,102 @@ const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  // Handle signup submit
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault();
+  // Handle signup step navigation
+  const handleSignupNext = async () => {
     setError(null);
     
-    if (!validateSignup()) {
+    if (!validateSignupStep(signupStep)) {
       return;
     }
     
     setIsLoading(true);
     
     try {
-      const { error: authError } = await signUp(
-        signupData.email,
-        signupData.password,
-        { full_name: signupData.fullName }
-      );
-      
-      if (authError) {
-        setError(authError.message || 'Sign up failed. Please try again.');
-      } else {
-        // Call onSuccess callback
-        if (onSuccess) {
-          onSuccess();
+      if (signupStep === 1) {
+        // Step 1: Send OTP to email
+        const { error: otpError } = await AuthService.sendOTP(signupData.email);
+        
+        if (otpError) {
+          setError(otpError.message || 'Gagal mengirim kode verifikasi. Silakan coba lagi.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Move to step 2
+        setSignupStep(2);
+      } else if (signupStep === 2) {
+        // Step 2: Verify OTP code
+        const { error: verifyError } = await AuthService.verifyOTP(
+          signupData.email,
+          signupData.verificationCode
+        );
+        
+        if (verifyError) {
+          setError(verifyError.message || 'Kode verifikasi tidak valid. Silakan coba lagi.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Move to step 3
+        setSignupStep(3);
+      } else if (signupStep === 3) {
+        // Step 3: Password set, move to step 4
+        setSignupStep(4);
+      } else if (signupStep === 4) {
+        // Step 4: Complete signup by updating user with password and name
+        const { error: signupError } = await AuthService.signUpWithOTP(
+          signupData.email,
+          signupData.verificationCode,
+          signupData.password,
+          { full_name: signupData.fullName }
+        );
+        
+        if (signupError) {
+          setError(signupError.message || 'Gagal membuat akun. Silakan coba lagi.');
+        } else {
+          // Call onSuccess callback
+          if (onSuccess) {
+            onSuccess();
+          }
         }
       }
     } catch (err) {
       console.error('Signup error:', err);
-      setError(err.message || 'Sign up failed. Please try again.');
+      setError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle resend OTP
+  const handleResendOTP = async () => {
+    setError(null);
+    setIsLoading(true);
+    
+    try {
+      const { error: otpError } = await AuthService.sendOTP(signupData.email);
+      
+      if (otpError) {
+        setError(otpError.message || 'Gagal mengirim ulang kode. Silakan coba lagi.');
+      } else {
+        // Show success message (you can add a success state if needed)
+        setError(null);
+        alert('Kode verifikasi telah dikirim ulang ke email Anda!');
+      }
+    } catch (err) {
+      console.error('Resend OTP error:', err);
+      setError(err.message || 'Gagal mengirim ulang kode.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle signup back button
+  const handleSignupBack = () => {
+    if (signupStep > 1) {
+      setSignupStep(signupStep - 1);
+      setError(null);
+      setSignupErrors({});
     }
   };
 
@@ -283,101 +359,233 @@ const EmailAuthModal = ({ isOpen, onClose, onSuccess }) => {
             </form>
           )}
 
-          {/* Signup Form */}
+          {/* Signup Form - Multi Step */}
           {activeTab === 'signup' && (
-            <form onSubmit={handleSignupSubmit} className="space-y-4">
-              <FormInput
-                label="Full Name"
-                type="text"
-                placeholder="Enter your full name"
-                value={signupData.fullName}
-                onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                error={signupErrors.fullName}
-                hasError={!!signupErrors.fullName}
-                required
-                icon={<User className="w-5 h-5" />}
-              />
-
-              <FormInput
-                label="Email"
-                type="email"
-                placeholder="Enter your email"
-                value={signupData.email}
-                onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                error={signupErrors.email}
-                hasError={!!signupErrors.email}
-                required
-                icon={<Mail className="w-5 h-5" />}
-              />
-
-              <div className="relative">
-                <FormInput
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a password (min. 6 characters)"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                  error={signupErrors.password}
-                  hasError={!!signupErrors.password}
-                  required
-                  icon={<Lock className="w-5 h-5" />}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-[38px] text-gray-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            <div className="space-y-6">
+              {/* Step Indicators */}
+              <div className="flex items-center justify-center gap-2">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                      step === signupStep
+                        ? 'bg-purple-500 w-8'
+                        : step < signupStep
+                        ? 'bg-purple-500/50'
+                        : 'bg-gray-600'
+                    }`}
+                  />
+                ))}
               </div>
 
-              <div className="relative">
-                <FormInput
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
-                  value={signupData.confirmPassword}
-                  onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                  error={signupErrors.confirmPassword}
-                  hasError={!!signupErrors.confirmPassword}
-                  required
-                  icon={<Lock className="w-5 h-5" />}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-[38px] text-gray-400 hover:text-white transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              {/* Step 1: Email */}
+              {signupStep === 1 && (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-2">Masukkan Email Anda</h3>
+                    <p className="text-sm text-gray-400">
+                      Kami akan mengirimkan kode verifikasi ke email Anda
+                    </p>
+                  </div>
 
-              <div className="text-xs text-gray-400">
-                By signing up, you agree to our{' '}
-                <button type="button" className="text-purple-400 hover:text-purple-300">
-                  Terms of Service
-                </button>{' '}
-                and{' '}
-                <button type="button" className="text-purple-400 hover:text-purple-300">
-                  Privacy Policy
-                </button>
-              </div>
+                  <FormInput
+                    label="Email"
+                    type="email"
+                    placeholder="contoh@email.com"
+                    value={signupData.email}
+                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                    error={signupErrors.email}
+                    hasError={!!signupErrors.email}
+                    required
+                    icon={<Mail className="w-5 h-5" />}
+                  />
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Creating account...</span>
-                  </>
-                ) : (
-                  'Sign Up'
-                )}
-              </button>
-            </form>
+                  <button
+                    onClick={handleSignupNext}
+                    disabled={isLoading}
+                    className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Mengirim kode...</span>
+                      </>
+                    ) : (
+                      'Kirim Kode Verifikasi'
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: Verification Code */}
+              {signupStep === 2 && (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-2">Masukkan Kode Verifikasi</h3>
+                    <p className="text-sm text-gray-400">
+                      Kode verifikasi telah dikirim ke <span className="text-purple-400">{signupData.email}</span>
+                    </p>
+                  </div>
+
+                  <FormInput
+                    label="Kode Verifikasi"
+                    type="text"
+                    placeholder="Masukkan 6 digit kode"
+                    value={signupData.verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setSignupData({ ...signupData, verificationCode: value });
+                    }}
+                    error={signupErrors.verificationCode}
+                    hasError={!!signupErrors.verificationCode}
+                    required
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest"
+                  />
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSignupBack}
+                      className="flex-1 py-3.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-300"
+                    >
+                      Kembali
+                    </button>
+                    <button
+                      onClick={handleSignupNext}
+                      disabled={isLoading}
+                      className="flex-1 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Memverifikasi...</span>
+                        </>
+                      ) : (
+                        'Verifikasi'
+                      )}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleResendOTP}
+                    disabled={isLoading}
+                    className="w-full text-sm text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                  >
+                    Kirim ulang kode
+                  </button>
+                </div>
+              )}
+
+              {/* Step 3: Password */}
+              {signupStep === 3 && (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-full mb-3">
+                      <Check className="w-6 h-6 text-green-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Email Terverifikasi!</h3>
+                    <p className="text-sm text-gray-400">
+                      Sekarang buat password untuk akun Anda
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <FormInput
+                      label="Password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Minimal 6 karakter"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                      error={signupErrors.password}
+                      hasError={!!signupErrors.password}
+                      required
+                      icon={<Lock className="w-5 h-5" />}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-[38px] text-gray-400 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSignupBack}
+                      className="flex-1 py-3.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-300"
+                    >
+                      Kembali
+                    </button>
+                    <button
+                      onClick={handleSignupNext}
+                      disabled={isLoading}
+                      className="flex-1 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Full Name */}
+              {signupStep === 4 && (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-2">Hampir Selesai!</h3>
+                    <p className="text-sm text-gray-400">
+                      Masukkan nama lengkap Anda
+                    </p>
+                  </div>
+
+                  <FormInput
+                    label="Nama Lengkap"
+                    type="text"
+                    placeholder="Masukkan nama lengkap Anda"
+                    value={signupData.fullName}
+                    onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                    error={signupErrors.fullName}
+                    hasError={!!signupErrors.fullName}
+                    required
+                    icon={<User className="w-5 h-5" />}
+                  />
+
+                  <div className="text-xs text-gray-400">
+                    Dengan mendaftar, Anda menyetujui{' '}
+                    <button type="button" className="text-purple-400 hover:text-purple-300">
+                      Syarat & Ketentuan
+                    </button>{' '}
+                    dan{' '}
+                    <button type="button" className="text-purple-400 hover:text-purple-300">
+                      Kebijakan Privasi
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSignupBack}
+                      className="flex-1 py-3.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-300"
+                    >
+                      Kembali
+                    </button>
+                    <button
+                      onClick={handleSignupNext}
+                      disabled={isLoading}
+                      className="flex-1 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Membuat akun...</span>
+                        </>
+                      ) : (
+                        'Selesai'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

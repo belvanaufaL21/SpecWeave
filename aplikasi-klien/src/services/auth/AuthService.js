@@ -465,7 +465,81 @@ class AuthService {
           data: {
             name: userData.name || extractNameFromEmail(email),
             ...userData
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Send OTP to email for verification
+   * @param {string} email - Email address
+   * @returns {Promise<Object>} - Result with error if any
+   */
+  static async sendOTP(email) {
+    try {
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false, // Don't create user, just send OTP
+        }
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Verify OTP code
+   * @param {string} email - Email address
+   * @param {string} token - OTP token
+   * @returns {Promise<Object>} - Verification result
+   */
+  static async verifyOTP(email, token) {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Sign up with email OTP (passwordless)
+   * @param {string} email - Email address
+   * @param {string} token - OTP token
+   * @param {string} password - Password to set
+   * @param {Object} userData - Additional user data
+   * @returns {Promise<Object>} - Sign up result
+   */
+  static async signUpWithOTP(email, token, password, userData = {}) {
+    try {
+      // First verify the OTP
+      const { data: verifyData, error: verifyError } = await this.verifyOTP(email, token);
+      
+      if (verifyError) throw verifyError;
+
+      // Then update the user with password and metadata
+      const { data, error } = await supabase.auth.updateUser({
+        password,
+        data: {
+          name: userData.name || extractNameFromEmail(email),
+          ...userData
         }
       });
 
