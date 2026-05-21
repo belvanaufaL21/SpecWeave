@@ -189,12 +189,12 @@ const LoginSignup = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight whitespace-nowrap">
             From User Story to Gherkin
           </h1>
 
           {/* Subtitle */}
-          <p className="text-gray-400 text-lg mb-12 max-w-3xl mx-auto">
+          <p className="text-gray-400 text-lg mb-12 max-w-3xl mx-auto whitespace-nowrap">
             Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.
           </p>
 
@@ -240,7 +240,7 @@ const LoginSignup = () => {
               <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/50 rounded-lg">
                 <p className="text-blue-300 text-xs">
                   {activeTab === 'login' 
-                    ? 'Login with your full name and password. Google users cannot use this method.'
+                    ? 'Create an account with full name and password. This is separate from Google login.'
                     : 'Create an account with full name and password. This is separate from Google login.'}
                 </p>
               </div>
@@ -257,6 +257,7 @@ const LoginSignup = () => {
                   hasError={!!errors.fullName}
                   required
                   icon={<User className="w-5 h-5" />}
+                  labelClassName="text-left"
                 />
 
                 <div className="relative">
@@ -270,6 +271,7 @@ const LoginSignup = () => {
                     hasError={!!errors.password}
                     required
                     icon={<Lock className="w-5 h-5" />}
+                    labelClassName="text-left"
                   />
                   <button
                     type="button"
@@ -339,30 +341,23 @@ const LoginSignup = () => {
             </div>
 
             {/* Google Sign In Button */}
-            <div className="space-y-3">
-              <button
-                onClick={handleGoogleAuth}
-                disabled={isLoading}
-                className="w-full flex items-center justify-between px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group border"
-                style={{ backgroundColor: '#160D14', borderColor: '#44273D', color: '#FF7AD0' }}
-              >
-                <span className="text-left flex-1">
-                  {isLoading ? 'Processing...' : 'Login/Sign up with Google'}
-                </span>
-                {!isLoading && (
-                  <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#FF7AD0' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                )}
-                {isLoading && (
-                  <div className="w-5 h-5 border-2 border-t-white rounded-full animate-spin" style={{ borderColor: 'rgba(255, 122, 208, 0.3)', borderTopColor: '#FF7AD0' }} />
-                )}
-              </button>
-
-              <p className="text-sm text-gray-400 text-center">
-                Use your Google account to login or sign up
-              </p>
-            </div>
+            <button
+              onClick={handleGoogleAuth}
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group border border-white/5 bg-[#09090A] hover:bg-[#160D14] hover:border-[#44273D]"
+            >
+              <span className="text-left flex-1 text-white/50 group-hover:text-[#FF7AD0] transition-colors">
+                {isLoading ? 'Processing...' : 'Login/Sign up with Google'}
+              </span>
+              {!isLoading && (
+                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-all text-white/50 group-hover:text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              )}
+              {isLoading && (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+            </button>
 
             {/* Initial Message Preview (if from landing) */}
             {initialMessage && (
