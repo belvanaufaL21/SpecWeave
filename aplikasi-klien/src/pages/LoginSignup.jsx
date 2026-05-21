@@ -189,13 +189,13 @@ const LoginSignup = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight whitespace-nowrap">
-            From User Story to Gherkin
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center">
+            <span className="inline-block whitespace-nowrap">From User Story to Gherkin</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-gray-400 text-lg mb-12 max-w-3xl mx-auto whitespace-nowrap">
-            Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.
+          <p className="text-gray-400 text-sm sm:text-lg mb-12 max-w-3xl mx-auto text-center px-4">
+            <span className="inline-block">Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.</span>
           </p>
 
           {/* Auth Section */}
@@ -237,14 +237,7 @@ const LoginSignup = () => {
               </div>
 
               {/* Info Message */}
-              <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/50 rounded-lg">
-                <p className="text-blue-300 text-xs">
-                  {activeTab === 'login' 
-                    ? 'Create an account with full name and password. This is separate from Google login.'
-                    : 'Create an account with full name and password. This is separate from Google login.'}
-                </p>
-              </div>
-
+              
               {/* Form */}
               <form onSubmit={handleManualAuth} className="space-y-4">
                 <FormInput
