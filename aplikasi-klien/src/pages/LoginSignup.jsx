@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import UsernameAuthModal from '../components/auth/UsernameAuthModal';
+import { FormInput } from '../components/common/FormField';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import AuthService from '../services/auth/AuthService';
 
 const LoginSignup = () => {
   const navigate = useNavigate();
@@ -9,8 +11,17 @@ const LoginSignup = () => {
   const { user, signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showUsernameAuthModal, setShowUsernameAuthModal] = useState(false);
-  const [usernameAuthTab, setUsernameAuthTab] = useState('login');
+  const [activeTab, setActiveTab] = useState('login'); // 'login' or 'signup'
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Form data
+  const [formData, setFormData] = useState({
+    fullName: '',
+    password: ''
+  });
+
+  // Validation errors
+  const [errors, setErrors] = useState({});
 
   // Get initial message from landing page if any
   const initialMessage = location.state?.initialMessage || '';
@@ -90,14 +101,72 @@ const LoginSignup = () => {
     }
   };
 
-  const handleEmailAuthSuccess = () => {
-    setShowUsernameAuthModal(false);
-    // Navigation will be handled by AuthContext after successful auth
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.fullName) {
+      newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleOpenAuth = (tab) => {
-    setUsernameAuthTab(tab);
-    setShowUsernameAuthModal(true);
+  // Handle manual auth (login or signup)
+  const handleManualAuth = async (e) => {
+    e.preventDefault();
+    setError(null);
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      let result;
+      
+      if (activeTab === 'login') {
+        // Login
+        result = await AuthService.signInWithFullName(
+          formData.fullName,
+          formData.password
+        );
+      } else {
+        // Sign up
+        result = await AuthService.signUpWithFullName(
+          formData.fullName,
+          formData.password
+        );
+      }
+      
+      if (result.error) {
+        setError(result.error.message || `${activeTab === 'login' ? 'Login' : 'Sign up'} failed. Please try again.`);
+      } else {
+        // Success - navigation will be handled by AuthContext
+        navigate('/chat', { replace: true });
+      }
+    } catch (err) {
+      console.error('Manual auth error:', err);
+      setError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    setError(null);
+    setErrors({});
   };
 
   return (
@@ -141,30 +210,122 @@ const LoginSignup = () => {
               </div>
             )}
 
-            {/* Username/Password Auth Buttons */}
-            <div className="space-y-3 mb-4">
-              <div className="flex gap-3">
+            {/* Manual Auth Form Container */}
+            <div className="bg-[#0D0D0D] border border-white/10 rounded-2xl p-6 mb-6">
+              {/* Tabs */}
+              <div className="flex border-b border-white/10 mb-6">
                 <button
-                  onClick={() => handleOpenAuth('login')}
-                  disabled={isLoading}
-                  className="flex-1 px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl border"
-                  style={{ backgroundColor: '#0D1117', borderColor: '#30363D', color: '#58A6FF' }}
+                  onClick={() => handleTabSwitch('login')}
+                  className={`flex-1 py-3 text-sm font-semibold transition-all ${
+                    activeTab === 'login'
+                      ? 'text-purple-400 border-b-2 border-purple-400'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
                 >
                   Login
                 </button>
                 <button
-                  onClick={() => handleOpenAuth('signup')}
-                  disabled={isLoading}
-                  className="flex-1 px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl border"
-                  style={{ backgroundColor: '#0D1117', borderColor: '#30363D', color: '#58A6FF' }}
+                  onClick={() => handleTabSwitch('signup')}
+                  className={`flex-1 py-3 text-sm font-semibold transition-all ${
+                    activeTab === 'signup'
+                      ? 'text-purple-400 border-b-2 border-purple-400'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
                 >
                   Sign Up
                 </button>
               </div>
 
-              <p className="text-sm text-gray-400 text-center">
-                Login or sign up with your full name and password
-              </p>
+              {/* Info Message */}
+              <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/50 rounded-lg">
+                <p className="text-blue-300 text-xs">
+                  {activeTab === 'login' 
+                    ? 'Login with your full name and password. Google users cannot use this method.'
+                    : 'Create an account with full name and password. This is separate from Google login.'}
+                </p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleManualAuth} className="space-y-4">
+                <FormInput
+                  label="Full Name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  error={errors.fullName}
+                  hasError={!!errors.fullName}
+                  required
+                  icon={<User className="w-5 h-5" />}
+                />
+
+                <div className="relative">
+                  <FormInput
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder={activeTab === 'login' ? 'Enter your password' : 'Create a password (min. 6 characters)'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    error={errors.password}
+                    hasError={!!errors.password}
+                    required
+                    icon={<Lock className="w-5 h-5" />}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-[38px] text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                {activeTab === 'login' && (
+                  <div className="flex items-center justify-between text-sm">
+                    <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-white/20 bg-[#050507] text-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                      />
+                      <span>Remember me</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === 'signup' && (
+                  <div className="text-xs text-gray-400">
+                    By signing up, you agree to our{' '}
+                    <button type="button" className="text-purple-400 hover:text-purple-300">
+                      Terms of Service
+                    </button>{' '}
+                    and{' '}
+                    <button type="button" className="text-purple-400 hover:text-purple-300">
+                      Privacy Policy
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>{activeTab === 'login' ? 'Logging in...' : 'Creating account...'}</span>
+                    </>
+                  ) : (
+                    activeTab === 'login' ? 'Login' : 'Sign Up'
+                  )}
+                </button>
+              </form>
             </div>
 
             {/* Divider */}
@@ -213,14 +374,6 @@ const LoginSignup = () => {
           </div>
         </div>
       </div>
-
-      {/* Username Auth Modal */}
-      <UsernameAuthModal
-        isOpen={showUsernameAuthModal}
-        onClose={() => setShowUsernameAuthModal(false)}
-        onSuccess={handleEmailAuthSuccess}
-        initialTab={usernameAuthTab}
-      />
     </div>
   );
 };
