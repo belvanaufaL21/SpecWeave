@@ -154,6 +154,9 @@ const DualTestingModal = memo(({
   const [suggestedReferences, setSuggestedReferences] = useState([]);
   const [showSuggestions,     setShowSuggestions]     = useState(false);
 
+  // Ref to track active test and allow cancellation
+  const activeTestRef = React.useRef({ active: false, scenarioId: null });
+
   const isLoading    = loading || isSubmitting;
   const isEvaluating = meteorStatus === 'running' || sbertStatus === 'running';
   const isCompleted  = meteorStatus === 'done' && sbertStatus === 'done'; // Both tests completed
@@ -172,12 +175,44 @@ const DualTestingModal = memo(({
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
+      // Cancel any active test
+      activeTestRef.current.active = false;
+      
       setShowResults(false); setMeteorResult(null); setSbertResult(null);
       setMeteorProgress(0); setSbertProgress(0);
       setMeteorStatus('idle'); setSbertStatus('idle');
       setActiveTab('meteor'); setValidationError('');
+      setIsSubmitting(false);
     }
   }, [isOpen]);
+
+  // Reset state when scenario changes (user switches to different scenario)
+  useEffect(() => {
+    if (isOpen && scenarioId) {
+      // Check if scenario has changed from the active test
+      if (activeTestRef.current.scenarioId && activeTestRef.current.scenarioId !== scenarioId) {
+        console.log('🔄 Scenario changed, resetting test state');
+        
+        // Cancel any active test
+        activeTestRef.current.active = false;
+        
+        // Reset all state
+        setShowResults(false);
+        setMeteorResult(null);
+        setSbertResult(null);
+        setMeteorProgress(0);
+        setSbertProgress(0);
+        setMeteorStatus('idle');
+        setSbertStatus('idle');
+        setActiveTab('meteor');
+        setValidationError('');
+        setIsSubmitting(false);
+      }
+      
+      // Update tracked scenario ID
+      activeTestRef.current.scenarioId = scenarioId;
+    }
+  }, [scenarioId, isOpen]);
 
   const isFormValid = useCallback(() => {
     if (!scenarioText?.trim()) { setValidationError('Skenario uji tidak boleh kosong'); return false; }
@@ -187,8 +222,13 @@ const DualTestingModal = memo(({
 
   const handleSubmitTest = useCallback(async () => {
     if (!isFormValid()) return;
-    let active = true;
-    const getActive = () => active;
+    
+    // Mark test as active for this scenario
+    activeTestRef.current.active = true;
+    activeTestRef.current.scenarioId = scenarioId;
+    
+    const getActive = () => activeTestRef.current.active && activeTestRef.current.scenarioId === scenarioId;
+    
     try {
       setValidationError(''); setIsSubmitting(true); setShowResults(false);
       setMeteorProgress(0); setSbertProgress(0);
@@ -199,35 +239,52 @@ const DualTestingModal = memo(({
       // ── METEOR with Real-Time SSE ──
       console.log('🚀 Starting METEOR test with SSE...');
       const meteorData = await TestingService.runMeteorTestSSE(testData, (stage, progress, details) => {
-        if (!getActive()) return;
+        if (!getActive()) {
+          console.log('⚠️ METEOR progress ignored - test cancelled or scenario changed');
+          return;
+        }
         setMeteorProgress(progress);
         console.log(`📊 METEOR ${stage}: ${progress}%`, details.message);
       });
       
-      active = false;
+      if (!getActive()) {
+        console.log('⚠️ METEOR completed but test was cancelled');
+        return;
+      }
+      
       const rawMeteor = meteorData.meteorMetrics;
       setMeteorProgress(100); setMeteorStatus('done'); setMeteorResult(rawMeteor);
       console.log('✅ METEOR completed:', rawMeteor);
       
       // ── Sentence-BERT with Real-Time SSE ──
-      active = true;
       setSbertStatus('running');
       console.log('🚀 Starting Sentence-BERT test with SSE...');
       
       let rawSbert = null;
       try {
         const sbertData = await TestingService.runSentenceBertTestSSE(testData, (stage, progress, details) => {
-          if (!getActive()) return;
+          if (!getActive()) {
+            console.log('⚠️ Sentence-BERT progress ignored - test cancelled or scenario changed');
+            return;
+          }
           setSbertProgress(progress);
           console.log(`📊 Sentence-BERT ${stage}: ${progress}%`, details.message);
         });
         
+        if (!getActive()) {
+          console.log('⚠️ Sentence-BERT completed but test was cancelled');
+          return;
+        }
+        
         rawSbert = sbertData.sentenceBertMetrics;
-        active = false;
         setSbertProgress(100); setSbertStatus('done'); setSbertResult(rawSbert);
         console.log('✅ Sentence-BERT completed:', rawSbert);
       } catch (sbertError) {
-        active = false;
+        if (!getActive()) {
+          console.log('⚠️ Sentence-BERT error ignored - test was cancelled');
+          return;
+        }
+        
         console.error('❌ Sentence-BERT test failed:', sbertError);
         setSbertProgress(0); 
         setSbertStatus('error');
@@ -256,8 +313,7 @@ const DualTestingModal = memo(({
               f_mean: meteorDetails.f_mean || 0,
               penalty: meteorDetails.penalty || 0,
               matches: meteorDetails.matches || 0,
-              chunks: meteorDetails.chunks || 0,
-              translation_info: meteorMetrics.translation_info || null,
+              chunks: meteorMetrics.translation_info || null,
               formattedScore: TestingService.formatScore(meteorMetrics.score, 'meteor'),
               qualityLevel: TestingService.getQualityLevel(meteorMetrics.score),
             } : null,
@@ -266,7 +322,15 @@ const DualTestingModal = memo(({
           await onSubmitTest(formatted);
         }
         
+        // Mark test as complete
+        activeTestRef.current.active = false;
         return; // Exit early
+      }
+
+      // Check again before saving
+      if (!getActive()) {
+        console.log('⚠️ Test completion ignored - test was cancelled');
+        return;
       }
 
       // Save reference (best-effort)
@@ -316,6 +380,9 @@ const DualTestingModal = memo(({
         };
         await onSubmitTest(formatted);
         
+        // Mark test as complete
+        activeTestRef.current.active = false;
+        
         // Give user a moment to see 100% completion before closing
         await new Promise(resolve => setTimeout(resolve, 800));
         
@@ -325,14 +392,15 @@ const DualTestingModal = memo(({
         return; // Exit early to skip finally block reset
       }
     } catch (error) {
-      active = false;
+      // Mark test as complete
+      activeTestRef.current.active = false;
+      
       console.error('❌ Test execution error:', error);
       setValidationError(error.message || 'Gagal menjalankan pengujian. Silakan coba lagi.');
       if (meteorStatus === 'running') setMeteorStatus('error');
       if (sbertStatus   === 'running') setSbertStatus('error');
       setIsSubmitting(false); // Only reset on error
     } finally {
-      active = false;
       // Don't reset isSubmitting here - it's handled in success/error paths
     }
   }, [isFormValid, scenarioId, scenarioText, referenceScenario, onSubmitTest, meteorStatus, sbertStatus]);
