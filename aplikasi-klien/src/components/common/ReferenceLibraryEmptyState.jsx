@@ -6,7 +6,7 @@ import React from 'react';
  */
 const ReferenceLibraryEmptyState = ({ onAddReference }) => {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex-1 flex items-center justify-center px-8">
       <div className="text-center max-w-md">
         {/* Icon */}
         <div className="w-24 h-24 mx-auto mb-6 bg-[#09090A] border border-white/5 rounded-full flex items-center justify-center">
@@ -21,7 +21,7 @@ const ReferenceLibraryEmptyState = ({ onAddReference }) => {
         </h3>
 
         {/* Description */}
-        <p className="text-gray-400 mb-8 leading-relaxed">
+        <p className="text-gray-400 leading-relaxed">
           Mulai dengan menambahkan refernsi Anda untuk mendapatkan scenario sesuai dengan konteks Anda.
         </p>
 
