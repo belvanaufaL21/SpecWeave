@@ -618,7 +618,7 @@ const ReferenceLibraryManager = ({ isOpen, onClose, onSelectReference, currentRe
                     <p className="text-gray-400 mb-4">
                       {searchTerm 
                         ? 'Coba ubah kata kunci pencarian Anda'
-                        : 'Mulai dengan menambahkan referensi pertama Anda'
+                        : 'Mulai dengan menambahkan refernsi Anda untuk mendapatkan scenario sesuai dengan konteks Anda'
                       }
                     </p>
                     <button
