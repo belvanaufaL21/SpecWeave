@@ -244,13 +244,13 @@ const LoginSignup = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center">
-            <span className="inline-block whitespace-nowrap">From User Story to Gherkin</span>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center mx-auto">
+            From User Story to Gherkin
           </h1>
 
           {/* Subtitle */}
           <p className="text-gray-400 text-sm sm:text-lg mb-12 max-w-3xl mx-auto text-center px-4">
-            <span className="inline-block">Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.</span>
+            Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.
           </p>
 
           {/* Auth Section */}
