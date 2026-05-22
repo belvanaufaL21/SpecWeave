@@ -210,6 +210,7 @@ const LoginSignup = () => {
     setActiveTab(tab);
     setError(null);
     setErrors({});
+    setFormData({ fullName: '', password: '' }); // Reset form data
     setShowPassword(false);
   };
 

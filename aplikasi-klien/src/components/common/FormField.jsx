@@ -41,7 +41,7 @@ export const FormInput = forwardRef(({
         
         <input
           ref={ref}
-          className={`w-full ${icon ? 'pl-12' : 'pl-4'} pr-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
+          className={`w-full ${icon ? 'pl-12' : 'pl-4'} pr-4 py-3 bg-[#09090A] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#09090A] transition-all ${
             hasError 
               ? 'border-red-500/50 focus:border-red-500' 
               : 'border-white/5 focus:border-white/50'

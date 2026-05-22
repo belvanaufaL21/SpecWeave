@@ -23,7 +23,7 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
     setActiveTab(tab);
     setError(null);
     setErrors({});
-    setFormData({ fullName: '', password: '' });
+    setFormData({ fullName: '', password: '' }); // Reset form data
     setShowPassword(false);
   };
 
