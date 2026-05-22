@@ -486,11 +486,26 @@ class AuthService {
    */
   static async signUpWithFullName(fullName, password) {
     try {
-      // Generate unique internal email
+      // Validate inputs
+      if (!fullName || fullName.trim().length < 2) {
+        throw new Error('Full name must be at least 2 characters');
+      }
+      
+      if (!password || password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      // Generate unique internal email with proper format
+      // Use a more standard email format that Supabase will accept
       const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 8);
-      const sanitizedName = fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const internalEmail = `${sanitizedName}_${timestamp}_${randomStr}@specweave.internal`;
+      const randomStr = Math.random().toString(36).substring(2, 10);
+      const sanitizedName = fullName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+      
+      // Use a format like: username_timestamp_random@internal.specweave.app
+      // This looks more like a real email and should pass Supabase validation
+      const internalEmail = `${sanitizedName || 'user'}.${timestamp}.${randomStr}@internal.specweave.app`;
+
+      console.log('🔐 [AUTH] Attempting sign up with generated email format');
 
       const { data, error } = await supabase.auth.signUp({
         email: internalEmail,
@@ -499,14 +514,22 @@ class AuthService {
           data: {
             name: fullName,
             full_name: fullName,
-            auth_method: 'username' // Mark as username-based auth
-          }
+            auth_method: 'username', // Mark as username-based auth
+            display_name: fullName
+          },
+          emailRedirectTo: undefined // No email confirmation needed for internal accounts
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [AUTH] Sign up error:', error);
+        throw error;
+      }
+      
+      console.log('✅ [AUTH] Sign up successful');
       return { data, error: null };
     } catch (error) {
+      console.error('❌ [AUTH] Sign up with full name failed:', error);
       return { data: null, error };
     }
   }
@@ -520,44 +543,70 @@ class AuthService {
    */
   static async signInWithFullName(fullName, password) {
     try {
+      // Validate inputs
+      if (!fullName || fullName.trim().length < 2) {
+        throw new Error('Full name must be at least 2 characters');
+      }
+      
+      if (!password || password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      console.log('🔐 [AUTH] Attempting sign in with full name');
+
       // First, find users with matching full_name
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, name')
         .eq('name', fullName);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('❌ [AUTH] Profile lookup error:', profileError);
+        throw profileError;
+      }
 
       if (!profiles || profiles.length === 0) {
+        console.warn('⚠️ [AUTH] No user found with full name:', fullName);
         throw new Error('User not found with this full name');
       }
+
+      console.log(`📋 [AUTH] Found ${profiles.length} profile(s) with matching name`);
 
       // Try to sign in with each email until one succeeds
       let lastError = null;
       for (const profile of profiles) {
-        // Skip Google OAuth users (they don't have password)
-        if (!profile.email.includes('@specweave.internal')) {
+        // Only try internal accounts (username-based auth)
+        // Skip Google OAuth users and other external auth
+        if (!profile.email.includes('@internal.specweave.app') && 
+            !profile.email.includes('@specweave.internal')) {
+          console.log('⏭️ [AUTH] Skipping non-internal account:', profile.email);
           continue;
         }
 
         try {
+          console.log('🔑 [AUTH] Attempting password authentication');
           const { data, error } = await supabase.auth.signInWithPassword({
             email: profile.email,
             password
           });
 
           if (!error && data) {
+            console.log('✅ [AUTH] Sign in successful');
             return { data, error: null };
           }
           lastError = error;
+          console.warn('⚠️ [AUTH] Password authentication failed:', error?.message);
         } catch (err) {
           lastError = err;
+          console.warn('⚠️ [AUTH] Sign in attempt error:', err.message);
         }
       }
 
       // If we get here, no password matched
+      console.error('❌ [AUTH] All sign in attempts failed');
       throw lastError || new Error('Invalid password');
     } catch (error) {
+      console.error('❌ [AUTH] Sign in with full name failed:', error);
       return { data: null, error };
     }
   }

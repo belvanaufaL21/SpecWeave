@@ -9,7 +9,8 @@ const LoginSignup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signInWithGoogle } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For manual auth (username/password)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // For Google OAuth
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'signup'
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +43,7 @@ const LoginSignup = () => {
       // User returned without completing OAuth (pressed back button)
       console.log('Detected return from OAuth without completion');
       sessionStorage.removeItem('oauth_in_progress');
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
     
     // Handle browser back button navigation (pageshow event)
@@ -54,7 +55,7 @@ const LoginSignup = () => {
         if (oauthInProgress) {
           console.log('Resetting loading state after back navigation');
           sessionStorage.removeItem('oauth_in_progress');
-          setIsLoading(false);
+          setIsGoogleLoading(false);
         }
       }
     };
@@ -65,11 +66,12 @@ const LoginSignup = () => {
       // Cleanup on unmount
       window.removeEventListener('pageshow', handlePageShow);
       setIsLoading(false);
+      setIsGoogleLoading(false);
     };
   }, []);
 
   const handleGoogleAuth = async () => {
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     setError(null);
 
     try {
@@ -87,7 +89,7 @@ const LoginSignup = () => {
         // Only handle actual errors, not cancellations
         console.error('Authentication error:', authError);
         setError(authError.message || 'Authentication failed. Please try again.');
-        setIsLoading(false);
+        setIsGoogleLoading(false);
       }
       // If successful, page will redirect to Google OAuth
       // oauth_in_progress flag will be cleared when user returns (in useEffect)
@@ -97,7 +99,7 @@ const LoginSignup = () => {
       
       console.error('Unexpected authentication error:', err);
       setError('An unexpected error occurred. Please try again.');
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -350,18 +352,18 @@ const LoginSignup = () => {
             {/* Google Sign In Button */}
             <button
               onClick={handleGoogleAuth}
-              disabled={isLoading}
+              disabled={isGoogleLoading}
               className="w-full flex items-center justify-between px-6 py-4 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group border border-white/5 bg-[#09090A] hover:bg-[#160D14] hover:border-[#44273D]"
             >
               <span className="text-left flex-1 text-white/50 group-hover:text-[#FF7AD0] transition-colors">
-                {isLoading ? 'Processing...' : 'Login/Sign up with Google'}
+                {isGoogleLoading ? 'Processing...' : 'Login/Sign up with Google'}
               </span>
-              {!isLoading && (
+              {!isGoogleLoading && (
                 <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-all text-white/50 group-hover:text-[#FF7AD0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               )}
-              {isLoading && (
+              {isGoogleLoading && (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
             </button>
