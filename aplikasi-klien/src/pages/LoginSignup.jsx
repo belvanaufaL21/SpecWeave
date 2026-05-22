@@ -246,7 +246,7 @@ const LoginSignup = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight text-center">
             From User Story to Gherkin
           </h1>
 
