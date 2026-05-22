@@ -239,7 +239,7 @@ const LoginSignup = () => {
               {/* Info Message */}
               
               {/* Form */}
-              <form onSubmit={handleManualAuth} className="space-y-4">
+              <form onSubmit={handleManualAuth} className="space-y-6">
                 <FormInput
                   label="Full Name"
                   type="text"

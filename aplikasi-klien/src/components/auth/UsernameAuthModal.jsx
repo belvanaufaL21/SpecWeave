@@ -178,7 +178,7 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
           </div>
 
           {/* Form */}
-          <form onSubmit={activeTab === 'login' ? handleLogin : handleSignup} className="space-y-4">
+          <form onSubmit={activeTab === 'login' ? handleLogin : handleSignup} className="space-y-6">
             <FormInput
               label="Full Name"
               type="text"
