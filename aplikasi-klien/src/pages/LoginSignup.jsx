@@ -234,22 +234,24 @@ const LoginSignup = () => {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
-        <div className="w-full max-w-2xl text-center">
+        <div className="w-full max-w-2xl">
           {/* Integration badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-8 border" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#FFFFFF' }}>
-            <svg className="w-4 h-4 text-[#2684FF]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
-            </svg>
-            Integration with JIRA
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm border" style={{ backgroundColor: '#120C18', borderColor: '#2C1A43', color: '#FFFFFF' }}>
+              <svg className="w-4 h-4 text-[#2684FF]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0z"/>
+              </svg>
+              Integration with JIRA
+            </div>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center mx-auto whitespace-nowrap">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-center">
             From User Story to Gherkin
           </h1>
 
           {/* Subtitle */}
-          <p className="text-gray-400 text-sm sm:text-lg mb-12 max-w-3xl mx-auto text-center px-4">
+          <p className="text-gray-400 text-sm sm:text-lg mb-12 text-center px-4">
             Konversi user story jadi skenario Gherkin yang rapi, konsisten, dan siap dipakai QA & Dev.
           </p>
 
