@@ -20,7 +20,7 @@ export const FormInput = forwardRef(({
   return (
     <div className={`${className}`}>
       {label && (
-        <label className={`block text-sm font-medium text-gray-300 mb-2 ${labelClassName}`}>
+        <label className={`block text-sm font-medium text-gray-300 mb-2 text-left ${labelClassName}`}>
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>
@@ -51,7 +51,7 @@ export const FormInput = forwardRef(({
       </div>
       
       {error && (
-        <p className="text-red-400 text-xs mt-1">
+        <p className="text-red-400 text-xs mt-1 text-left">
           {error}
         </p>
       )}
