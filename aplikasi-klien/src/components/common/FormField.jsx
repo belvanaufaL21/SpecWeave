@@ -20,7 +20,7 @@ export const FormInput = forwardRef(({
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className={`text-xs font-semibold text-gray-400 ml-1 uppercase tracking-wider ${labelClassName}`}>
+        <label className={`block text-xs font-semibold text-gray-400 uppercase tracking-wider text-left ${labelClassName}`}>
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>
@@ -76,7 +76,7 @@ export const FormTextarea = forwardRef(({
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className={`text-xs font-semibold text-gray-400 ml-1 uppercase tracking-wider ${labelClassName}`}>
+        <label className={`block text-xs font-semibold text-gray-400 uppercase tracking-wider text-left ${labelClassName}`}>
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>
@@ -120,7 +120,7 @@ export const FormSelect = forwardRef(({
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className={`text-xs font-semibold text-gray-400 ml-1 uppercase tracking-wider ${labelClassName}`}>
+        <label className={`block text-xs font-semibold text-gray-400 uppercase tracking-wider text-left ${labelClassName}`}>
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>

@@ -250,7 +250,6 @@ const LoginSignup = () => {
                   hasError={!!errors.fullName}
                   required
                   icon={<User className="w-5 h-5" />}
-                  labelClassName="text-left"
                 />
 
                 <div className="relative">
@@ -264,7 +263,6 @@ const LoginSignup = () => {
                     hasError={!!errors.password}
                     required
                     icon={<Lock className="w-5 h-5" />}
-                    labelClassName="text-left"
                   />
                   <button
                     type="button"
