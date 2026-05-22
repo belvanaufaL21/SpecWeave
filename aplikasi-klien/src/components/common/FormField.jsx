@@ -18,9 +18,9 @@ export const FormInput = forwardRef(({
   ...props
 }, ref) => {
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`${className}`}>
       {label && (
-        <label className={`block text-xs font-semibold text-gray-400 uppercase tracking-wider text-left ${labelClassName}`}>
+        <label className={`block text-sm font-medium text-gray-300 mb-2 ${labelClassName}`}>
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>
@@ -29,10 +29,10 @@ export const FormInput = forwardRef(({
       <div className="relative group">
         {icon && (
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <div className={`h-5 w-5 transition-colors duration-300 ${
+            <div className={`h-5 w-5 transition-colors ${
               hasError 
                 ? 'text-red-400' 
-                : 'text-gray-500 group-focus-within:text-purple-400'
+                : 'text-gray-500'
             }`}>
               {icon}
             </div>
@@ -41,17 +41,17 @@ export const FormInput = forwardRef(({
         
         <input
           ref={ref}
-          className={`w-full ${icon ? 'pl-12' : 'pl-4'} pr-4 py-3.5 bg-[#050507] border rounded-xl text-white placeholder-gray-600 focus:outline-none focus:bg-[#0c0c12] transition-all duration-300 text-sm font-medium ${
+          className={`w-full ${icon ? 'pl-12' : 'pl-4'} pr-4 py-3 bg-[#0D0D0D] border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:bg-[#0D0D0D] transition-all ${
             hasError 
-              ? 'border-red-500/50 focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20' 
-              : 'border-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20'
+              ? 'border-red-500/50 focus:border-red-500' 
+              : 'border-white/5 focus:border-white/50'
           } ${inputClassName}`}
           {...props}
         />
       </div>
       
       {error && (
-        <p className="text-red-400 text-xs mt-1 ml-1 animate-in slide-in-from-top-1 duration-200">
+        <p className="text-red-400 text-xs mt-1">
           {error}
         </p>
       )}

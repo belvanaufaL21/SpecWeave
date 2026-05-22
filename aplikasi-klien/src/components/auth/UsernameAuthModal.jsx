@@ -24,6 +24,50 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
     setError(null);
     setErrors({});
     setFormData({ fullName: '', password: '' });
+    setShowPassword(false);
+  };
+
+  // Real-time validation
+  const validateField = (name, value) => {
+    const newErrors = { ...errors };
+    
+    switch (name) {
+      case 'fullName':
+        if (!value) {
+          newErrors.fullName = 'Full name is required';
+        } else if (value.length < 2) {
+          newErrors.fullName = 'Name must be at least 2 characters';
+        } else {
+          delete newErrors.fullName;
+        }
+        break;
+      case 'password':
+        if (!value) {
+          newErrors.password = 'Password is required';
+        } else if (value.length < 6) {
+          newErrors.password = 'Password must be at least 6 characters';
+        } else {
+          delete newErrors.password;
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Real-time validation
+    validateField(name, value);
+    setError(null);
   };
 
   // Validate form
@@ -182,9 +226,10 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
             <FormInput
               label="Full Name"
               type="text"
+              name="fullName"
               placeholder="Enter your full name"
               value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              onChange={handleInputChange}
               error={errors.fullName}
               hasError={!!errors.fullName}
               required
@@ -195,9 +240,10 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
               <FormInput
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
+                name="password"
                 placeholder={activeTab === 'login' ? 'Enter your password' : 'Create a password (min. 6 characters)'}
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={handleInputChange}
                 error={errors.password}
                 hasError={!!errors.password}
                 required
@@ -245,8 +291,8 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={isLoading || Object.keys(errors).length > 0 || !formData.fullName || !formData.password}
+              className="w-full py-3 bg-[#160D14] border border-[#44273D] text-[#FF7AD0] rounded-lg font-medium hover:bg-[#1a1016] transition-all duration-200 disabled:bg-[#0D0D0D] disabled:border-white/5 disabled:text-white/10 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
