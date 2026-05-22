@@ -142,7 +142,15 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
       );
       
       if (authError) {
-        setError(authError.message || 'Sign up failed. Please try again.');
+        // Check if it's a rate limit error
+        if (authError.code === 'RATE_LIMIT' || authError.message?.includes('rate limit')) {
+          setError(
+            '⏱️ Too many attempts. Please wait 5-10 minutes before trying again. ' +
+            'If you already have an account, try logging in instead.'
+          );
+        } else {
+          setError(authError.message || 'Sign up failed. Please try again.');
+        }
       } else {
         if (onSuccess) {
           onSuccess();
@@ -218,6 +226,13 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
               {activeTab === 'login' 
                 ? 'Login with your full name and password. Google users cannot use this method.'
                 : 'Create an account with full name and password. This is separate from Google login.'}
+            </p>
+          </div>
+
+          {/* Rate Limit Warning */}
+          <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/50 rounded-lg">
+            <p className="text-yellow-300 text-xs">
+              ⚠️ Limited to 3-5 sign ups per hour. If you get an error, please wait 5-10 minutes.
             </p>
           </div>
 

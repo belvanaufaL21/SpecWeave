@@ -195,7 +195,15 @@ const LoginSignup = () => {
       }
       
       if (result.error) {
-        setError(result.error.message || `${activeTab === 'login' ? 'Login' : 'Sign up'} failed. Please try again.`);
+        // Check if it's a rate limit error
+        if (result.error.code === 'RATE_LIMIT' || result.error.message?.includes('rate limit')) {
+          setError(
+            '⏱️ Too many attempts. Please wait 5-10 minutes before trying again. ' +
+            'If you already have an account, try logging in instead.'
+          );
+        } else {
+          setError(result.error.message || `${activeTab === 'login' ? 'Login' : 'Sign up'} failed. Please try again.`);
+        }
       } else {
         // Success - navigation will be handled by AuthContext
         navigate('/chat', { replace: true });

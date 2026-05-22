@@ -523,6 +523,16 @@ class AuthService {
 
       if (error) {
         console.error('❌ [AUTH] Sign up error:', error);
+        
+        // Handle rate limit error with user-friendly message
+        if (error.message?.includes('rate limit') || error.status === 429) {
+          const rateLimitError = new Error(
+            'Too many sign up attempts. Please wait a few minutes and try again, or try logging in if you already have an account.'
+          );
+          rateLimitError.code = 'RATE_LIMIT';
+          throw rateLimitError;
+        }
+        
         throw error;
       }
       
