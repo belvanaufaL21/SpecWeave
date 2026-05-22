@@ -258,37 +258,6 @@ const UsernameAuthModal = ({ isOpen, onClose, onSuccess, initialTab = 'login' })
               </button>
             </div>
 
-            {activeTab === 'login' && (
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-white/20 bg-[#050507] text-purple-500 focus:ring-2 focus:ring-purple-500/20"
-                  />
-                  <span>Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  className="text-purple-400 hover:text-purple-300 transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
-            {activeTab === 'signup' && (
-              <div className="text-xs text-gray-400">
-                By signing up, you agree to our{' '}
-                <button type="button" className="text-purple-400 hover:text-purple-300">
-                  Terms of Service
-                </button>{' '}
-                and{' '}
-                <button type="button" className="text-purple-400 hover:text-purple-300">
-                  Privacy Policy
-                </button>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={isLoading || Object.keys(errors).length > 0 || !formData.fullName || !formData.password}
