@@ -6,7 +6,6 @@ import ChatBubble from '../components/chat/ChatBubble';
 import TypingIndicator from '../components/chat/TypingIndicator';
 import CompactChatItem from '../components/chat/CompactChatItem';
 import ChatCountIndicator from '../components/chat/ChatCountIndicator';
-import FormatGuide from '../components/chat/FormatGuide';
 import UserDataService from '../services/UserDataService';
 import { getCurrentLLMInfo, getLLMConfig } from '../utils/helpers/llmHelpers';
 import { generateUniqueId, generateUniqueChatTitle, createChatHistoryItem } from '../utils/helpers/chatHelpers';
@@ -141,7 +140,6 @@ const ChatRefined = () => {
   const [sidebarForceUpdate, setSidebarForceUpdate] = useState(0);
   const [input, setInput] = useState(''); // For welcome state input (kondisi 1)
   const [inputBottom, setInputBottom] = useState(''); // For bottom input (kondisi 2)
-  const [showFormatGuide, setShowFormatGuide] = useState(false); // For format guide modal
   const [showAIDropdown, setShowAIDropdown] = useState(false); // For AI model dropdown
   const [selectedModel, setSelectedModel] = useState(() => {
     // Load from localStorage or use default
@@ -2202,21 +2200,8 @@ const ChatRefined = () => {
                   <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
                       <button
-                        onClick={() => setShowFormatGuide(!showFormatGuide)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
-                        style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                        title={isMobile ? "Format Guide" : undefined}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        {!isMobile && "Format Guide"}
-                      </button>
-                      
-                      <button
                         onClick={() => {
                           setInput("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
-                          setShowFormatGuide(false);
                         }}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                         style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
@@ -2370,21 +2355,8 @@ const ChatRefined = () => {
                 <div className="flex items-center justify-between mt-4 flex-wrap gap-4">
                   <div className="flex items-center gap-4 flex-wrap">
                     <button
-                      onClick={() => setShowFormatGuide(!showFormatGuide)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
-                      style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                      title={isMobile ? "Format Guide" : undefined}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      {!isMobile && "Format Guide"}
-                    </button>
-                    
-                    <button
                       onClick={() => {
                         setInputBottom("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
-                        setShowFormatGuide(false);
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
                       style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
@@ -2456,11 +2428,6 @@ const ChatRefined = () => {
       />
 
       {/* MODALS */}
-      <FormatGuide
-        isVisible={showFormatGuide}
-        onClose={() => setShowFormatGuide(false)}
-      />
-
       <EpicSelectionModal 
         isOpen={isEpicModalOpen} 
         onClose={closeEpicModal}

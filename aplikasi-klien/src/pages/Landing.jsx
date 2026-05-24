@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Logo from '../components/common/Logo';
-import FormatGuide from '../components/chat/FormatGuide';
 import { getCurrentLLMInfo, getLLMConfig } from '../utils/helpers/llmHelpers';
 import toast from 'react-hot-toast';
 
@@ -12,7 +11,6 @@ const Landing = () => {
   
   const [userStory, setUserStory] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showFormatGuide, setShowFormatGuide] = useState(false);
   const [showAIDropdown, setShowAIDropdown] = useState(false);
 
   // Get current AI model info
@@ -95,13 +93,8 @@ const Landing = () => {
   };
 
   // Insert template function (from ChatInput)
-  const insertTemplate = (template) => {
-    if (template) {
-      setUserStory(template);
-    } else {
-      setUserStory("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
-    }
-    setShowFormatGuide(false);
+  const insertTemplate = () => {
+    setUserStory("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
   };
 
   // Handle story card click
@@ -168,17 +161,6 @@ const Landing = () => {
                 
                 <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
                   <div className="flex items-center gap-4 flex-wrap">
-                    <button
-                      onClick={() => setShowFormatGuide(!showFormatGuide)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
-                      style={{ backgroundColor: '#09090A', borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      Format Guide
-                    </button>
-                    
                     <button
                       onClick={() => insertTemplate()}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
@@ -348,12 +330,6 @@ const Landing = () => {
           </div>
         </div>
       </footer>
-
-      {/* Format Guide Modal */}
-      <FormatGuide
-        isVisible={showFormatGuide}
-        onClose={() => setShowFormatGuide(false)}
-      />
     </div>
   );
 };
