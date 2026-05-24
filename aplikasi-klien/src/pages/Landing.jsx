@@ -353,7 +353,6 @@ const Landing = () => {
       <FormatGuide
         isVisible={showFormatGuide}
         onClose={() => setShowFormatGuide(false)}
-        onInsertTemplate={insertTemplate}
       />
     </div>
   );

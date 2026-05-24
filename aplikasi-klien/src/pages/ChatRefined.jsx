@@ -2215,7 +2215,7 @@ const ChatRefined = () => {
                       
                       <button
                         onClick={() => {
-                          setInput("As a [role], I want [feature], so that [benefit]");
+                          setInput("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
                           setShowFormatGuide(false);
                         }}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
@@ -2383,7 +2383,7 @@ const ChatRefined = () => {
                     
                     <button
                       onClick={() => {
-                        setInputBottom("As a [role], I want [feature], so that [benefit]");
+                        setInputBottom("Sebagai [peran], saya ingin [fitur], agar [manfaat]");
                         setShowFormatGuide(false);
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm border"
@@ -2459,14 +2459,6 @@ const ChatRefined = () => {
       <FormatGuide
         isVisible={showFormatGuide}
         onClose={() => setShowFormatGuide(false)}
-        onInsertTemplate={(template) => {
-          if (template) {
-            setInput(template);
-          } else {
-            setInput("As a [role], I want [feature], so that [benefit]");
-          }
-          setShowFormatGuide(false);
-        }}
       />
 
       <EpicSelectionModal 
