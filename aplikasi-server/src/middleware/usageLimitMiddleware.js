@@ -44,9 +44,31 @@ export const checkUsageLimit = async (req, res, next) => {
   }
 
   try {
-    const modelName = req.body.model || 'llama-3.1-8b-instant';
+    // ✅ FIX: Update default model ke model baru yang valid
+    // Model lama 'llama-3.1-8b-instant' sudah tidak ada di sistem
+    const modelName = req.body.model || 'meta-llama/llama-3.3-70b-instruct';
 
-    const limitCheck = await usageLimitService.checkLimit(req.user.id, modelName);
+    let limitCheck;
+    try {
+      limitCheck = await usageLimitService.checkLimit(req.user.id, modelName);
+    } catch (error) {
+      // ✅ AUTO-MIGRATION: Jika model tidak ditemukan, coba fallback ke default model
+      if (error.message.includes('Model not found')) {
+        console.warn(`⚠️ [USAGE-LIMIT] Model not found: ${modelName}, falling back to default model`);
+        
+        // Fallback ke model default yang valid
+        const defaultModel = 'meta-llama/llama-3.3-70b-instruct';
+        limitCheck = await usageLimitService.checkLimit(req.user.id, defaultModel);
+        
+        // Update request body dengan model yang valid
+        req.body.model = defaultModel;
+        
+        console.log(`✅ [USAGE-LIMIT] Auto-migrated to default model: ${defaultModel}`);
+      } else {
+        // Error lain, throw ulang
+        throw error;
+      }
+    }
 
     if (!limitCheck.allowed) {
       const cooldownMsg = formatCooldownMessage(limitCheck.resetsAt);
