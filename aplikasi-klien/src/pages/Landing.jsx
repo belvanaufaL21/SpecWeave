@@ -87,8 +87,8 @@ const Landing = () => {
     if (user) {
       navigate('/chat', { state: { initialMessage: userStory } });
     } else {
-      // Redirect to login with the user story
-      navigate('/login', { state: { initialMessage: userStory } });
+      // Redirect to login without the user story
+      navigate('/login');
     }
   };
 

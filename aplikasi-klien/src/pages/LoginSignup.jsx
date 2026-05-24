@@ -24,9 +24,6 @@ const LoginSignup = () => {
   // Validation errors
   const [errors, setErrors] = useState({});
 
-  // Get initial message from landing page if any
-  const initialMessage = location.state?.initialMessage || '';
-
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
@@ -377,14 +374,6 @@ const LoginSignup = () => {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
             </button>
-
-            {/* Initial Message Preview (if from landing) */}
-            {initialMessage && (
-              <div className="mt-8 p-4 bg-white/5 border border-white/10 rounded-lg text-left">
-                <p className="text-xs text-gray-500 mb-2">Your user story:</p>
-                <p className="text-sm text-gray-300 line-clamp-3">{initialMessage}</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
