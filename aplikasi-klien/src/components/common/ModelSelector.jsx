@@ -105,7 +105,10 @@ const ModelSelector = ({
       if (response.data.success) {
         setModels(response.data.data.models);
         if (!selectedModel && response.data.data.models.length > 0) {
+          // Try to find default model in order of preference
           const defaultModel =
+            response.data.data.models.find(m => m.name === 'deepseek/deepseek-r1:free') ||
+            response.data.data.models.find(m => m.name === 'meta-llama/meta-llama-3-70b-instruct') ||
             response.data.data.models.find(m => m.name === 'llama-3.1-8b-instant') ||
             response.data.data.models[0];
           onModelChange(defaultModel.name);
@@ -142,13 +145,24 @@ const ModelSelector = ({
     
     // Fallback display names when models not loaded yet
     const displayNames = {
+      // Old models (Groq)
       'llama-3.1-8b-instant': 'Llama 3.1 8B',
       'llama-3.1-70b-versatile': 'Llama 3.1 70B',
-      'llama-3.3-70b-versatile': 'Llama 3.3 70B',
       'gemma2-9b-it': 'Gemma 2 9B',
       'mixtral-8x7b-32768': 'Mixtral 8x7B',
+      // New OpenRouter models
+      'deepseek/deepseek-r1:free': 'DeepSeek R1 (Free)',
+      'meta-llama/meta-llama-3-70b-instruct': 'Llama 3 70B',
+      'google/gemini-1.5-pro': 'Gemini 1.5 Pro',
+      'openai/gpt-4-turbo': 'GPT-4 Turbo',
+      // Old OpenRouter models (inactive)
+      'llama-3.3-70b-versatile': 'Llama 3.3 70B',
+      'meta-llama/llama-3.3-70b-instruct': 'Llama 3.3 70B',
       'gemini-2.5-flash': 'Gemini 2.5 Flash',
-      'gemini-2.5-pro': 'Gemini 2.5 Pro'
+      'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
+      'gemini-2.5-pro': 'Gemini 2.5 Pro',
+      'openai/gpt-4.1-mini': 'GPT-4.1 Mini',
+      'anthropic/claude-haiku-4.5': 'Claude 4.5 Haiku'
     };
     
     return displayNames[modelName] || modelName;
