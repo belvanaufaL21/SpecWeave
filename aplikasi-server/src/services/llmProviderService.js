@@ -69,6 +69,8 @@ class LLMProviderService {
         model: modelName,
         messages,
         max_tokens: 4096, // Limit token output untuk menghindari error insufficient credits
+      }, {
+        timeout: 180000 // 3 minutes timeout untuk accommodate slow models
       });
 
       console.log('✅ [LLM-PROVIDER] OpenRouter API success:', {
@@ -115,6 +117,13 @@ class LLMProviderService {
       if (error.status === 400 || (error.message && error.message.includes('400'))) {
         throw new Error(
           `OpenRouter bad request (400) for model ${modelName}: ${error.message}. Check if model name is correct.`
+        );
+      }
+      
+      // Handle timeout errors
+      if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+        throw new Error(
+          `OpenRouter request timeout for model ${modelName}. This model may be too slow (>3 minutes). Consider using a faster model like Gemini 2.5 Pro or GPT-4 Turbo.`
         );
       }
       

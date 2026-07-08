@@ -16,7 +16,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 60000 // 60 detik timeout untuk development
+  timeout: 180000 // 180 detik (3 menit) - untuk accommodate slow models seperti Llama 3.3 70B
 });
 
 // Request interceptor untuk menambahkan auth token
@@ -197,7 +197,10 @@ export const generateGherkinAPI = async (userStory, options = {}) => {
     evaluateQuality: options.enableMeteor || false
   };
 
-  const config = {};
+  const config = {
+    timeout: 180000 // 3 minutes - allows for slow models like Llama 3.3 70B (90-110s)
+  };
+  
   if (options.signal) {
     config.signal = options.signal;
   }
