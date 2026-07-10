@@ -386,7 +386,6 @@ INSTRUKSI FINAL YANG SANGAT PENTING:
 
 Hasilkan respons JSON dalam bahasa Indonesia yang profesional dan detail:`;
 }
-}
 
 /**
  * Prompt untuk response umum (non-Connextra format)
