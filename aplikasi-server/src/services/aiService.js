@@ -46,7 +46,7 @@ export const convertToGherkin = async (userStory, options = {}) => {
       {
         role: "system",
         content: responseType === 'gherkin' 
-          ? "Anda adalah ahli Product Manager yang sangat berpengalaman dalam membuat spesifikasi fitur dan skenario Gherkin dalam bahasa Indonesia. Selalu berikan output dalam format JSON yang valid tanpa markdown atau penjelasan tambahan."
+          ? "Anda adalah ahli Product Manager yang sangat berpengalaman dalam membuat spesifikasi fitur dan skenario Gherkin dalam bahasa Indonesia. PENTING: Berikan output yang LENGKAP dan DETAIL, bukan hanya kerangka atau skeleton. Setiap field harus diisi dengan konten yang spesifik dan relevan. Selalu berikan output dalam format JSON yang valid tanpa markdown atau penjelasan tambahan."
           : "Berikan respons yang sangat singkat dan langsung. Maksimal 2 kalimat. Arahkan pengguna untuk menggunakan format User Story Connextra. Gunakan bahasa Indonesia yang sederhana."
       },
       {
@@ -222,6 +222,9 @@ function constructGherkinPrompt(userStory, patterns = []) {
   
   return `Anda adalah Senior Product Manager & QA Lead yang ahli dalam membuat spesifikasi fitur dan acceptance criteria. Tugas Anda adalah menganalisis User Story berikut dan membuat spesifikasi fitur lengkap dalam format JSON.
 
+⚠️ PERINGATAN PENTING: 
+Jangan hanya memberikan kerangka atau template kosong. Setiap field HARUS diisi dengan konten lengkap dan detail yang relevan dengan user story. Output yang hanya berisi skeleton atau placeholder TIDAK DITERIMA.
+
 PERSYARATAN KRITIS:
 1. Output HARUS berupa JSON valid saja - tanpa markdown, tanpa penjelasan, tanpa code blocks
 2. Ikuti struktur JSON yang tepat seperti di bawah ini
@@ -242,6 +245,8 @@ PERSYARATAN KRITIS:
     - status: selalu "To Do"
 11. Development tasks harus mencakup minimal: 2-3 BE tasks, 2 FE tasks, 1 UI/UX task, dan 2 QA tasks
 12. Description harus spesifik sesuai konteks user story, bukan template generik
+13. SETIAP field given/when/then HARUS berisi kalimat lengkap yang menjelaskan detail spesifik, BUKAN hanya ringkasan atau poin singkat
+14. SETIAP development task description HARUS berisi penjelasan lengkap tentang apa yang dikerjakan, BUKAN hanya 2-3 kata
 ${fewShotExamples}
 Struktur JSON yang Diperlukan:
 {
@@ -363,6 +368,9 @@ CONTOH FORMAT YANG BENAR (sesuai standar profesional):
 
 User Story yang akan dianalisis:
 "${userStory}"
+
+📝 INSTRUKSI AKHIR:
+Berikan output JSON yang LENGKAP dan DETAIL. Setiap field given/when/then harus berisi kalimat lengkap yang menjelaskan konteks, aksi, dan hasil secara spesifik. Setiap development task harus berisi penjelasan lengkap tentang implementasi teknisnya. JANGAN memberikan output yang hanya berupa kerangka atau template kosong.
 
 Hasilkan respons JSON dalam bahasa Indonesia yang profesional dan detail:`;
 }
