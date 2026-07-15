@@ -142,8 +142,8 @@ const ChatRefined = () => {
   const [inputBottom, setInputBottom] = useState(''); // For bottom input (kondisi 2)
   const [showAIDropdown, setShowAIDropdown] = useState(false); // For AI model dropdown
   const [selectedModel, setSelectedModel] = useState(() => {
-    // Load from localStorage or use default (prefer free DeepSeek R1)
-    return localStorage.getItem('selectedLLMModel') || 'deepseek/deepseek-r1:free';
+    // Load from localStorage or use default (4 models: Llama, DeepSeek, Gemini Pro, GPT-4 Turbo)
+    return localStorage.getItem('selectedLLMModel') || 'meta-llama/llama-3.3-70b-instruct';
   }); // Selected LLM model
   const [usageInfo, setUsageInfo] = useState(null); // Usage information from last API response
   const [modelSelectorRefresh, setModelSelectorRefresh] = useState(0); // Trigger to refresh ModelSelector
