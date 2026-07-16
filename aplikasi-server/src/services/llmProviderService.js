@@ -68,6 +68,7 @@ class LLMProviderService {
       const response = await openrouter.chat.completions.create({
         model: modelName,
         messages,
+        temperature: 0.7, // Temperature untuk keseimbangan antara kreativitas dan konsistensi
         max_tokens: 4096, // Limit token output untuk menghindari error insufficient credits
       }, {
         timeout: 180000 // 3 minutes timeout untuk accommodate slow models

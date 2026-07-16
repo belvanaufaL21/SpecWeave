@@ -332,8 +332,8 @@ class AutoReferenceService {
       // Shuffle all references untuk randomisasi
       const shuffledReferences = this.shuffleArray([...allReferences]);
       
-      // Ambil maksimal 3 references untuk few-shot prompting (optimal untuk performa dan kualitas)
-      const maxReferences = Math.min(shuffledReferences.length, 3);
+      // Ambil maksimal 5 references untuk few-shot prompting (optimal untuk performa dan kualitas)
+      const maxReferences = Math.min(shuffledReferences.length, 5);
       const selectedReferences = shuffledReferences.slice(0, maxReferences);
       
       // Buat pattern sederhana dengan selected references
