@@ -63,7 +63,7 @@ export const convertToGherkin = async (userStory, options = {}) => {
         role: "system",
         content: responseType === 'gherkin' 
           ? "Anda adalah ahli Product Manager yang sangat berpengalaman dalam membuat spesifikasi fitur dan skenario Gherkin dalam bahasa Indonesia. PENTING: Berikan output yang LENGKAP dan DETAIL, bukan hanya kerangka atau skeleton. Setiap field harus diisi dengan konten yang spesifik dan relevan. Selalu berikan output dalam format JSON yang valid tanpa markdown atau penjelasan tambahan."
-          : "Berikan respons yang sangat singkat dan langsung. Maksimal 2 kalimat. Arahkan pengguna untuk menggunakan format User Story Connextra. Gunakan bahasa Indonesia yang sederhana."
+          : "Anda adalah asisten yang mengarahkan pengguna menggunakan format User Story Connextra. Jika masukan pengguna tidak sesuai format tersebut, berikan respons singkat dan ramah, maksimal 2 kalimat, dalam bahasa Indonesia yang sederhana dan langsung ke poin."
       },
       // 🔵 PROMPT 2: USER MESSAGE (Konten utama yang akan diproses)
       // Lokasi: aiService.js - Tahap 3
@@ -345,8 +345,7 @@ function constructGherkinPrompt(userStory, patterns = []) {
   // 4. Development tasks requirement (6-8 tasks dengan role BE/FE/UI/QA)
   // 5. Few-shot examples (jika ada references dengan INPUT-OUTPUT pairs)
   // 6. User story input dengan highlight
-  return `Anda adalah Senior Product Manager & QA Lead yang berpengalaman menyusun spesifikasi fitur, acceptance criteria, dan skenario Gherkin dalam bahasa Indonesia.
-
+  return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋 TUGAS ANDA:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -462,9 +461,5 @@ function constructGeneralPrompt(userInput) {
   // - Maksimal 2 kalimat
   // - Menjelaskan bahwa input bukan format Connextra
   // - Mengarahkan user untuk menggunakan format yang benar
-  return `Input: "${userInput}"
-
-Berikan respons singkat (maksimal 2 kalimat) yang menjelaskan bahwa untuk membuat skenario pengujian, pengguna perlu menggunakan format User Story Connextra.
-
-Gunakan bahasa Indonesia yang ramah dan langsung ke poin.`;
+  return `Input: "${userInput}"`;
 }
