@@ -71,6 +71,11 @@ class EpicService {
   }
 
   /**
+   * 🟢 PENGECEKAN EPIC CONTEXT
+   * Lokasi: epicService.js - getEpicContext()
+   * Tujuan: Mengambil Epic context dari memory atau database
+   * Return: {success: true, data: context} atau {success: true, data: null}
+   * 
    * Get Epic context for a user
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Epic context
@@ -79,10 +84,10 @@ class EpicService {
     try {
       const contextKey = `${userId}:epic_context`;
       
-      // Try to get from memory first
+      // PENGECEKAN KONEKSI JIRA & EPIC: Coba ambil context dari memory terlebih dahulu
       let context = this.epicContexts.get(contextKey);
       
-      // If not in memory, try to get from database
+      // PENGECEKAN KONEKSI JIRA & EPIC: Jika tidak ada di memory, ambil dari database
       if (!context) {
         context = await this.getEpicContextFromDB(userId);
         if (context) {
@@ -90,7 +95,7 @@ class EpicService {
         }
       }
 
-      // Check if context is expired
+      // PENGECEKAN KONEKSI JIRA & EPIC: Cek apakah context sudah expired
       if (context && context.expiresAt < Date.now()) {
         await this.clearEpicContext(userId);
         return { success: true, data: null };
@@ -240,12 +245,13 @@ class EpicService {
    */
   async getEpicContextFromDB(userId) {
     try {
+      // PENGECEKAN KONEKSI JIRA & EPIC: Ambil Epic context dari database
       const profile = await supabaseService.getUserProfile(userId);
       
       if (profile && profile.preferences && profile.preferences.epic_context) {
         const context = profile.preferences.epic_context;
         
-        // Check if context is expired
+        // PENGECEKAN KONEKSI JIRA & EPIC: Cek apakah context expired
         if (context.expiresAt && context.expiresAt < Date.now()) {
           await this.clearEpicContextFromDB(userId);
           return null;
@@ -301,11 +307,20 @@ class EpicService {
   // =====================================================
 
   /**
+   * 🟢 VALIDASI EPIC DATA
+   * Lokasi: epicService.js - validateEpicData()
+   * Tujuan: Memvalidasi struktur data Epic sebelum export
+   * Validasi:
+   * 1. Epic ID dan Key harus ada
+   * 2. Connection ID dan Project Key harus ada
+   * 3. Atau workWithoutEpic = true dengan valid connection
+   * 
    * Validate Epic context data structure
    * @param {Object} epicData - Epic data to validate
    * @returns {boolean} Validation result
    */
   validateEpicData(epicData) {
+    // PENGECEKAN KONEKSI JIRA & EPIC: Validasi struktur data Epic
     if (!epicData || typeof epicData !== 'object') {
       console.error('❌ [EPIC-VALIDATION] Invalid epicData: not an object');
       return false;
@@ -313,9 +328,8 @@ class EpicService {
 
     const { epic, connection, workWithoutEpic } = epicData;
 
-    // If working without Epic, only validate connection
+    // PENGECEKAN KONEKSI JIRA & EPIC: Jika mode workWithoutEpic, validasi connection saja
     if (workWithoutEpic === true) {
-      // Validate connection data
       if (!connection || !connection.id || !connection.project_key) {
         console.error('❌ [EPIC-VALIDATION] Invalid connection for workWithoutEpic mode:', { 
           hasConnection: !!connection, 
@@ -328,8 +342,7 @@ class EpicService {
       return true;
     }
 
-    // Validate Epic data (when Epic is required)
-    // Epic must have id and key, but name can be derived from summary or key
+    // PENGECEKAN KONEKSI JIRA & EPIC: Validasi Epic data (id dan key wajib ada)
     if (!epic || !epic.id || !epic.key) {
       console.error('❌ [EPIC-VALIDATION] Invalid epic data:', { 
         hasEpic: !!epic, 
@@ -341,13 +354,11 @@ class EpicService {
       return false;
     }
 
-    // Name is optional - can be derived from summary or key
-    // Just log if it's missing
     if (!epic.name && !epic.summary) {
       console.warn('⚠️ [EPIC-VALIDATION] Epic has no name or summary, will use key as fallback');
     }
 
-    // Validate connection data
+    // PENGECEKAN KONEKSI JIRA & EPIC: Validasi connection data
     if (!connection || !connection.id || !connection.project_key) {
       console.error('❌ [EPIC-VALIDATION] Invalid connection:', { 
         hasConnection: !!connection, 

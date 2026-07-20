@@ -169,11 +169,8 @@ def preprocess_text(text, detected_lang, target_language):
 
 def build_alignment(generated_tokens, reference_tokens):
     """
-    Greedy alignment: untuk setiap token di hipotesis, cocokkan ke posisi
-    pertama yang belum terpakai di referensi.
-
-    Returns:
-        list of (gen_idx, ref_idx) pairs, urut berdasarkan gen_idx
+    Build alignment: cocokkan token generated dengan reference (greedy)
+    Returns: list of (gen_idx, ref_idx) pairs
     """
     used_ref = set()
     alignment = []
@@ -188,13 +185,8 @@ def build_alignment(generated_tokens, reference_tokens):
 
 def count_chunks(alignment):
     """
-    Hitung chunks sesuai METEOR (Banerjee & Lavie 2005):
-    Chunk = maximal sequence of aligned token-pairs yang konsekutif
-    BAIK di gen_idx MAUPUN di ref_idx (urutan sama di kedua sisi).
-
-    Contoh:
-      Gen: A B C D ; Ref: B A D C   →  alignment: (0,1)(1,0)(2,3)(3,2)
-      Tidak ada pasangan konsekutif di kedua sisi → 4 chunks
+    Hitung jumlah chunks (fragmen alignment yang terputus)
+    Chunks = jumlah sequence alignment yang konsekutif di kedua sisi
     """
     if not alignment:
         return 0
@@ -202,6 +194,7 @@ def count_chunks(alignment):
     for i in range(1, len(alignment)):
         prev_gen, prev_ref = alignment[i - 1]
         curr_gen, curr_ref = alignment[i]
+        # Jika tidak konsekutif di salah satu sisi → chunk baru
         if curr_gen != prev_gen + 1 or curr_ref != prev_ref + 1:
             chunks += 1
     return chunks
@@ -209,13 +202,8 @@ def count_chunks(alignment):
 
 def calculate_diagnostic_metrics(generated_tokens, reference_tokens):
     """
-    Hitung komponen METEOR untuk display: P, R, F-mean, chunks, penalty.
-    Rumus mengikuti Banerjee & Lavie (2005):
-        P       = m / |hypothesis|
-        R       = m / |reference|
-        F_mean  = 10·P·R / (R + 9·P)        (recall-weighted harmonic mean)
-        Penalty = 0.5 · (chunks / m)³
-        METEOR  = F_mean · (1 - Penalty)
+    Hitung komponen METEOR: P, R, F-mean, chunks, penalty
+    Formula: METEOR = F_mean * (1 - Penalty)
     """
     if not generated_tokens or not reference_tokens:
         return {
@@ -224,19 +212,27 @@ def calculate_diagnostic_metrics(generated_tokens, reference_tokens):
             'alignment': []
         }
 
+    # Build alignment dan count chunks
     alignment = build_alignment(generated_tokens, reference_tokens)
     matches = len(alignment)
     chunks = count_chunks(alignment)
 
+    # Precision = matches / total generated tokens
     precision = matches / len(generated_tokens) if generated_tokens else 0.0
+    
+    # Recall = matches / total reference tokens
     recall = matches / len(reference_tokens) if reference_tokens else 0.0
 
+    # F-mean = 10*P*R / (9*P + R) - recall-weighted harmonic mean
     if (9 * precision + recall) > 0:
         f_mean = (10 * precision * recall) / (9 * precision + recall)
     else:
         f_mean = 0.0
 
+    # Penalty = 0.5 * (chunks/matches)^3
     penalty = 0.5 * (chunks / matches) ** 3 if matches > 0 else 0.0
+    
+    # METEOR score = F_mean * (1 - Penalty)
     meteor = f_mean * (1 - penalty)
 
     return {
@@ -253,9 +249,8 @@ def calculate_diagnostic_metrics(generated_tokens, reference_tokens):
 
 def nltk_meteor(gen_tokens, ref_tokens, use_identity_stemmer=False):
     """
-    Wrapper untuk NLTK meteor_score.
-    use_identity_stemmer=True dipakai saat token sudah di-stem oleh Sastrawi,
-    untuk mencegah Porter stemmer (English) merusak token Indonesia.
+    Panggil NLTK meteor_score (implementasi resmi Banerjee & Lavie 2005)
+    use_identity_stemmer=True untuk teks Indonesia yang sudah di-stem Sastrawi
     """
     if not gen_tokens or not ref_tokens:
         return 0.0
@@ -300,32 +295,35 @@ def send_progress(stage, progress, message):
 
 def calculate_meteor(generated_text, reference_text, target_language='id'):
     """
-    Hitung METEOR score sesuai Banerjee & Lavie (2005).
-
-    Skor utama  : NLTK meteor_score pada teks utuh (preprocessed)
-    Diagnostik  : P, R, F-mean, penalty (dari alignment proper) +
-                  per-section breakdown untuk error analysis
+    Hitung METEOR score menggunakan NLTK (Banerjee & Lavie 2005)
+    
+    Flow:
+    1. Parse Gherkin → buang keyword Given/When/Then
+    2. Detect bahasa → Indonesia atau English
+    3. Preprocessing → Sastrawi stemming (ID) atau translate (EN)
+    4. Tokenisasi → pecah jadi array kata
+    5. NLTK meteor_score → skor utama
+    6. Diagnostic metrics → untuk analisis detail
     """
     try:
         download_nltk_data()
 
-        # ===== Stage 0: Parse Gherkin (remove Given/When/Then keywords) =====
+        # ===== 1. Parse Gherkin =====
         print(f"\n=== Parsing Gherkin ===", file=sys.stderr)
         print(f"Original generated_text: {generated_text[:100]}...", file=sys.stderr)
         print(f"Original reference_text: {reference_text[:100]}...", file=sys.stderr)
         
-        # Parse untuk mendapatkan isi tanpa keyword Given/When/Then
         gen_parts = parse_gherkin_scenario(generated_text)
         ref_parts = parse_gherkin_scenario(reference_text)
         
-        # Gabungkan isi section (tanpa keyword) untuk full-text evaluation
+        # Gabungkan isi tanpa keyword
         generated_text_clean = ' '.join([gen_parts['given'], gen_parts['when'], gen_parts['then']]).strip()
         reference_text_clean = ' '.join([ref_parts['given'], ref_parts['when'], ref_parts['then']]).strip()
         
         print(f"Cleaned generated_text: {generated_text_clean[:100]}...", file=sys.stderr)
         print(f"Cleaned reference_text: {reference_text_clean[:100]}...", file=sys.stderr)
 
-        # ===== Stage 1: Language detection & preprocessing =====
+        # ===== 2. Language detection =====
         send_progress('precision', 15, 'Mendeteksi bahasa dan preprocessing teks')
 
         gen_lang = detect_language(generated_text_clean)
@@ -338,9 +336,9 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
         print(f"Sastrawi available: {SASTRAWI_AVAILABLE}, "
               f"is_indonesian: {is_indonesian}", file=sys.stderr)
 
+        # ===== 3. Preprocessing & Tokenisasi =====
         send_progress('precision', 20, 'Tokenisasi dan stemming teks')
 
-        # FIXED: Gunakan teks yang sudah dibersihkan dari keyword Given/When/Then
         gen_pre = preprocess_text(generated_text_clean, gen_lang, target_language)
         ref_pre = preprocess_text(reference_text_clean, ref_lang, target_language)
         gen_tokens, ref_tokens = gen_pre['tokens'], ref_pre['tokens']
@@ -350,7 +348,7 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
         print(f"Reference tokens ({len(ref_tokens)}): {ref_tokens[:15]}{'...' if len(ref_tokens) > 15 else ''}",
               file=sys.stderr)
 
-        # ===== Stage 2: Skor utama (NLTK official) =====
+        # ===== 4. Progress updates =====
         send_progress('precision', 28, 'Presisi dihitung')
         send_progress('recall', 33, 'Menghitung recall kata yang ditemukan')
         send_progress('recall', 46, 'Recall dihitung')
@@ -358,13 +356,12 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
         send_progress('fmean', 64, 'F-mean dihitung')
         send_progress('penalty', 69, 'Menghitung penalti chunk')
 
-        # Skor utama: NLTK meteor_score (Banerjee & Lavie 2005 standard)
-        # IdentityStemmer dipakai jika Sastrawi sudah pre-stem text Indonesia
+        # ===== 5. NLTK METEOR Score (SKOR UTAMA) =====
         use_identity = is_indonesian and SASTRAWI_AVAILABLE
         official_score = nltk_meteor(gen_tokens, ref_tokens,
                                      use_identity_stemmer=use_identity)
 
-        # Diagnostik komponen (P, R, F, penalty) dengan alignment proper
+        # ===== 6. Diagnostic metrics =====
         diagnostic = calculate_diagnostic_metrics(gen_tokens, ref_tokens)
 
         print(f"\n=== METEOR Result ===", file=sys.stderr)
@@ -382,7 +379,6 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
         send_progress('meteor', 95, 'Skor METEOR selesai dihitung')
 
         # ===== Build response =====
-        # Penjelasan transparansi: skor utama dari NLTK pada teks utuh
         preprocessing_desc = (
             'Sastrawi stemming + tokenisasi NLTK + filter tanda baca + IdentityStemmer'
             if (is_indonesian and SASTRAWI_AVAILABLE)
@@ -391,12 +387,12 @@ def calculate_meteor(generated_text, reference_text, target_language='id'):
 
         return {
             'success': True,
-            'score': official_score,  # MAIN: NLTK meteor_score (Banerjee & Lavie 2005)
+            'score': official_score,  # SKOR UTAMA dari NLTK
             'detailed_metrics': {
                 'precision': diagnostic['precision'],
                 'recall': diagnostic['recall'],
                 'f_mean': diagnostic['f_mean'],
-                'meteor_score': official_score,  # konsisten dengan main score
+                'meteor_score': official_score,
                 'matches': diagnostic['matches'],
                 'chunks': diagnostic['chunks'],
                 'penalty': diagnostic['penalty'],

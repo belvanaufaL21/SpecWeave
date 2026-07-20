@@ -19,7 +19,7 @@ export const detectConnextraFormat = (input) => {
 
   const text = input.toLowerCase().trim();
   
-  // Connextra format patterns
+  // PENGECEKAN FORMAT CONNEXTRA: Definisi pola untuk mendeteksi role, want, benefit
   const patterns = {
     role: [
       /as\s+a\s+/i,           // "as a"
@@ -43,12 +43,12 @@ export const detectConnextraFormat = (input) => {
     ]
   };
 
-  // Check each component
+  // PENGECEKAN FORMAT CONNEXTRA: Cek keberadaan setiap komponen
   const hasRole = patterns.role.some(pattern => pattern.test(text));
   const hasWant = patterns.want.some(pattern => pattern.test(text));
   const hasBenefit = patterns.benefit.some(pattern => pattern.test(text));
 
-  // Calculate confidence score
+  // PENGECEKAN FORMAT CONNEXTRA: Hitung confidence score
   let confidence = 0;
   let matchedComponents = [];
 
@@ -76,7 +76,8 @@ export const detectConnextraFormat = (input) => {
     confidence += 0.05; // Reasonable length bonus
   }
 
-  const isConnextra = confidence >= 0.6; // Threshold for Connextra detection
+  // PENGECEKAN FORMAT CONNEXTRA: Tentukan apakah Connextra atau bukan (threshold 80%)
+  const isConnextra = confidence >= 0.8;
 
   return {
     isConnextra,

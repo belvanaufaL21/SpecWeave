@@ -22,16 +22,27 @@ export const generateGherkin = async (req, res, next) => {
     // Use originalUserStory for format detection if available, otherwise use userStory
     const inputForDetection = originalUserStory || userStory;
 
-    // 1. Validasi - HANYA cek keberadaan dan tipe, TIDAK ada validasi panjang
+    // ============================================================
+    // TAHAP 1: VALIDASI DASAR USER STORY
+    // ============================================================
+    // Hanya mengecek keberadaan dan tipe data user story
+    // TIDAK ada validasi panjang atau format di sini
     // Karena input pendek/non-Connextra akan diproses sebagai general response
     if (!userStory || typeof userStory !== 'string') {
       throw new AppError('User story is required and must be a string', 400);
     }
 
-    // 2. Start performance monitoring
+    // ============================================================
+    // TAHAP 2: MULAI PERFORMANCE MONITORING
+    // ============================================================
     performanceService.startTimer(requestId, 'gherkin_generation');
 
-    // 3. Panggil AI Service dengan references jika ada
+    // ============================================================
+    // TAHAP 3: EKSTRAKSI REFERENCE PATTERNS (Few-shot Learning)
+    // ============================================================
+    // PENGECEKAN REFERENCE LIBRARY: Ambil reference patterns dari options
+    // Jika ada patterns, akan menggunakan few-shot prompting
+    // Jika tidak ada patterns, akan menggunakan zero-shot prompting
     const patterns = options.referenceData?.patterns || [];
     
     console.log('📊 [GHERKIN-CONTROLLER] Reference data received:', {
@@ -40,7 +51,7 @@ export const generateGherkin = async (req, res, next) => {
       patternTypes: patterns.map(p => p.type)
     });
     
-    // Extract references from patterns for display
+    // PENGECEKAN REFERENCE LIBRARY: Ekstrak references dari patterns untuk display
     let usedReferences = [];
     if (patterns.length > 0) {
       patterns.forEach(pattern => {
@@ -85,6 +96,36 @@ export const generateGherkin = async (req, res, next) => {
       hasIds: usedReferences.every(r => r.id)  // Check if all have IDs
     });
     
+    // ============================================================
+    // TAHAP 4: PANGGIL AI SERVICE UNTUK GENERATE GHERKIN
+    // ============================================================
+    // PENTING: Di tahap ini AI Service akan melakukan:
+    // 1. Format Detection (Connextra vs Non-Connextra)
+    // 2. Jika Non-Connextra -> Return general response
+    // 3. Jika Connextra -> Generate Gherkin dengan/tanpa references
+    //
+    // URUTAN PENGECEKAN DI AI SERVICE:
+    // ❌ TIDAK ada pengecekan koneksi Jira di sini
+    // ❌ TIDAK ada pengecekan epic Jira di sini  
+    // ❌ TIDAK ada pengecekan limit model di sini
+    // ❌ TIDAK ada pengecekan format user story di sini
+    // ✅ Semua pengecekan dilakukan DI DALAM convertToGherkin()
+    //
+    // 🔵 ORCHESTRATION: GENERATE GHERKIN VIA AI SERVICE
+    // Lokasi: gherkinController.js - Tahap 4
+    // Fungsi: convertToGherkin() dari aiService.js
+    // Input:
+    // - userStory: User story (bisa original atau enhanced)
+    // - references: Few-shot examples dari reference library
+    // - originalInput: Input asli untuk format detection
+    // - provider: 'openrouter' (jika authenticated)
+    // - modelName: Model yang dipilih user (jika authenticated)
+    // Flow:
+    // 1. Format detection di aiService.js
+    // 2. Construct prompt (Gherkin atau General)
+    // 3. Send ke LLM via llmProviderService.js
+    // 4. Parse dan return response
+    //
     // IMPORTANT: Use originalUserStory for format detection, not the enhanced prompt
     // Use provider abstraction if usage limit is set (authenticated user with model selection)
     let aiResponse;
@@ -104,6 +145,9 @@ export const generateGherkin = async (req, res, next) => {
       });
     }
 
+    // ============================================================
+    // TAHAP 5: HANDLE RESPONSE BERDASARKAN TIPE
+    // ============================================================
     // Handle different response types
     if (aiResponse.type === 'general') {
       // Non-Connextra input - return general LLM response
@@ -122,7 +166,9 @@ export const generateGherkin = async (req, res, next) => {
     // Connextra format - continue with Gherkin processing
     const gherkinCode = aiResponse.content;
 
-    // 4. METEOR Quality Evaluation (if requested)
+    // ============================================================
+    // TAHAP 6: METEOR QUALITY EVALUATION (Optional)
+    // ============================================================
     let meteorMetrics = null;
     let qualityAssessment = null;
     
@@ -151,7 +197,9 @@ export const generateGherkin = async (req, res, next) => {
       }
     }
 
-    // 5. End performance monitoring
+    // ============================================================
+    // TAHAP 7: AKHIRI PERFORMANCE MONITORING
+    // ============================================================
     const performanceMetrics = performanceService.endTimer(requestId);
     
     // Log performance metrics if user is authenticated
@@ -159,7 +207,9 @@ export const generateGherkin = async (req, res, next) => {
       await performanceService.logPerformanceMetrics(performanceMetrics, req.user.id);
     }
 
-    // 5.5. Increment usage counter and record request for authenticated users with usage limits
+    // ============================================================
+    // TAHAP 8: INCREMENT USAGE & RECORD REQUEST (Untuk user terautentikasi)
+    // ============================================================
     let usageInfo = null;
     if (req.user?.id && req.usageLimit) {
       try {
@@ -202,7 +252,14 @@ export const generateGherkin = async (req, res, next) => {
       }
     }
 
-    // 6. Save scenario to database and create JIRA user story if user is authenticated
+    // ============================================================
+    // TAHAP 9: SAVE KE DATABASE & JIRA INTEGRATION (Optional)
+    // ============================================================
+    // CATATAN PENTING:
+    // - Pengecekan koneksi Jira dan Epic DILAKUKAN DI SINI (SETELAH generate Gherkin)
+    // - Jira integration adalah OPTIONAL (tidak wajib)
+    // - Jika tidak ada koneksi Jira, proses tetap berlanjut
+    // - Auto-export ke Jira sudah DISABLED, user harus manual export
     let savedScenario = null;
     let jiraUserStory = null;
     let jiraSubtasks = [];
@@ -212,11 +269,13 @@ export const generateGherkin = async (req, res, next) => {
         // Parse Gherkin to extract feature info
         const parsedGherkin = JSON.parse(gherkinCode);
         
-        // Check if user has Epic context for JIRA integration
+        // PENGECEKAN KONEKSI JIRA & EPIC: Ambil Epic context dari database
+        // Pengecekan ini dilakukan SETELAH generate Gherkin selesai
         const epicContext = await epicService.getEpicContext(req.user.id);
         let jiraEpicId = null;
         let jiraConnectionId = null;
         
+        // PENGECEKAN KONEKSI JIRA & EPIC: Jika ada Epic context, ambil ID-nya
         if (epicContext.success && epicContext.data) {
           jiraEpicId = epicContext.data.epicData.epic.id;
           jiraConnectionId = epicContext.data.epicData.connection.id;
@@ -226,6 +285,9 @@ export const generateGherkin = async (req, res, next) => {
           });
         }
         
+        // ============================================================
+        // SIMPAN SCENARIO KE DATABASE
+        // ============================================================
         const scenarioData = {
           user_id: req.user.id,
           title: parsedGherkin.feature || 'Generated Scenario',
@@ -251,7 +313,8 @@ export const generateGherkin = async (req, res, next) => {
         savedScenario = await supabaseService.createScenario(scenarioData);
         cleanLogger.debug('GHERKIN-CONTROLLER', 'Scenario saved to database', { id: savedScenario.id });
 
-        // Create JIRA user story if Epic context exists
+        // PENGECEKAN KONEKSI JIRA & EPIC: Jika ada koneksi Jira dan Epic, bisa create JIRA items (DISABLED)
+        // Auto-export sudah di-DISABLE, user harus manual export via button
         if (jiraEpicId && jiraConnectionId) {
           try {
             const storyData = {
@@ -347,7 +410,9 @@ export const generateGherkin = async (req, res, next) => {
       }
     }
 
-    // 7. Response with quality metrics, JIRA integration results, and references used
+    // ============================================================
+    // TAHAP 10: KIRIM RESPONSE
+    // ============================================================
     const response = {
       success: true,
       data: {

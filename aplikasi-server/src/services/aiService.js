@@ -6,7 +6,9 @@ dotenv.config();
 
 export const convertToGherkin = async (userStory, options = {}) => {
   try {
-    // Use originalInput for format detection if provided, otherwise use userStory
+    // ============================================================
+    // TAHAP 1: FORMAT DETECTION (CEK APAKAH INPUT CONNEXTRA)
+    // ============================================================
     const inputForDetection = options.originalInput || userStory;
     
     // Detect input format on ORIGINAL user input (not enhanced prompt)
@@ -21,6 +23,9 @@ export const convertToGherkin = async (userStory, options = {}) => {
       analysis: formatDetection.analysis
     });
     
+    // ============================================================
+    // TAHAP 2: TENTUKAN JENIS PROMPT BERDASARKAN FORMAT
+    // ============================================================
     let prompt;
     let responseType;
     
@@ -30,18 +35,29 @@ export const convertToGherkin = async (userStory, options = {}) => {
                           formatDetection.matchedComponents.length >= 2;
     
     if (meetsThreshold) {
-      // Connextra format - Generate Gherkin scenarios
+      // ✅ CONNEXTRA FORMAT - Generate Gherkin scenarios
       console.log('✅ [AI-SERVICE] Detected as Connextra format - generating Gherkin');
       prompt = constructGherkinPrompt(userStory, options.references);
       responseType = 'gherkin';
     } else {
-      // Non-Connextra format - General LLM response
+      // ❌ NON-CONNEXTRA FORMAT - General LLM response
       console.log('❌ [AI-SERVICE] Not Connextra format - returning general response');
       prompt = constructGeneralPrompt(inputForDetection); // Use original input for general response
       responseType = 'general';
     }
     
-    // Prepare messages for LLM
+    // ============================================================
+    // TAHAP 3: PREPARE MESSAGES UNTUK LLM
+    // ============================================================
+    // CATATAN: Di tahap ini sudah ditentukan apakah akan generate
+    // Gherkin atau general response
+    //
+    // 🔵 PROMPT 1: SYSTEM MESSAGE (Instruksi untuk LLM)
+    // Lokasi: aiService.js - Tahap 3
+    // Tujuan: Memberikan instruksi kepada LLM tentang peran dan format output
+    // Kondisi: 
+    // - Jika responseType === 'gherkin': Instruksi untuk generate JSON Gherkin lengkap
+    // - Jika responseType === 'general': Instruksi untuk respons singkat mengarahkan user
     const messages = [
       {
         role: "system",
@@ -49,6 +65,12 @@ export const convertToGherkin = async (userStory, options = {}) => {
           ? "Anda adalah ahli Product Manager yang sangat berpengalaman dalam membuat spesifikasi fitur dan skenario Gherkin dalam bahasa Indonesia. PENTING: Berikan output yang LENGKAP dan DETAIL, bukan hanya kerangka atau skeleton. Setiap field harus diisi dengan konten yang spesifik dan relevan. Selalu berikan output dalam format JSON yang valid tanpa markdown atau penjelasan tambahan."
           : "Berikan respons yang sangat singkat dan langsung. Maksimal 2 kalimat. Arahkan pengguna untuk menggunakan format User Story Connextra. Gunakan bahasa Indonesia yang sederhana."
       },
+      // 🔵 PROMPT 2: USER MESSAGE (Konten utama yang akan diproses)
+      // Lokasi: aiService.js - Tahap 3
+      // Tujuan: Berisi prompt yang sudah dibentuk dari constructGherkinPrompt() atau constructGeneralPrompt()
+      // Kondisi:
+      // - Jika responseType === 'gherkin': Prompt berisi user story + instruksi JSON + few-shot examples
+      // - Jika responseType === 'general': Prompt berisi input user + instruksi respons singkat
       {
         role: "user",
         content: prompt,
@@ -57,7 +79,8 @@ export const convertToGherkin = async (userStory, options = {}) => {
 
     let text;
 
-    // Use provider abstraction - provider and modelName are required
+    // PENGECEKAN PROVIDER & LIMIT MODEL: Validasi keberadaan provider dan model
+    // Provider dan model name harus ada, jika tidak ada akan error
     if (!options.provider || !options.modelName) {
       throw new Error('Provider dan model name harus disediakan. Groq tidak lagi didukung.');
     }
@@ -67,7 +90,22 @@ export const convertToGherkin = async (userStory, options = {}) => {
       model: options.modelName
     });
     
+    // ============================================================
+    // TAHAP 5: PANGGIL LLM PROVIDER SERVICE
+    // ============================================================
+    // CATATAN: Ini adalah eksekusi sebenarnya ke LLM
+    // Jika user belum login atau limit habis, akan error di middleware
     try {
+      // 🔵 EKSEKUSI PROMPT KE LLM
+      // Lokasi: aiService.js - Tahap 5
+      // Fungsi: llmProviderService.generateCompletion()
+      // Parameter:
+      // - modelName: Nama model (e.g., 'meta-llama/llama-3.3-70b-instruct')
+      // - provider: Provider name (e.g., 'openrouter')
+      // - messages: Array berisi system message dan user message dengan prompt
+      // Output: {text, tokensInput, tokensOutput}
+      // 
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Panggil LLM dengan provider dan model yang sudah divalidasi
       const response = await llmProviderService.generateCompletion(
         options.modelName,
         options.provider,
@@ -109,6 +147,9 @@ export const convertToGherkin = async (userStory, options = {}) => {
       throw providerError;
     }
 
+    // ============================================================
+    // TAHAP 6: PROSES & FORMAT RESPONSE BERDASARKAN TIPE
+    // ============================================================
     if (responseType === 'gherkin') {
       // Process Gherkin JSON response
       const firstBrace = text.indexOf('{');
@@ -154,13 +195,21 @@ export const convertToGherkin = async (userStory, options = {}) => {
 };
 
 /**
- * Prompt Engineering untuk menghasilkan JSON Terstruktur dengan Groq/Llama dalam Bahasa Indonesia
+ * 🔵 PROMPT BUILDER: GHERKIN PROMPT (Few-shot/Zero-shot)
+ * Lokasi: aiService.js - constructGherkinPrompt()
+ * Tujuan: Membentuk prompt lengkap untuk generate Gherkin JSON
+ * Input:
+ * - userStory: User story dalam format Connextra
+ * - patterns: Array references untuk few-shot prompting
+ * Output: String prompt lengkap dengan instruksi + examples + user story
+ * 
+ * Prompt Engineering untuk menghasilkan JSON Terstruktur dengan llm dalam Bahasa Indonesia
  * Digunakan untuk input format Connextra (user story)
  * @param {string} userStory - User story input
  * @param {Array} patterns - Array of patterns with examples for few-shot prompting
  */
 function constructGherkinPrompt(userStory, patterns = []) {
-  // Extract references from patterns
+  // PENGECEKAN REFERENCE LIBRARY: Ekstrak references dari patterns
   let references = [];
   
   if (patterns && patterns.length > 0) {
@@ -177,7 +226,7 @@ function constructGherkinPrompt(userStory, patterns = []) {
     referencesTitles: references.map(r => r.title)
   });
   
-  // Remove duplicates based on title AND gherkinContent (more strict)
+  // PENGECEKAN REFERENCE LIBRARY: Hapus duplikat berdasarkan title dan content
   const uniqueReferences = [];
   const seenKeys = new Set();
   
@@ -197,57 +246,153 @@ function constructGherkinPrompt(userStory, patterns = []) {
     uniqueTitles: references.map(r => r.title)
   });
   
+  // PENGECEKAN REFERENCE LIBRARY: Pilih maksimal 5 references untuk few-shot prompting
   // References sudah di-shuffle di frontend, langsung gunakan
-  // Maksimal 5 references, atau semua jika kurang dari 5
   const maxReferences = Math.min(references.length, 5);
   const selectedReferences = references.slice(0, maxReferences);
   
-  // Build few-shot examples from references
+  // PENGECEKAN REFERENCE LIBRARY: Build few-shot examples dari references
   let fewShotExamples = '';
   
+  // 🔵 PROMPT DECISION: FEW-SHOT vs ZERO-SHOT
+  // Lokasi: aiService.js - constructGherkinPrompt() - Decision Point
+  // Kondisi:
+  // - selectedReferences.length > 0 → FEW-SHOT (dengan contoh INPUT-OUTPUT pairs)
+  // - selectedReferences.length === 0 → ZERO-SHOT (tanpa contoh)
+  // 
+  // PERBEDAAN PROMPT:
+  // FEW-SHOT: Prompt berisi section "CONTOH REFERENSI" dengan 1-5 contoh nyata (INPUT + OUTPUT)
+  // ZERO-SHOT: Prompt TIDAK berisi section "CONTOH REFERENSI", hanya instruksi dasar
+  //
+  // PENGECEKAN REFERENCE LIBRARY: Jika ada references, tambahkan ke prompt sebagai few-shot examples
   if (selectedReferences.length > 0) {
-    fewShotExamples = '\n\nCONTOH REFERENSI (gunakan sebagai panduan format dan kualitas):\n\n';
+    // 🔵 PROMPT TYPE: FEW-SHOT PROMPTING
+    // Menambahkan section "CONTOH REFERENSI" ke prompt
+    // Berisi 1-5 contoh nyata dari reference library dengan INPUT-OUTPUT pairs
+    
+    // Opening: Instruksi tentang cara menggunakan contoh
+    fewShotExamples = '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    fewShotExamples += '⚠️ PENTING TENTANG CONTOH REFERENSI:\n';
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    fewShotExamples += 'Contoh-contoh berikut HANYA untuk pembelajaran pola transformasi:\n';
+    fewShotExamples += '• ✅ BOLEH: Pelajari struktur, tingkat detail, dan pola INPUT → OUTPUT\n';
+    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara langsung\n';
+    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang 100% sesuai konteks user story baru\n\n';
+    
+    // Examples Section
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    fewShotExamples += '📚 CONTOH REFERENSI (Pelajari pola transformasi INPUT → OUTPUT):\n';
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
     selectedReferences.forEach((ref, index) => {
-      fewShotExamples += `Contoh ${index + 1}: ${ref.title}\n`;
+      fewShotExamples += `═══════════════════════════════════════════════════════════\n`;
+      fewShotExamples += `📋 CONTOH ${index + 1}: ${ref.title}\n`;
+      fewShotExamples += `═══════════════════════════════════════════════════════════\n\n`;
+      
+      // Add INPUT (User Story) if available
+      if (ref.userStory && ref.userStory.trim()) {
+        fewShotExamples += `📥 INPUT (User Story Asli):\n`;
+        fewShotExamples += `"${ref.userStory.trim()}"\n\n`;
+      } else {
+        // Fallback if no user story (backward compatibility)
+        fewShotExamples += `📥 INPUT (User Story):\n`;
+        fewShotExamples += `⚠️ User story tidak tersedia untuk contoh ini (data lama)\n\n`;
+      }
+      
+      // Add OUTPUT (Gherkin Content)
+      fewShotExamples += `📤 OUTPUT (JSON Gherkin yang Dihasilkan):\n`;
       fewShotExamples += `${ref.gherkinContent}\n\n`;
+      
+      fewShotExamples += `═══════════════════════════════════════════════════════════\n\n`;
     });
     
-    fewShotExamples += 'PENTING: Gunakan contoh di atas sebagai panduan untuk membuat scenario yang berkualitas dan konsisten dengan standar perusahaan. Ikuti pola dan struktur yang sama, tetapi sesuaikan dengan konteks user story yang diberikan.\n';
+    // Closing: Summary of learning points
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    fewShotExamples += '⚡ RANGKUMAN PEMBELAJARAN:\n';
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    fewShotExamples += 'Dari contoh-contoh di atas, perhatikan:\n';
+    fewShotExamples += '1. Bagaimana user story (INPUT) ditransformasi menjadi JSON terstruktur (OUTPUT)\n';
+    fewShotExamples += '2. Tingkat kedetailan di field given/when/then (kalimat lengkap, bukan poin singkat)\n';
+    fewShotExamples += '3. Spesifisitas development tasks (actionable, bukan template generik)\n';
+    fewShotExamples += '4. Kualitas bahasa Indonesia yang profesional dan jelas\n\n';
+    fewShotExamples += 'PENTING: Ikuti standar kualitas yang sama, tetapi gunakan kata-kata Anda\n';
+    fewShotExamples += 'sendiri yang spesifik untuk user story baru di bawah ini.\n\n';
     
-    console.log(`✅ [AI-SERVICE] Few-shot examples added to prompt (${selectedReferences.length} references)`);
+    console.log(`✅ [AI-SERVICE] Few-shot prompting enabled with INPUT-OUTPUT pairs (${selectedReferences.length} references)`);
+    
+    // Log detail untuk debugging
+    const referencesWithUserStory = selectedReferences.filter(ref => ref.userStory && ref.userStory.trim());
+    console.log(`   📊 References with user story: ${referencesWithUserStory.length}/${selectedReferences.length}`);
+    if (referencesWithUserStory.length < selectedReferences.length) {
+      console.log(`   ⚠️  ${selectedReferences.length - referencesWithUserStory.length} references missing user story (backward compatibility)`);
+    }
+    
   } else {
-    console.log('⚠️ [AI-SERVICE] No references available for few-shot prompting');
+    // 🔵 PROMPT TYPE: ZERO-SHOT PROMPTING
+    // TIDAK menambahkan section "CONTOH REFERENSI"
+    // Prompt hanya berisi instruksi dasar tanpa contoh dari reference library
+    // PENGECEKAN REFERENCE LIBRARY: Jika tidak ada references, gunakan zero-shot prompting
+    console.log('⚠️ [AI-SERVICE] Zero-shot prompting (no references available)');
   }
   
-  return `Anda adalah Senior Product Manager & QA Lead yang ahli dalam membuat spesifikasi fitur dan acceptance criteria. Tugas Anda adalah menganalisis User Story berikut dan membuat spesifikasi fitur lengkap dalam format JSON.
+  // 🔵 PROMPT CONTENT: GHERKIN GENERATION (v2.0 - Improved with Better Structure)
+  // Lokasi: aiService.js - constructGherkinPrompt() - return statement
+  // Tujuan: Template prompt lengkap untuk generate Gherkin JSON
+  // Komponen:
+  // 1. Role definition (Product Manager & QA Lead)
+  // 2. Output format requirement (JSON valid)
+  // 3. Scenario requirements (3 scenarios: Happy Path, Edge Case, Alternative Flow)
+  // 4. Development tasks requirement (6-8 tasks dengan role BE/FE/UI/QA)
+  // 5. Few-shot examples (jika ada references dengan INPUT-OUTPUT pairs)
+  // 6. User story input dengan highlight
+  return `Anda adalah Senior Product Manager & QA Lead yang berpengalaman menyusun spesifikasi fitur, acceptance criteria, dan skenario Gherkin dalam bahasa Indonesia.
 
-⚠️ PERINGATAN PENTING: 
-Jangan hanya memberikan kerangka atau template kosong. Setiap field HARUS diisi dengan konten lengkap dan detail yang relevan dengan user story. Output yang hanya berisi skeleton atau placeholder TIDAK DITERIMA.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 TUGAS ANDA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PERSYARATAN KRITIS:
-1. Output HARUS berupa JSON valid saja - tanpa markdown, tanpa penjelasan, tanpa code blocks
-2. Ikuti struktur JSON yang tepat seperti di bawah ini
-3. Buat TEPAT 3 skenario Gherkin yang realistis dan detail berdasarkan user story
-4. Gunakan bahasa Indonesia yang profesional dan jelas untuk semua konten
-5. Description harus menjelaskan nilai bisnis dan fungsi fitur secara detail
-6. User Story tetap dalam bahasa asli yang diberikan
-7. WAJIB: Buat 3 scenario dengan tipe yang KONSISTEN:
-   - Scenario 1: HARUS bertipe "Happy Path" (alur normal/sukses)
-   - Scenario 2: HARUS bertipe "Edge Case" (kondisi batas/error)
-   - Scenario 3: HARUS bertipe "Alternative Flow" (alur alternatif)
-8. Field "type" HARUS diisi dengan salah satu dari: "Happy Path", "Edge Case", atau "Alternative Flow"
-9. Field "title" adalah deskripsi singkat yang spesifik untuk scenario tersebut (contoh: "Login Berhasil", "Password Salah", "Lupa Password")
-10. WAJIB: Buat 6-8 development tasks yang realistis dan spesifik berdasarkan user story:
-    - role: "BE" (Backend), "FE" (Frontend), "UI/UX" (Design), atau "QA" (Testing)
-    - description: Deskripsi task yang spesifik dan actionable sesuai konteks user story
-    - priority: "High", "Medium", atau "Low"
-    - status: selalu "To Do"
-11. Development tasks harus mencakup minimal: 2-3 BE tasks, 2 FE tasks, 1 UI/UX task, dan 2 QA tasks
-12. Description harus spesifik sesuai konteks user story, bukan template generik
-13. SETIAP field given/when/then HARUS berisi kalimat lengkap yang menjelaskan detail spesifik, BUKAN hanya ringkasan atau poin singkat
-14. SETIAP development task description HARUS berisi penjelasan lengkap tentang apa yang dikerjakan, BUKAN hanya 2-3 kata
+Analisis satu user story dan hasilkan spesifikasi fitur lengkap dalam format JSON yang valid, tanpa markdown maupun penjelasan tambahan. Setiap field wajib diisi dengan konten spesifik dan detail berdasarkan konteks user story yang diberikan, bukan kerangka atau placeholder kosong.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📐 PERSYARATAN FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. FORMAT KELUARAN
+   • Keluaran harus berupa JSON valid saja (tanpa markdown, tanpa code block, tanpa penjelasan)
+   • Ikuti struktur JSON yang ditentukan di bagian akhir instruksi ini
+
+2. SKENARIO GHERKIN (3 skenario wajib)
+   • Buat tepat 3 skenario dengan urutan tetap:
+     - Scenario 1: Happy Path (alur normal/sukses)
+     - Scenario 2: Edge Case (kondisi batas/error)
+     - Scenario 3: Alternative Flow (alur alternatif)
+   • Field "type" harus persis salah satu dari tiga label di atas
+   • Field "title" berisi deskripsi singkat dan spesifik (contoh: "Login Berhasil")
+   • Field given/when/then masing-masing berupa kalimat lengkap yang menjelaskan kondisi, aksi, dan hasil secara spesifik
+
+3. DEVELOPMENT TASKLIST (6-8 tasks wajib)
+   • Komposisi minimal: 2 task BE, 2 task FE, 1 task UI/UX, 2 task QA
+   • Setiap task memiliki:
+     - role: "BE", "FE", "UI/UX", atau "QA"
+     - description: spesifik dan actionable sesuai konteks user story
+     - priority: "High", "Medium", atau "Low"
+     - status: selalu "To Do"
+
+4. KUALITAS BAHASA & KONTEN
+   • Gunakan bahasa Indonesia yang profesional dan jelas
+   • Tulis given/when/then dalam sudut pandang orang ketiga untuk menghindari ambiguitas
+   • Gunakan terminologi bisnis yang konsisten, hindari jargon teknis implementasi (mis. nama variabel, nama tabel database)
+   • Fokus pada satu aksi dan satu hasil yang jelas per langkah, hindari pengulangan informasi yang tidak perlu
+   • Description fitur menjelaskan nilai bisnis dan fungsi fitur dalam 2-3 kalimat
+   • Field "userStory" berisi teks user story asli, dipertahankan persis seperti yang diberikan
 ${fewShotExamples}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TUGAS ANDA SEKARANG:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User Story yang akan dianalisis:
+"${userStory}"
+
 Struktur JSON yang Diperlukan:
 {
   "feature": "Nama Fitur (Judul Pendek & Profesional)",
@@ -286,100 +431,37 @@ Struktur JSON yang Diperlukan:
   ]
 }
 
-CONTOH FORMAT YANG BENAR (sesuai standar profesional):
-{
-  "feature": "Agent Route Summary",
-  "description": "Report ini menampilkan ringkasan rute yang dilalui agen selama satu hari kerja, termasuk urutan kunjungan dan waktu tiba di setiap titik.",
-  "userStory": "Sebagai user, saya ingin melihat ringkasan rute harian agen agar saya dapat mengevaluasi efisiensi perjalanan dan distribusi tugas di lapangan.",
-  "scenarios": [
-    {
-      "type": "Happy Path",
-      "title": "Tampilkan Rute Harian",
-      "given": "Sistem mencatat data lokasi agen sepanjang hari",
-      "when": "User membuka laporan Agent Route Summary",
-      "then": "Sistem menampilkan urutan kunjungan agen dalam bentuk daftar dan visualisasi map, termasuk waktu tiba di tiap titik"
-    },
-    {
-      "type": "Edge Case",
-      "title": "Tidak Ada Data Kunjungan",
-      "given": "Agen belum melakukan kunjungan apapun pada hari tersebut",
-      "when": "User membuka laporan Agent Route Summary",
-      "then": "Sistem menampilkan pesan bahwa belum ada data kunjungan untuk hari yang dipilih"
-    },
-    {
-      "type": "Alternative Flow",
-      "title": "Data GPS Tidak Lengkap",
-      "given": "Data GPS agen tidak tersedia atau terputus",
-      "when": "User membuka laporan Agent Route Summary",
-      "then": "Sistem menampilkan peringatan tentang data yang tidak lengkap dan menampilkan data yang tersedia"
-    }
-  ],
-  "developmentTasks": [
-    {
-      "role": "BE",
-      "description": "Implementasi API endpoint untuk mengambil data rute agen dari database dengan filter tanggal",
-      "priority": "High",
-      "status": "To Do"
-    },
-    {
-      "role": "BE",
-      "description": "Buat service layer untuk menghitung urutan kunjungan dan waktu tiba di setiap lokasi",
-      "priority": "High",
-      "status": "To Do"
-    },
-    {
-      "role": "BE",
-      "description": "Implementasi error handling untuk data GPS yang tidak lengkap atau terputus",
-      "priority": "Medium",
-      "status": "To Do"
-    },
-    {
-      "role": "FE",
-      "description": "Buat komponen React untuk menampilkan daftar urutan kunjungan dengan timeline",
-      "priority": "High",
-      "status": "To Do"
-    },
-    {
-      "role": "FE",
-      "description": "Integrasi library peta (Google Maps/Leaflet) untuk visualisasi rute agen",
-      "priority": "High",
-      "status": "To Do"
-    },
-    {
-      "role": "UI/UX",
-      "description": "Desain interface untuk laporan Agent Route Summary dengan visualisasi map dan timeline",
-      "priority": "Medium",
-      "status": "To Do"
-    },
-    {
-      "role": "QA",
-      "description": "Testing skenario happy path untuk tampilan rute harian dengan data lengkap",
-      "priority": "Low",
-      "status": "To Do"
-    },
-    {
-      "role": "QA",
-      "description": "Testing edge case untuk kondisi tidak ada data kunjungan dan data GPS tidak lengkap",
-      "priority": "Low",
-      "status": "To Do"
-    }
-  ]
-}
-
-User Story yang akan dianalisis:
-"${userStory}"
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📝 INSTRUKSI AKHIR:
-Berikan output JSON yang LENGKAP dan DETAIL. Setiap field given/when/then harus berisi kalimat lengkap yang menjelaskan konteks, aksi, dan hasil secara spesifik. Setiap development task harus berisi penjelasan lengkap tentang implementasi teknisnya. JANGAN memberikan output yang hanya berupa kerangka atau template kosong.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Hasilkan respons JSON dalam bahasa Indonesia yang profesional dan detail:`;
+Berikan output JSON yang LENGKAP dan DETAIL:
+• Setiap field given/when/then berisi kalimat lengkap (bukan poin singkat)
+• Setiap development task berisi penjelasan spesifik (bukan template generik)
+• Gunakan kata-kata Anda sendiri yang 100% sesuai dengan user story di atas
+• Output harus JSON valid tanpa markdown, code block, atau penjelasan tambahan
+
+Hasilkan respons JSON sekarang:`;
 }
 
 /**
+ * 🔵 PROMPT BUILDER: GENERAL PROMPT (Non-Connextra Response)
+ * Lokasi: aiService.js - constructGeneralPrompt()
+ * Tujuan: Membentuk prompt untuk respons singkat ketika input bukan Connextra
+ * Input: userInput - Input user yang tidak sesuai format Connextra
+ * Output: String prompt untuk generate respons singkat yang mengarahkan user
+ * 
  * Prompt untuk response umum (non-Connextra format)
  * Digunakan untuk input yang bukan user story format
  */
 function constructGeneralPrompt(userInput) {
+  // 🔵 PROMPT CONTENT: GENERAL RESPONSE
+  // Lokasi: aiService.js - constructGeneralPrompt() - return statement
+  // Tujuan: Template prompt untuk respons singkat mengarahkan user ke format Connextra
+  // Karakteristik:
+  // - Maksimal 2 kalimat
+  // - Menjelaskan bahwa input bukan format Connextra
+  // - Mengarahkan user untuk menggunakan format yang benar
   return `Input: "${userInput}"
 
 Berikan respons singkat (maksimal 2 kalimat) yang menjelaskan bahwa untuk membuat skenario pengujian, pengguna perlu menggunakan format User Story Connextra.

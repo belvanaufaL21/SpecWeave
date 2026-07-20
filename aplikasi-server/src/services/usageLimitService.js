@@ -26,7 +26,7 @@ class UsageLimitService {
     try {
       const client = supabaseService.getClient();
 
-      // Get model info
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Ambil info model dari database
       const { data: model, error: modelError } = await client
         .from('models')
         .select('id, name, display_name, provider, daily_limit')
@@ -41,7 +41,7 @@ class UsageLimitService {
         throw modelError;
       }
 
-      // Get remaining requests via database function (sudah handle 24-hour cooldown)
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Ambil sisa request via database function (handle 24-hour cooldown)
       const { data: remainingData, error: remainingError } = await client
         .rpc('get_remaining_requests', {
           p_user_id: userId,
@@ -52,15 +52,11 @@ class UsageLimitService {
         throw remainingError;
       }
 
-      // ✅ FIX KRITIS: gunakan `??` (nullish coalescing), BUKAN `||` (logical OR).
-      // `||` salah memperlakukan 0 sebagai falsy → fallback ke daily_limit
-      // padahal 0 = limit benar-benar habis.
       const remaining = remainingData ?? model.daily_limit;
       const used = model.daily_limit - remaining;
       const allowed = remaining > 0;
 
-      // Hitung kapan cooldown berakhir (last_reset_at + 24 jam)
-      // Ambil last_reset_at dari counter untuk perhitungan akurat
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Hitung kapan cooldown berakhir (last_reset_at + 24 jam)
       let resetsAt = null;
       if (!allowed) {
         const { data: counter } = await client
@@ -83,14 +79,14 @@ class UsageLimitService {
         displayName: model.display_name,
         provider: model.provider,
         dailyLimit: model.daily_limit,
-        limit: model.daily_limit,        // alias untuk middleware/frontend
+        limit: model.daily_limit,
         used,
         remaining,
         modelId: model.id,
         resetsAt,
       };
 
-      // Jika limit habis, fetch model alternatif
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Jika limit habis, ambil daftar model alternatif
       if (!allowed) {
         result.alternatives = await this.getAlternativeModels(userId, modelName);
       }

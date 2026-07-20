@@ -24,6 +24,15 @@ const openrouter = new OpenAI({
  */
 class LLMProviderService {
   /**
+   * 🔵 ROUTER: PROVIDER SELECTION
+   * Lokasi: llmProviderService.js - generateCompletion()
+   * Tujuan: Routing ke provider yang sesuai (saat ini hanya openrouter)
+   * Input:
+   * - modelName: Identifier model (e.g., 'meta-llama/llama-3.3-70b-instruct')
+   * - provider: Nama provider (harus 'openrouter')
+   * - messages: Array prompt messages dengan format [{role, content}]
+   * Output: {text, tokensInput, tokensOutput}
+   * 
    * Send a completion request to OpenRouter
    * 
    * @param {string} modelName - Model identifier (e.g., 'meta-llama/llama-3.3-70b-instruct', 'google/gemini-2.5-flash')
@@ -33,6 +42,7 @@ class LLMProviderService {
    * @throws {Error} If provider is unsupported or API call fails
    */
   async generateCompletion(modelName, provider, messages) {
+    // PENGECEKAN PROVIDER & LIMIT MODEL: Validasi provider harus 'openrouter'
     if (provider === 'openrouter') {
       return this._callOpenRouter(modelName, messages);
     }
@@ -40,6 +50,14 @@ class LLMProviderService {
   }
 
   /**
+   * 🔵 API CALL: OPENROUTER (Eksekusi Prompt ke LLM)
+   * Lokasi: llmProviderService.js - _callOpenRouter()
+   * Tujuan: Mengirim prompt ke OpenRouter API dan menerima respons
+   * Input:
+   * - modelName: Nama model OpenRouter (e.g., 'anthropic/claude-sonnet-4.6')
+   * - messages: Array prompt dengan format OpenAI [{role, content}]
+   * Output: {text, tokensInput, tokensOutput}
+   * 
    * Call OpenRouter API using OpenAI SDK
    * 
    * OpenRouter provides access to 300+ models through a single API.
@@ -65,13 +83,25 @@ class LLMProviderService {
         apiKeyPrefix: process.env.OPENROUTER_API_KEY?.substring(0, 10) + '...'
       });
 
+      // 🔵 EKSEKUSI API: OPENROUTER CHAT COMPLETIONS
+      // Lokasi: llmProviderService.js - _callOpenRouter()
+      // Endpoint: OpenRouter API (https://openrouter.ai/api/v1/chat/completions)
+      // Parameter:
+      // - model: Model yang dipilih user (Llama, Gemini, GPT, Claude, dll)
+      // - messages: Array prompt dari aiService.js (system + user message)
+      // - temperature: 0.7 (kreativitas sedang)
+      // - max_tokens: 4096 (maksimal panjang respons)
+      // - timeout: 180000ms (3 menit)
+      // Output: Response object dengan choices[0].message.content dan usage
+      // 
+      // PENGECEKAN PROVIDER & LIMIT MODEL: Kirim request ke OpenRouter dengan model yang dipilih
       const response = await openrouter.chat.completions.create({
         model: modelName,
         messages,
-        temperature: 0.7, // Temperature untuk keseimbangan antara kreativitas dan konsistensi
-        max_tokens: 4096, // Limit token output untuk menghindari error insufficient credits
+        temperature: 0.7,
+        max_tokens: 4096,
       }, {
-        timeout: 180000 // 3 minutes timeout untuk accommodate slow models
+        timeout: 180000 // 3 minutes timeout
       });
 
       console.log('✅ [LLM-PROVIDER] OpenRouter API success:', {

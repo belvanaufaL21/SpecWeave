@@ -67,6 +67,7 @@ export const referenceController = {
       const transformedData = filteredData.map(ref => ({
         id: ref.id,
         title: ref.title,
+        userStory: ref.user_story, // Add user story for few-shot prompting
         gherkinContent: ref.gherkin_content,
         createdAt: ref.created_at,
         updatedAt: ref.updated_at,
@@ -122,6 +123,7 @@ export const referenceController = {
 
       const {
         title,
+        userStory,
         gherkinContent
       } = req.body;
 
@@ -141,13 +143,20 @@ export const referenceController = {
       }
 
       // Insert new reference
+      const insertData = {
+        user_id: userId,
+        title: title.trim(),
+        gherkin_content: gherkinContent.trim()
+      };
+      
+      // Add user_story if provided (optional for backward compatibility)
+      if (userStory?.trim()) {
+        insertData.user_story = userStory.trim();
+      }
+
       const { data, error } = await supabase
         .from('scenario_references')
-        .insert({
-          user_id: userId,
-          title: title.trim(),
-          gherkin_content: gherkinContent.trim()
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -164,6 +173,7 @@ export const referenceController = {
       const transformedData = {
         id: data.id,
         title: data.title,
+        userStory: data.user_story,
         gherkinContent: data.gherkin_content,
         createdAt: data.created_at,
         updatedAt: data.updated_at
@@ -200,6 +210,7 @@ export const referenceController = {
 
       const {
         title,
+        userStory,
         gherkinContent
       } = req.body;
 
@@ -239,6 +250,7 @@ export const referenceController = {
       };
 
       if (title !== undefined) updateData.title = title.trim();
+      if (userStory !== undefined) updateData.user_story = userStory?.trim() || null;
       if (gherkinContent !== undefined) updateData.gherkin_content = gherkinContent.trim();
 
       // Update reference
@@ -262,6 +274,7 @@ export const referenceController = {
       const transformedData = {
         id: data.id,
         title: data.title,
+        userStory: data.user_story,
         gherkinContent: data.gherkin_content,
         createdAt: data.created_at,
         updatedAt: data.updated_at

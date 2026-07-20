@@ -100,19 +100,26 @@ function extractJSON(stdout) {
  */
 
 /**
- * Spawn Python script dengan timeout, progress callback, dan robust parsing.
- * @param {string} scriptName - Nama file (mis. 'meteor_calculator.py')
- * @param {string[]} args - Argumen positional ke script
- * @param {object} [opts]
- * @param {ProgressCallback} [opts.onProgress] - Callback progress dari stderr
- * @param {number} [opts.timeoutMs] - Override default timeout
- * @param {string} [opts.label] - Label untuk log (mis. 'METEOR')
+ * FUNGSI KUNCI: Spawn Python script dan handle komunikasi dengan Node.js
+ * 
+ * Fungsi ini adalah "jembatan" antara Node.js backend dan Python script.
+ * 
+ * @param {string} scriptName - Nama file Python (mis. 'meteor_calculator.py')
+ * @param {string[]} args - Argumen yang dikirim ke Python (generated_text, reference_text)
+ * @param {object} [opts] - Opsi tambahan (timeout, progress callback, label)
  * @returns {Promise<object>} Hasil parsed JSON dari Python
+ * 
+ * Cara kerja:
+ * 1. Spawn Python process dengan child_process.spawn()
+ * 2. Kirim argumen melalui command line
+ * 3. Tangkap stdout (hasil JSON) dan stderr (progress/log)
+ * 4. Parse JSON result dan return ke caller
  */
 function runPythonScript(scriptName, args, opts = {}) {
   const { onProgress, timeoutMs = PYTHON_TIMEOUT_MS, label = scriptName } = opts;
 
   return new Promise((resolve, reject) => {
+    // Path ke Python script di folder ../python
     const scriptPath = path.join(__dirname, '../python', scriptName);
 
     if (!fs.existsSync(scriptPath)) {
@@ -122,16 +129,18 @@ function runPythonScript(scriptName, args, opts = {}) {
 
     let pythonProcess;
     try {
+      // SPAWN PYTHON PROCESS - ini yang menjalankan script Python
+      // Command: python meteor_calculator.py "generated_text" "reference_text"
       pythonProcess = spawn(PYTHON_COMMAND, [scriptPath, ...args], {
-        env: getPythonEnv(),
+        env: getPythonEnv(),  // Set environment variables (UTF-8, library paths)
       });
     } catch (err) {
       reject(new Error(`[${label}] Failed to spawn Python (${PYTHON_COMMAND}): ${err.message}`));
       return;
     }
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = '';  // Untuk menampung output JSON dari Python
+    let stderr = '';  // Untuk menampung progress/log dari Python
     let timedOut = false;
     let settled = false;
 
@@ -152,21 +161,24 @@ function runPythonScript(scriptName, args, opts = {}) {
       safeReject(new Error(`[${label}] Timeout after ${timeoutMs}ms`));
     }, timeoutMs);
 
+    // TANGKAP STDOUT - ini tempat Python kirim hasil JSON
     pythonProcess.stdout.on('data', (data) => {
       stdout += data.toString('utf-8');
     });
 
+    // TANGKAP STDERR - ini tempat Python kirim progress update
     pythonProcess.stderr.on('data', (data) => {
       const output = data.toString('utf-8');
       stderr += output;
 
-      // Parse PROGRESS:{...} lines kalau ada onProgress callback
+      // Parse PROGRESS:{...} lines untuk real-time progress
       if (onProgress) {
         for (const line of output.split('\n')) {
           if (line.startsWith('PROGRESS:')) {
             try {
               const progress = JSON.parse(line.substring(9));
               if (progress.type === 'progress') {
+                // Forward progress ke frontend (untuk progress bar)
                 onProgress(progress.stage, progress.progress, { message: progress.message });
               }
             } catch { /* ignore parse errors */ }
@@ -177,6 +189,7 @@ function runPythonScript(scriptName, args, opts = {}) {
       }
     });
 
+    // HANDLE PROCESS CLOSE - Python script selesai
     pythonProcess.on('close', (code) => {
       clearTimeout(timeout);
       if (timedOut) return;
@@ -190,13 +203,14 @@ function runPythonScript(scriptName, args, opts = {}) {
       }
 
       try {
+        // PARSE JSON dari stdout Python
         const result = extractJSON(stdout);
         if (result.success === false || result.error) {
           safeReject(new Error(`[${label}] ${result.error || 'Unknown error'}`));
           return;
         }
         console.log(`✅ [${label}] Score: ${result.score}`);
-        safeResolve(result);
+        safeResolve(result);  // Return hasil ke caller
       } catch (err) {
         safeReject(new Error(`[${label}] Parse failed: ${err.message}`));
       }
@@ -213,36 +227,54 @@ function runPythonScript(scriptName, args, opts = {}) {
 }
 
 // ============================================================================
-// TestingService
+// TestingService - Wrapper functions untuk memanggil Python scripts
 // ============================================================================
 
 class TestingService {
 
-  // -------- Python script wrappers --------
-
+  // ============ METEOR WRAPPERS ============
+  
+  /**
+   * WRAPPER METEOR: Panggil meteor_calculator.py
+   * Digunakan untuk testing manual (user klik button test)
+   */
   static async calculateMeteorScore(generatedText, referenceText) {
     return runPythonScript('meteor_calculator.py', [generatedText, referenceText], {
       label: 'METEOR',
     });
   }
 
+  /**
+   * WRAPPER METEOR + PROGRESS: Panggil meteor_calculator.py dengan progress callback
+   * Digunakan untuk SSE/WebSocket real-time updates
+   */
   static async calculateMeteorScoreWithProgress(generatedText, referenceText, onProgress) {
     return runPythonScript('meteor_calculator.py', [generatedText, referenceText], {
       label: 'METEOR',
-      onProgress,
+      onProgress,  // Callback untuk kirim progress ke frontend
     });
   }
 
+  // ============ SENTENCE-BERT WRAPPERS ============
+
+  /**
+   * WRAPPER SENTENCE-BERT: Panggil sentence_bert_calculator.py
+   * Digunakan untuk testing manual (user klik button test)
+   */
   static async calculateSentenceBertScore(generatedText, referenceText) {
     return runPythonScript('sentence_bert_calculator.py', [generatedText, referenceText], {
       label: 'SBERT',
     });
   }
 
+  /**
+   * WRAPPER SENTENCE-BERT + PROGRESS: Panggil sentence_bert_calculator.py dengan progress callback
+   * Digunakan untuk SSE/WebSocket real-time updates
+   */
   static async calculateSentenceBertScoreWithProgress(generatedText, referenceText, onProgress) {
     return runPythonScript('sentence_bert_calculator.py', [generatedText, referenceText], {
       label: 'SBERT',
-      onProgress,
+      onProgress,  // Callback untuk kirim progress ke frontend
     });
   }
 

@@ -173,24 +173,35 @@ class JiraService {
   }
 
   /**
-   * Test JIRA connection
+   * VERIFIKASI KREDENSIAL JIRA: Test koneksi ke JIRA API
+   * 
+   * Flow:
+   * 1. Encode kredensial (email + API token) → Base64
+   * 2. Request ke JIRA API → GET /rest/api/3/project/{projectKey}
+   * 3. Parse response → validasi project info
+   * 4. Return result → success/error dengan pesan spesifik
    */
   async testJiraConnection({ jiraUrl, email, apiToken, projectKey }) {
     try {
+      // ===== 1. ENCODE KREDENSIAL =====
+      // Format: email:apiToken → Base64 untuk Basic Auth
       const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
       
-      // Test connection by fetching project info
+      // ===== 2. REQUEST KE JIRA API =====
+      // Test koneksi dengan fetch project info
       const response = await axios.get(
         `${jiraUrl}/rest/api/3/project/${projectKey}`,
         {
           headers: {
-            'Authorization': `Basic ${auth}`,
+            'Authorization': `Basic ${auth}`,  // Basic Authentication
             'Accept': 'application/json'
           },
-          timeout: 10000
+          timeout: 10000  // Timeout 10 detik
         }
       );
 
+      // ===== 3. PARSE RESPONSE =====
+      // Jika sukses, extract project data
       return {
         success: true,
         data: {
@@ -207,30 +218,45 @@ class JiraService {
         status: error.response?.status
       });
       
-      // Provide specific error messages based on status code
+      // ===== 4. ERROR HANDLING =====
+      // Provide pesan error yang spesifik berdasarkan status code
       let errorMessage = error.message;
       
       if (error.response) {
         const status = error.response.status;
         const jiraError = error.response.data;
         
+        // 401 = API token invalid/expired
         if (status === 401) {
           errorMessage = 'API Token JIRA telah kedaluwarsa atau tidak valid. Silakan periksa email dan API token Anda.';
-        } else if (status === 403) {
+        } 
+        // 403 = Permission denied
+        else if (status === 403) {
           errorMessage = 'Akses ditolak. Anda tidak memiliki izin untuk mengakses project ini.';
-        } else if (status === 404) {
+        } 
+        // 404 = Project not found
+        else if (status === 404) {
           errorMessage = `Project Key "${projectKey}" tidak ditemukan. Periksa kembali kode project JIRA Anda.`;
-        } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        } 
+        // Timeout
+        else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
           errorMessage = 'Koneksi timeout. Server JIRA tidak merespons, coba lagi.';
-        } else if (error.code === 'ENOTFOUND' || error.message.includes('getaddrinfo')) {
+        } 
+        // DNS lookup failed
+        else if (error.code === 'ENOTFOUND' || error.message.includes('getaddrinfo')) {
           errorMessage = 'URL JIRA tidak valid atau tidak dapat dijangkau. Periksa kembali URL JIRA Anda.';
-        } else {
-          // Use JIRA error message if available
+        } 
+        // Other JIRA errors
+        else {
           errorMessage = jiraError?.errorMessages?.[0] || jiraError?.message || errorMessage;
         }
-      } else if (error.code === 'ECONNREFUSED') {
+      } 
+      // Connection refused
+      else if (error.code === 'ECONNREFUSED') {
         errorMessage = 'Tidak dapat terhubung ke server JIRA. Periksa URL dan koneksi internet Anda.';
-      } else if (error.code === 'ETIMEDOUT') {
+      } 
+      // Network timeout
+      else if (error.code === 'ETIMEDOUT') {
         errorMessage = 'Koneksi timeout. Periksa koneksi internet Anda dan coba lagi.';
       }
       

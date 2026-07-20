@@ -722,6 +722,12 @@ const ChatRefined = () => {
       hasEpic
     });
     
+    // PENGECEKAN KONEKSI JIRA & EPIC (FRONTEND): Validasi Epic context sebelum generate
+    // Jika tidak ada Epic, buka modal Epic selection
+    // CATATAN: hasEpic akan false jika:
+    // 1. Project Jira belum terhubung (tidak ada connection → tidak ada epic)
+    // 2. Project Jira sudah terhubung tapi Epic belum dipilih
+    // Jadi satu validasi ini mencakup KEDUA kondisi tersebut
     if (!activeChatId && !hasEpic) {
       setRequiresEpicSelection(true);
       openEpicModal();

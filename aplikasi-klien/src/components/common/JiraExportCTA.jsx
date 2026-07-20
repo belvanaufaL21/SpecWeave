@@ -40,6 +40,12 @@ const JiraExportCTA = ({ scenarioData }) => {
     isMounted: isMountedRef.current
   });
 
+  // 🟢 JIRA EXPORT BUTTON: DISABLE LOGIC
+  // Lokasi: JiraExportCTA.jsx - button disabled attribute
+  // Kondisi Disable:
+  // 1. isExporting: Sedang proses export
+  // 2. !hasEpic: Belum memilih Epic
+  // 3. !epicContext: Epic context tidak valid
   // Handle export to JIRA
   const handleExportToJira = async () => {
     // Generate unique export ID for tracking
@@ -78,12 +84,18 @@ const JiraExportCTA = ({ scenarioData }) => {
       scenarioCount: dataToExport?.scenarios?.length,
       timestamp: new Date().toISOString()
     });
+    // 🟢 PENGECEKAN EPIC CONTEXT
+    // Lokasi: JiraExportCTA.jsx - handleExportToJira()
+    // Validasi: Epic harus dipilih sebelum export
     if (!hasEpic || !epicContext) {
       showErrorToast('No Epic selected. Please select an Epic first.');
       openEpicModal();
       return;
     }
 
+    // 🟢 VALIDASI EPIC DATA
+    // Lokasi: JiraExportCTA.jsx - handleExportToJira()
+    // Pastikan epicData valid dan lengkap
     if (!epicContext.epicData) {
       showErrorToast('Invalid Epic context. Please select an Epic again.');
       openEpicModal();
@@ -156,6 +168,15 @@ const JiraExportCTA = ({ scenarioData }) => {
         chatId: chatId
       });
       
+      // 🟢 EKSEKUSI EXPORT KE JIRA
+      // Lokasi: JiraExportCTA.jsx - handleExportToJira()
+      // Fungsi: jiraService.createCompleteStory()
+      // Parameter:
+      // - connection.id: ID koneksi JIRA
+      // - epic.id: ID Epic yang dipilih
+      // - storyData: Data user story (title, description, scenarios)
+      // - scenarios: Array skenario untuk acceptance criteria
+      // - developmentTasks: Array tasks untuk subtasks
       // Create user story with scenarios and development tasks
       const result = await jiraService.createCompleteStory(
         connection.id,
@@ -165,6 +186,9 @@ const JiraExportCTA = ({ scenarioData }) => {
         developmentTasks
       );
 
+      // 🟢 NOTIFIKASI SUCCESS
+      // Lokasi: JiraExportCTA.jsx - handleExportToJira() - success block
+      // Menampilkan notifikasi success dengan link ke JIRA issue
       if (result.success) {
         console.log(`✅ [JIRA-EXPORT][${exportId}] Export successful`);
         const issueKey = result.data.userStory?.key || result.data.issueKey || 'Story';
@@ -217,6 +241,9 @@ const JiraExportCTA = ({ scenarioData }) => {
       {/* Export Button - Animated Loading State */}
       <button
         onClick={handleExportToJira}
+        // 🟢 DISABLE BUTTON CONDITION
+        // Lokasi: JiraExportCTA.jsx - button render
+        // Disabled jika: isExporting || !hasEpic || !epicContext
         disabled={isExporting || !hasEpic || !epicContext}
         className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
           isExporting || !hasEpic || !epicContext

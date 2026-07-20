@@ -36,9 +36,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 # Default model: multilingual, mendukung Bahasa Indonesia, 384-dim, ringan.
-# Alternatif yang lebih akurat (tapi 2x lebih besar):
-#   - 'paraphrase-multilingual-mpnet-base-v2' (768-dim)
-#   - 'sentence-transformers/LaBSE' (109 bahasa)
 DEFAULT_MODEL = 'paraphrase-multilingual-MiniLM-L12-v2'
 
 
@@ -88,13 +85,21 @@ def parse_gherkin_scenario(text):
 
 
 def embedding_components(emb_a, emb_b):
-    """Hitung komponen detail untuk transparansi:
-    dot product, magnitude masing-masing vector, dan cosine similarity.
     """
+    Hitung komponen detail cosine similarity untuk transparansi
+    Returns: dot product, magnitude, dan cosine similarity
+    """
+    # Dot product = jumlah hasil kali elemen yang bersesuaian
     dot = float(np.dot(emb_a, emb_b))
+    
+    # Magnitude (panjang vector) = akar dari jumlah kuadrat elemen
     mag_a = float(np.linalg.norm(emb_a))
     mag_b = float(np.linalg.norm(emb_b))
+    
+    # Cosine similarity = dot product / (magnitude A × magnitude B)
+    # Range: -1 (berlawanan) sampai 1 (identik)
     cos = dot / (mag_a * mag_b) if (mag_a * mag_b) > 0 else 0.0
+    
     return {
         'dot_product': dot,
         'magnitude_a': mag_a,
@@ -109,19 +114,19 @@ def embedding_components(emb_a, emb_b):
 
 def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_MODEL):
     """
-    Hitung Sentence-BERT cosine similarity sesuai Reimers & Gurevych (2019).
-
-    Skor utama  : Cosine similarity pada embedding TEKS UTUH (standar paper).
+    Hitung Sentence-BERT cosine similarity menggunakan SentenceTransformer
+    (Reimers & Gurevych 2019)
     
-    CATATAN PREPROCESSING:
-    Tidak seperti METEOR yang strip keyword Gherkin, Sentence-BERT menggunakan
-    raw text dengan keyword karena:
-    1. Semantic embedding model robust terhadap keyword (tidak inflate skor)
-    2. Keyword memberikan konteks struktural yang berguna untuk embedding
-    3. Konsisten dengan paper asli yang tidak melakukan text preprocessing khusus
+    Flow:
+    1. Load model → paraphrase-multilingual-MiniLM-L12-v2
+    2. Encode text → convert teks jadi embedding vector (384-dim)
+    3. Cosine similarity → hitung kemiripan antar embedding
+    
+    CATATAN: Tidak strip keyword Gherkin (berbeda dengan METEOR)
+    karena semantic model robust terhadap keyword.
     """
     try:
-        # ===== Stage 1: Load model =====
+        # ===== 1. Load model =====
         send_progress('tokenizing', 13, 'Memuat model Sentence-BERT')
 
         try:
@@ -134,13 +139,11 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
                 'details': {'method': 'Sentence-BERT', 'model': model_name},
             }
 
-        # ===== Stage 2: Encoding full text only =====
-        # Per-section computation dihapus karena tidak digunakan di frontend
-        # dan hanya menambah overhead (6 extra embeddings per evaluation)
+        # ===== 2. Encode text menjadi embedding =====
         send_progress('tokenizing', 20, 'Encoding embeddings untuk teks utuh')
         send_progress('tokenizing', 26, 'Encoding embeddings (batch)')
 
-        # Encode hanya full text (tidak perlu per-section lagi)
+        # Encode generated & reference text → vector 384-dim
         gen_embs = model.encode([generated_text], show_progress_bar=False)
         ref_embs = model.encode([reference_text], show_progress_bar=False)
 
@@ -148,10 +151,10 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
         send_progress('attention', 40, 'Hubungan antar kata dalam konteks')
         send_progress('attention', 46, 'Self-attention selesai')
 
-        # ===== Stage 3: Skor utama (full-text cosine similarity) =====
-        # Sesuai standar Reimers & Gurevych (2019)
+        # ===== 3. Hitung cosine similarity (SKOR UTAMA) =====
         send_progress('ffn', 51, 'Transformasi feed-forward network')
 
+        # Cosine similarity = dot product / (magnitude A × magnitude B)
         overall = embedding_components(gen_embs[0], ref_embs[0])
         overall_similarity = overall['cosine_similarity']
 
@@ -172,7 +175,7 @@ def calculate_sentence_bert(generated_text, reference_text, model_name=DEFAULT_M
 
         return {
             'success': True,
-            'score': float(overall_similarity),  # MAIN: full-text cosine sim
+            'score': float(overall_similarity),  # SKOR UTAMA
             'details': {
                 'embedding_dimension': int(len(gen_embs[0])),
                 'model': model_name,
