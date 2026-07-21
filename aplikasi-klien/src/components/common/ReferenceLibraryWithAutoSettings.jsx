@@ -25,6 +25,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
 
   const [newReference, setNewReference] = useState({
     title: '',
+    userStory: '', // Add user story field for few-shot prompting
     scenarios: [
       {
         given: [''],
@@ -36,6 +37,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
 
   const [errors, setErrors] = useState({
     title: '',
+    userStory: '',
     scenarios: []
   });
 
@@ -207,13 +209,16 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
   // Save reference
   const saveReference = async () => {
     // Reset errors
-    setErrors({ title: '', scenarios: [] });
+    setErrors({ title: '', userStory: '', scenarios: [] });
     
     // Validate title
     if (!newReference.title.trim()) {
       setErrors(prev => ({ ...prev, title: 'Judul tidak boleh kosong' }));
       return;
     }
+
+    // User story is optional - just inform user if missing
+    // No validation error that stops saving
 
     // Validate scenarios
     let hasError = false;
@@ -255,6 +260,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
     const referenceData = {
       id: Date.now().toString(),
       title: newReference.title,
+      userStory: newReference.userStory || null, // Add user story for few-shot prompting
       gherkinContent: allGherkinContent,
       category: 'general',
       tags: [],
@@ -270,7 +276,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
         setReferences(updatedReferences);
         localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(updatedReferences));
         
-        setNewReference({ title: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
+        setNewReference({ title: '', userStory: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
         setShowAddForm(false);
         
         // Refresh auto reference patterns after adding new reference
@@ -285,6 +291,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
       try {
         const result = await referenceService.createReference({
           title: newReference.title,
+          userStory: newReference.userStory || null, // Add user story for few-shot prompting
           gherkinContent: allGherkinContent,
           category: 'general',
           tags: [],
@@ -293,7 +300,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
         
         if (result.success) {
           setReferences([result.data, ...references]);
-          setNewReference({ title: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
+          setNewReference({ title: '', userStory: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
           setShowAddForm(false);
           
           const updatedReferences = [result.data, ...references];
@@ -312,7 +319,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
         setReferences(updatedReferences);
         localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(updatedReferences));
         
-        setNewReference({ title: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
+        setNewReference({ title: '', userStory: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
         setShowAddForm(false);
         setOfflineMode(true);
         setServerError(true);
@@ -500,8 +507,33 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                         )}
                       </div>
 
+                      {/* User Story Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          User Story (Input) 
+                          <span className="ml-2 text-xs text-gray-500">(Opsional, tapi disarankan)</span>
+                        </label>
+                        <AutoExpandingTextarea
+                          value={newReference.userStory}
+                          onChange={(e) => {
+                            setNewReference({...newReference, userStory: e.target.value});
+                          }}
+                          placeholder="Contoh: As a user, I want to login with email and password, So that I can access my account securely"
+                          className="w-full px-4 py-3 bg-[#0D0D0D] border border-white/5 focus:border-white/5 rounded-lg text-white/50 placeholder-white/50 focus:outline-none focus:bg-[#0D0D0D] resize-none"
+                          minRows={2}
+                          maxRows={6}
+                        />
+                        <p className="text-gray-500 text-xs mt-1">
+                          💡 User story membantu AI memahami konteks dan menghasilkan Gherkin yang lebih akurat melalui few-shot prompting
+                        </p>
+                      </div>
+
                       {/* Gherkin Table */}
                       <div>
+                        <label className="block text-sm font-medium text-white mb-3">
+                          Gherkin Scenarios (Output)
+                          <span className="ml-2 text-xs text-gray-500">(Format: Given-When-Then)</span>
+                        </label>
                         {newReference.scenarios.map((scenario, scenarioIndex) => (
                           <div key={scenarioIndex} className="mb-6">
                             {/* Scenario Header with Delete Button */}
@@ -682,7 +714,7 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                         <button
                           onClick={() => {
                             setShowAddForm(false);
-                            setNewReference({ title: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
+                            setNewReference({ title: '', userStory: '', scenarios: [{ given: [''], when: [''], then: [''] }] });
                           }}
                           className="px-4 py-3 border border-white/20 text-gray-300 rounded-lg hover:bg-white/5 transition-all"
                         >
@@ -763,6 +795,14 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                                     <div>
                                       <h4 className="text-lg font-semibold text-white">{reference.title}</h4>
                                       <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                                        {reference.userStory && (
+                                          <span className="flex items-center gap-1 text-blue-400">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            User Story
+                                          </span>
+                                        )}
                                         <span className="flex items-center gap-1">
                                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -807,7 +847,36 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                               {/* Accordion Content - Multiple Gherkin Scenarios */}
                               {isExpanded && (
                                 <div className="border-t border-white/5 bg-[#09090A]">
+                                  {/* User Story Section (if available) */}
+                                  {reference.userStory && (
+                                    <div className="p-6 pb-0">
+                                      <div className="bg-[#0D0D0D] border border-white/5 rounded-lg p-4">
+                                        <div className="flex items-start gap-3">
+                                          <div className="flex-shrink-0 mt-0.5">
+                                            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                          </div>
+                                          <div className="flex-1">
+                                            <h5 className="text-sm font-semibold text-blue-400 mb-2">User Story (Input)</h5>
+                                            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                              {reference.userStory}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
                                   <div className="p-6 space-y-6">
+                                    {/* Section Header untuk Output */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                      </svg>
+                                      <h5 className="text-sm font-semibold text-gray-400">Gherkin Scenarios (Output)</h5>
+                                    </div>
+                                    
                                     {scenarios.map((scenario, scenarioIndex) => (
                                       <div key={scenarioIndex}>
                                         {/* Gherkin Table - Same design as ComparisonTable */}
