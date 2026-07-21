@@ -217,8 +217,11 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
       return;
     }
 
-    // User story is optional - just inform user if missing
-    // No validation error that stops saving
+    // Validate user story (WAJIB diisi)
+    if (!newReference.userStory.trim()) {
+      setErrors(prev => ({ ...prev, userStory: 'User story tidak boleh kosong' }));
+      return;
+    }
 
     // Validate scenarios
     let hasError = false;
@@ -510,22 +513,24 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                       {/* User Story Input */}
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">
-                          User Story (Input) 
-                          <span className="ml-2 text-xs text-gray-500">(Opsional, tapi disarankan)</span>
+                          User Story (Input)
                         </label>
                         <AutoExpandingTextarea
                           value={newReference.userStory}
                           onChange={(e) => {
                             setNewReference({...newReference, userStory: e.target.value});
+                            if (errors.userStory) setErrors(prev => ({ ...prev, userStory: '' }));
                           }}
-                          placeholder="Contoh: As a user, I want to login with email and password, So that I can access my account securely"
-                          className="w-full px-4 py-3 bg-[#0D0D0D] border border-white/5 focus:border-white/5 rounded-lg text-white/50 placeholder-white/50 focus:outline-none focus:bg-[#0D0D0D] resize-none"
+                          placeholder="Sebagai user, saya ingin login menggunakan email dan password, agar saya dapat mengakses akun saya dengan aman"
+                          className={`w-full px-4 py-3 bg-[#0D0D0D] border rounded-lg text-white/50 placeholder-white/50 focus:outline-none focus:bg-[#0D0D0D] resize-none ${
+                            errors.userStory ? 'border-red-500' : 'border-white/5 focus:border-white/5'
+                          }`}
                           minRows={2}
                           maxRows={6}
                         />
-                        <p className="text-gray-500 text-xs mt-1">
-                          💡 User story membantu AI memahami konteks dan menghasilkan Gherkin yang lebih akurat melalui few-shot prompting
-                        </p>
+                        {errors.userStory && (
+                          <p className="text-red-400 text-xs mt-1">{errors.userStory}</p>
+                        )}
                       </div>
 
                       {/* Gherkin Table */}
@@ -536,12 +541,9 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                         </label>
                         {newReference.scenarios.map((scenario, scenarioIndex) => (
                           <div key={scenarioIndex} className="mb-6">
-                            {/* Scenario Header with Delete Button */}
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold text-white">
-                                {newReference.scenarios.length === 1 ? 'Scenario' : `Scenario ${scenarioIndex + 1}`}
-                              </h4>
-                              {newReference.scenarios.length > 1 && (
+                            {/* Delete Button - Only show for multiple scenarios */}
+                            {newReference.scenarios.length > 1 && (
+                              <div className="flex justify-end mb-2">
                                 <button
                                   onClick={() => removeScenario(scenarioIndex)}
                                   className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
@@ -551,8 +553,8 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                             
                             <div className="bg-[#09090A] border border-white/5 rounded-xl overflow-hidden">
                           <div className="grid grid-cols-3 bg-[#0D0D0D] border-b border-white/5">
@@ -722,9 +724,9 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                         </button>
                         <button
                           onClick={saveReference}
-                          disabled={!newReference.title.trim()}
+                          disabled={!newReference.title.trim() || !newReference.userStory.trim()}
                           className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all font-semibold shadow-lg ${
-                            newReference.title.trim()
+                            (newReference.title.trim() && newReference.userStory.trim())
                               ? 'bg-[#120C18] border border-[#2C1A43] text-[#C27AFF] hover:bg-[#1A1220] cursor-pointer'
                               : 'bg-[#0D0D0D] border border-white/5 text-white/50 cursor-not-allowed'
                           }`}
