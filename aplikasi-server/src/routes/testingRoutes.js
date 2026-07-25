@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import {
-  runMeteorTest,
   runSentenceBertTest,
   getTestResults,
   getAllUserTestResults,
@@ -11,10 +10,9 @@ import {
   getScenarioReferences,
   getLastUsedReference,
   getCrossTestData,
-  runDualEvaluation
+  runEvaluation
 } from '../controllers/testingController.js';
 import {
-  runMeteorTestSSE,
   runSentenceBertTestSSE
 } from '../controllers/testingControllerSSE.js';
 import { authenticate, optionalAuth } from '../middlewares/auth.js';
@@ -23,27 +21,22 @@ import { sseMiddlewareWrapper } from '../middlewares/sseErrorHandler.js';
 
 const router = Router();
 
-// ⚠️ IMPORTANT: METEOR & Sentence-BERT testing TIDAK menggunakan LLM
-// Mereka hanya menjalankan Python script untuk evaluasi
+// ⚠️ IMPORTANT: Sentence-BERT testing TIDAK menggunakan LLM
+// Hanya menjalankan Python script untuk evaluasi
 // Jadi TIDAK PERLU checkUsageLimit middleware
 
 // Regular testing endpoints (non-SSE) - NO usage limit check
-router.post('/meteor', authenticate, runMeteorTest);
 router.post('/sentence-bert', authenticate, runSentenceBertTest);
 
 // SSE endpoints - NO usage limit check, hanya authenticate
-router.post('/meteor/stream', 
-  sseMiddlewareWrapper(authenticate),
-  runMeteorTestSSE
-);
 router.post('/sentence-bert/stream', 
   sseMiddlewareWrapper(authenticate),
   runSentenceBertTestSSE
 );
 
-// Batch & dual-evaluation juga tidak pakai LLM, hanya evaluasi
+// Batch & evaluation juga tidak pakai LLM, hanya evaluasi
 router.post('/batch', authenticate, runBatchTest);
-router.post('/dual-evaluation', authenticate, runDualEvaluation);
+router.post('/evaluation', authenticate, runEvaluation);
 
 // Results endpoints
 router.get('/results/:scenarioId', authenticate, getTestResults);

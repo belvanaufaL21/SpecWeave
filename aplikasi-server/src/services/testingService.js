@@ -22,7 +22,7 @@ const PYTHON_COMMAND =
   (process.platform === 'win32' ? 'python' : 'python3');
 
 // Timeout default untuk Python script (ms). Sentence-BERT bisa lama saat
-// model belum di-cache (~30-60s download), METEOR jauh lebih cepat.
+// model belum di-cache (~30-60s download).
 const PYTHON_TIMEOUT_MS = parseInt(process.env.PYTHON_TIMEOUT_MS || '180000', 10);
 
 /**
@@ -94,7 +94,7 @@ function extractJSON(stdout) {
 
 /**
  * @callback ProgressCallback
- * @param {string} stage - Stage name (mis. 'precision', 'attention', atau dengan prefix 'meteor:precision')
+ * @param {string} stage - Stage name (mis. 'attention', 'pooling', dll)
  * @param {number} progress - Persentase progress (0-100)
  * @param {{message?: string}} details - Detail tambahan (saat ini hanya pesan)
  */
@@ -104,7 +104,7 @@ function extractJSON(stdout) {
  * 
  * Fungsi ini adalah "jembatan" antara Node.js backend dan Python script.
  * 
- * @param {string} scriptName - Nama file Python (mis. 'meteor_calculator.py')
+ * @param {string} scriptName - Nama file Python (mis. 'sentence_bert_calculator.py')
  * @param {string[]} args - Argumen yang dikirim ke Python (generated_text, reference_text)
  * @param {object} [opts] - Opsi tambahan (timeout, progress callback, label)
  * @returns {Promise<object>} Hasil parsed JSON dari Python
@@ -130,7 +130,7 @@ function runPythonScript(scriptName, args, opts = {}) {
     let pythonProcess;
     try {
       // SPAWN PYTHON PROCESS - ini yang menjalankan script Python
-      // Command: python meteor_calculator.py "generated_text" "reference_text"
+      // Command: python sentence_bert_calculator.py "generated_text" "reference_text"
       pythonProcess = spawn(PYTHON_COMMAND, [scriptPath, ...args], {
         env: getPythonEnv(),  // Set environment variables (UTF-8, library paths)
       });
@@ -232,29 +232,6 @@ function runPythonScript(scriptName, args, opts = {}) {
 
 class TestingService {
 
-  // ============ METEOR WRAPPERS ============
-  
-  /**
-   * WRAPPER METEOR: Panggil meteor_calculator.py
-   * Digunakan untuk testing manual (user klik button test)
-   */
-  static async calculateMeteorScore(generatedText, referenceText) {
-    return runPythonScript('meteor_calculator.py', [generatedText, referenceText], {
-      label: 'METEOR',
-    });
-  }
-
-  /**
-   * WRAPPER METEOR + PROGRESS: Panggil meteor_calculator.py dengan progress callback
-   * Digunakan untuk SSE/WebSocket real-time updates
-   */
-  static async calculateMeteorScoreWithProgress(generatedText, referenceText, onProgress) {
-    return runPythonScript('meteor_calculator.py', [generatedText, referenceText], {
-      label: 'METEOR',
-      onProgress,  // Callback untuk kirim progress ke frontend
-    });
-  }
-
   // ============ SENTENCE-BERT WRAPPERS ============
 
   /**
@@ -279,52 +256,6 @@ class TestingService {
   }
 
   // -------- Save results to DB --------
-
-  /**
-   * Simpan hasil METEOR ke meteor_test_results.
-   * Catatan: meteorResult.score sekarang dari NLTK full-text (Banerjee & Lavie 2005),
-   * bukan rata-rata section. Per-section computation sudah dihapus untuk efisiensi.
-   */
-  static async saveMeteorResult(userId, scenarioId, generatedText, referenceText, meteorResult) {
-    try {
-      const detailedMetrics = meteorResult.detailed_metrics || {};
-
-      // Pakai ?? bukan || supaya nilai 0 (legitimate) tidak di-coerce ke null
-      const meteorData = {
-        user_id: userId,
-        scenario_id: scenarioId,
-        meteor_score: meteorResult.score ?? 0,
-        
-        // Overall metrics (dari full-text evaluation)
-        precision: detailedMetrics.precision ?? null,
-        recall: detailedMetrics.recall ?? null,
-        f_mean: detailedMetrics.f_mean ?? null,
-        penalty: detailedMetrics.penalty ?? null,
-        chunks: detailedMetrics.chunks ?? null,
-        matches: detailedMetrics.matches ?? null,
-        generated_tokens: detailedMetrics.generated_tokens ?? null,
-        reference_tokens: detailedMetrics.reference_tokens ?? null,
-
-        generated_text: generatedText,
-        reference_text: referenceText,
-        translation_info: meteorResult.translation_info || null,
-        created_at: new Date().toISOString(),
-      };
-
-      const { data, error } = await supabaseService.getClient()
-        .from('meteor_test_results')
-        .insert(meteorData)
-        .select()
-        .single();
-
-      if (error) throw new Error(`Failed to save METEOR result: ${error.message}`);
-
-      console.log('💾 Saved METEOR result:', data.id);
-      return data;
-    } catch (error) {
-      throw new Error(`Failed to save METEOR result: ${error.message}`);
-    }
-  }
 
   /**
    * Simpan hasil Sentence-BERT ke sentence_bert_test_results.
@@ -374,7 +305,7 @@ class TestingService {
 
   /**
    * Legacy: simpan ke table 'test_results' lama. Kept for backward compat.
-   * Untuk kode baru, pakai saveMeteorResult / saveSentenceBertResult.
+   * Untuk kode baru, pakai saveSentenceBertResult.
    */
   static async saveTestResult(testData) {
     try {
@@ -405,36 +336,24 @@ class TestingService {
     }
   }
 
-  // -------- Dual evaluation --------
+  // -------- Single evaluation (Sentence-BERT only) --------
 
   /**
-   * Run METEOR + Sentence-BERT secara paralel, simpan ke tabel terpisah.
+   * Run Sentence-BERT evaluation dan simpan ke tabel.
+   * Menggantikan dual evaluation (METEOR dihapus).
    */
-  static async runDualEvaluation(generatedText, referenceText, scenarioId, userId) {
+  static async runSingleEvaluation(generatedText, referenceText, scenarioId, userId) {
     try {
-      const [meteorResult, sentenceBertResult] = await Promise.all([
-        this.calculateMeteorScore(generatedText, referenceText),
-        this.calculateSentenceBertScore(generatedText, referenceText),
-      ]);
-
+      const sentenceBertResult = await this.calculateSentenceBertScore(generatedText, referenceText);
       const timestamp = new Date().toISOString();
 
-      await Promise.all([
-        this.saveMeteorResult(userId, scenarioId, generatedText, referenceText, meteorResult),
-        this.saveSentenceBertResult(userId, scenarioId, generatedText, referenceText, sentenceBertResult),
-      ]);
+      await this.saveSentenceBertResult(userId, scenarioId, generatedText, referenceText, sentenceBertResult);
 
-      console.log('✅ Saved DUAL test results to separate tables');
+      console.log('✅ Saved Sentence-BERT test result');
 
       return {
         success: true,
         timestamp,
-        meteor: {
-          success: meteorResult.success,
-          score: meteorResult.score,
-          details: meteorResult.detailed_metrics || meteorResult.details,
-          translation_info: meteorResult.translation_info,
-        },
         sentence_bert: {
           success: sentenceBertResult.success,
           score: sentenceBertResult.score,
@@ -444,41 +363,28 @@ class TestingService {
         referenceText,
       };
     } catch (error) {
-      throw new Error(`Dual evaluation failed: ${error.message}`);
+      throw new Error(`Evaluation failed: ${error.message}`);
     }
   }
 
   /**
    * Variant dengan progress callback untuk SSE/websocket.
-   * Progress METEOR & SBERT di-merge dengan prefix supaya frontend bisa bedakan.
    */
-  static async runDualEvaluationWithProgress(generatedText, referenceText, scenarioId, userId, onProgress) {
+  static async runSingleEvaluationWithProgress(generatedText, referenceText, scenarioId, userId, onProgress) {
     try {
-      const wrapProgress = (prefix) => (stage, progress, details) => {
-        if (onProgress) onProgress(`${prefix}:${stage}`, progress, details);
-      };
-
-      const [meteorResult, sentenceBertResult] = await Promise.all([
-        this.calculateMeteorScoreWithProgress(generatedText, referenceText, wrapProgress('meteor')),
-        this.calculateSentenceBertScoreWithProgress(generatedText, referenceText, wrapProgress('sbert')),
-      ]);
+      const sentenceBertResult = await this.calculateSentenceBertScoreWithProgress(
+        generatedText, 
+        referenceText, 
+        onProgress
+      );
 
       const timestamp = new Date().toISOString();
 
-      await Promise.all([
-        this.saveMeteorResult(userId, scenarioId, generatedText, referenceText, meteorResult),
-        this.saveSentenceBertResult(userId, scenarioId, generatedText, referenceText, sentenceBertResult),
-      ]);
+      await this.saveSentenceBertResult(userId, scenarioId, generatedText, referenceText, sentenceBertResult);
 
       return {
         success: true,
         timestamp,
-        meteor: {
-          success: meteorResult.success,
-          score: meteorResult.score,
-          details: meteorResult.detailed_metrics || meteorResult.details,
-          translation_info: meteorResult.translation_info,
-        },
         sentence_bert: {
           success: sentenceBertResult.success,
           score: sentenceBertResult.score,
@@ -488,30 +394,18 @@ class TestingService {
         referenceText,
       };
     } catch (error) {
-      throw new Error(`Dual evaluation failed: ${error.message}`);
+      throw new Error(`Evaluation failed: ${error.message}`);
     }
   }
 
   // -------- Read results --------
 
   /**
-   * Get test results untuk satu scenario, gabung dari tabel baru + tabel lama.
-   *
-   * Catatan tentang overall metrics (precision/recall/f_mean):
-   * Setelah refactor, METEOR score utama = NLTK pada teks utuh (Banerjee & Lavie 2005).
-   * Tapi DB schema hanya simpan per-section, jadi overall di-rekonstruksi sebagai
-   * RATA-RATA section. Ini bisa sedikit beda dari formula score = f_mean × (1 − penalty)
-   * pada teks utuh. Anggap nilai overall ini sebagai aproksimasi untuk display saja.
+   * Get test results untuk satu scenario, hanya dari tabel Sentence-BERT + tabel lama.
    */
   static async getTestResultsByScenario(scenarioId, userId) {
     try {
-      const [meteorResults, sbertResults] = await Promise.all([
-        supabaseService.getClient()
-          .from('meteor_test_results')
-          .select('*')
-          .eq('scenario_id', scenarioId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false }),
+      const [sbertResults] = await Promise.all([
         supabaseService.getClient()
           .from('sentence_bert_test_results')
           .select('*')
@@ -527,102 +421,23 @@ class TestingService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (meteorResults.error) console.warn('⚠️ meteor_test_results:', meteorResults.error.message);
       if (sbertResults.error) console.warn('⚠️ sentence_bert_test_results:', sbertResults.error.message);
       if (oldError) console.warn('⚠️ test_results (legacy):', oldError.message);
 
-      const transformedMeteor = (meteorResults.data || []).map(this._transformMeteorRow);
       const transformedSbert = (sbertResults.data || []).map(this._transformSbertRow);
 
-      const oldMeteor = (oldResults || []).filter(r => r.test_type === 'meteor').map(this._transformLegacyRow);
       const oldSbert = (oldResults || []).filter(r => r.test_type === 'sentence_bert').map(this._transformLegacyRow);
-      const oldDual = (oldResults || []).filter(r => r.test_type === 'dual').map(this._transformLegacyRow);
 
-      const allMeteor = [...transformedMeteor, ...oldMeteor]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const allSbert = [...transformedSbert, ...oldSbert]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-      // Dual: gabungkan METEOR & SBERT yang waktu-nya berdekatan (≤5 detik)
-      const dualResults = [...oldDual];
-      allMeteor.forEach(meteorResult => {
-        const matchingSbert = allSbert.find(sbertResult =>
-          Math.abs(new Date(sbertResult.created_at) - new Date(meteorResult.created_at)) < 5000
-        );
-        if (matchingSbert) {
-          dualResults.push({
-            id: meteorResult.id,
-            user_id: meteorResult.user_id,
-            scenario_id: meteorResult.scenario_id,
-            test_type: 'dual',
-            score: meteorResult.score,
-            test_details: {
-              meteor: { score: meteorResult.score, ...meteorResult.test_details },
-              sentence_bert: { score: matchingSbert.score, ...matchingSbert.test_details },
-            },
-            generated_text: meteorResult.generated_text,
-            reference_text: meteorResult.reference_text,
-            created_at: meteorResult.created_at,
-          });
-        }
-      });
-      dualResults.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-      return { meteor: allMeteor, sentence_bert: allSbert, dual: dualResults };
+      return { sentence_bert: allSbert };
     } catch (error) {
       throw new Error(`Failed to get test results: ${error.message}`);
     }
   }
 
-  /**
-   * Helper: transform row dari meteor_test_results jadi format yang dipakai frontend.
-   * Menggunakan overall metrics dari database (full-text evaluation).
-   */
-  static _transformMeteorRow(result) {
-    // Overall metrics dari full-text evaluation
-    let overallMetrics = {
-      precision: result.precision ?? 0,
-      recall: result.recall ?? 0,
-      f_mean: result.f_mean ?? 0,
-      penalty: result.penalty ?? 0,
-      chunks: result.chunks ?? 0,
-      matches: result.matches ?? 0,
-      generated_tokens: result.generated_tokens ?? 0,
-      reference_tokens: result.reference_tokens ?? 0,
-    };
-
-    // FALLBACK: Jika generated_tokens atau reference_tokens = 0 (data lama),
-    // hitung dari teks dengan tokenisasi sederhana
-    if (overallMetrics.generated_tokens === 0 && result.generated_text) {
-      // Tokenisasi sederhana: split by whitespace, filter empty
-      const tokens = result.generated_text.toLowerCase()
-        .split(/\s+/)
-        .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
-      overallMetrics.generated_tokens = tokens.length;
-    }
-
-    if (overallMetrics.reference_tokens === 0 && result.reference_text) {
-      const tokens = result.reference_text.toLowerCase()
-        .split(/\s+/)
-        .filter(t => t.trim().length > 0 && /[a-z0-9]/i.test(t));
-      overallMetrics.reference_tokens = tokens.length;
-    }
-
-    return {
-      id: result.id,
-      user_id: result.user_id,
-      scenario_id: result.scenario_id,
-      test_type: 'meteor',
-      score: result.meteor_score,
-      test_details: {
-        ...overallMetrics,
-        translation_info: result.translation_info,
-      },
-      generated_text: result.generated_text,
-      reference_text: result.reference_text,
-      created_at: result.created_at,
-    };
-  }
+  // Helper untuk transform row (hanya Sentence-BERT yang tersisa)
 
   static _transformSbertRow(result) {
     return {
@@ -656,23 +471,13 @@ class TestingService {
   }
 
   /**
-   * NOTE: query gabungan dari tabel baru + lama.
-   * Sebelumnya hanya query 'test_results' (lama) → result baru tidak muncul.
+   * NOTE: query hanya dari tabel Sentence-BERT + lama.
    */
   static async getTestResultsByUser(userId, options = {}) {
     try {
       const queries = [];
 
       // Tabel baru — kalau filter testType, skip yang tidak relevan
-      if (!options.testType || options.testType === 'meteor') {
-        queries.push(
-          supabaseService.getClient()
-            .from('meteor_test_results')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-        );
-      }
       if (!options.testType || options.testType === 'sentence_bert') {
         queries.push(
           supabaseService.getClient()
@@ -697,10 +502,6 @@ class TestingService {
 
       // Transform berdasarkan source table
       let idx = 0;
-      if (!options.testType || options.testType === 'meteor') {
-        all.push(...(responses[idx]?.data || []).map(TestingService._transformMeteorRow));
-        idx++;
-      }
       if (!options.testType || options.testType === 'sentence_bert') {
         all.push(...(responses[idx]?.data || []).map(TestingService._transformSbertRow));
         idx++;
@@ -749,15 +550,11 @@ class TestingService {
   }
 
   /**
-   * Statistik gabungan dari tabel baru + lama.
+   * Statistik hanya dari Sentence-BERT + tabel lama.
    */
   static async getTestStatistics(userId) {
     try {
-      const [meteorRes, sbertRes, oldRes] = await Promise.all([
-        supabaseService.getClient()
-          .from('meteor_test_results')
-          .select('meteor_score, created_at')
-          .eq('user_id', userId),
+      const [sbertRes, oldRes] = await Promise.all([
         supabaseService.getClient()
           .from('sentence_bert_test_results')
           .select('similarity_score, created_at')
@@ -767,11 +564,6 @@ class TestingService {
           .select('test_type, score, created_at')
           .eq('user_id', userId),
       ]);
-
-      const meteorScores = [
-        ...(meteorRes.data || []).map(r => r.meteor_score),
-        ...(oldRes.data || []).filter(r => r.test_type === 'meteor').map(r => r.score),
-      ].filter(s => s != null);
 
       const sbertScores = [
         ...(sbertRes.data || []).map(r => r.similarity_score),
@@ -790,18 +582,13 @@ class TestingService {
         };
       };
 
-      const meteorStats = statsFor(meteorScores);
       const sbertStats = statsFor(sbertScores);
 
       return {
-        total_tests: meteorStats.count + sbertStats.count,
-        meteor_tests: meteorStats.count,
+        total_tests: sbertStats.count,
         sentence_bert_tests: sbertStats.count,
-        average_meteor_score: meteorStats.average,
         average_sentence_bert_score: sbertStats.average,
-        highest_meteor_score: meteorStats.highest,
         highest_sentence_bert_score: sbertStats.highest,
-        lowest_meteor_score: meteorStats.lowest,
         lowest_sentence_bert_score: sbertStats.lowest,
       };
     } catch (error) {
@@ -880,15 +667,8 @@ class TestingService {
 
   static async getLastUsedReference(scenarioId, userId) {
     try {
-      // Cek ke tabel baru (METEOR & SBERT) dulu, lalu tabel lama
+      // Cek ke tabel Sentence-BERT dulu, lalu tabel lama
       const queries = await Promise.all([
-        supabaseService.getClient()
-          .from('meteor_test_results')
-          .select('reference_text, created_at')
-          .eq('scenario_id', scenarioId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1),
         supabaseService.getClient()
           .from('sentence_bert_test_results')
           .select('reference_text, created_at')
@@ -919,19 +699,12 @@ class TestingService {
   }
 
   /**
-   * Cross-test data: METEOR + SBERT terbaru untuk satu scenario.
-   * Sekarang query dari tabel baru, fallback ke tabel lama.
+   * Cross-test data: Hanya Sentence-BERT untuk satu scenario.
+   * (METEOR sudah dihapus)
    */
   static async getCrossTestData(scenarioId, userId) {
     try {
-      const [meteorRes, sbertRes, oldRes] = await Promise.all([
-        supabaseService.getClient()
-          .from('meteor_test_results')
-          .select('*')
-          .eq('scenario_id', scenarioId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1),
+      const [sbertRes, oldRes] = await Promise.all([
         supabaseService.getClient()
           .from('sentence_bert_test_results')
           .select('*')
@@ -948,29 +721,19 @@ class TestingService {
       ]);
 
       // Ambil hasil terbaru: prefer tabel baru, fallback ke lama
-      let meteorResult = meteorRes.data?.[0]
-        ? TestingService._transformMeteorRow(meteorRes.data[0])
-        : null;
       let sentenceBertResult = sbertRes.data?.[0]
         ? TestingService._transformSbertRow(sbertRes.data[0])
         : null;
 
-      if (!meteorResult) {
-        const oldMeteor = (oldRes.data || []).find(r => r.test_type === 'meteor');
-        if (oldMeteor) meteorResult = TestingService._transformLegacyRow(oldMeteor);
-      }
       if (!sentenceBertResult) {
         const oldSbert = (oldRes.data || []).find(r => r.test_type === 'sentence_bert');
         if (oldSbert) sentenceBertResult = TestingService._transformLegacyRow(oldSbert);
       }
 
       return {
-        meteor: meteorResult,
         sentence_bert: sentenceBertResult,
-        hasResults: !!(meteorResult || sentenceBertResult),
-        hasBothResults: !!(meteorResult && sentenceBertResult),
-        sharedReferenceText:
-          meteorResult?.reference_text || sentenceBertResult?.reference_text || null,
+        hasResults: !!sentenceBertResult,
+        sharedReferenceText: sentenceBertResult?.reference_text || null,
       };
     } catch (error) {
       throw new Error(`Failed to get cross-test data: ${error.message}`);
