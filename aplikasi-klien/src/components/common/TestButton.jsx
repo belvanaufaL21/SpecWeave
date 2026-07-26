@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import { useTestResults } from '../../contexts/TestResultsContext';
 import cleanLogger from '../../config/cleanLogging.js';
@@ -14,7 +13,6 @@ const TestButton = ({
   className = '',
   size = 'md'
 }) => {
-  const navigate = useNavigate();
   const { isScenarioTested, getTestResult, getAllTestResults } = useTestResults();
   const [forceUpdate, setForceUpdate] = React.useState(0);
   
@@ -67,7 +65,7 @@ const TestButton = ({
     lg: 'px-6 py-3 text-sm'
   };
   
-  const handleClick = () => {
+  const handleClick = (e) => {
     console.log('🔍 [TEST-BUTTON] Button clicked:', {
       scenarioIndex,
       isTested,
@@ -75,10 +73,13 @@ const TestButton = ({
     });
     
     if (isTested) {
-      // Navigate to detailed results page using scenarioId
-      const fullScenarioId = scenarioId || `${messageId}-${scenarioIndex}`;
-      navigate(`/test-results/${fullScenarioId}`);
+      // For link navigation, prevent default and let the browser handle it
+      // This allows right-click to work properly
+      return;
     } else {
+      // Prevent navigation for test modal
+      e.preventDefault();
+      
       // Open test modal - call the provided callback or global function
       if (onTestClick) {
         cleanLogger.debug('TEST_BUTTON', 'Calling onTestClick callback');
@@ -92,16 +93,22 @@ const TestButton = ({
     }
   };
 
+  // Construct URL for tested scenarios
+  const fullScenarioId = scenarioId || `${messageId}-${scenarioIndex}`;
+  const testResultUrl = `/test-results/${fullScenarioId}`;
+
   return (
-    <button
+    <a
+      href={isTested ? testResultUrl : '#'}
       onClick={handleClick}
       className={`group/btn relative flex items-center gap-2 border rounded-xl font-semibold transition-all duration-300 overflow-hidden hover:scale-105 hover:shadow-xl ${sizeClasses[size]} ${className}`}
       style={{ 
         backgroundColor: '#160D14', 
         borderColor: '#44273D',
-        color: '#FF7AD0'
+        color: '#FF7AD0',
+        textDecoration: 'none'
       }}
-      title={isTested ? "View METEOR Results" : "Test with METEOR"}
+      title={isTested ? "View Sentence-BERT Results" : "Test with Sentence-BERT"}
     >
       {/* Button Background Animation */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
@@ -121,7 +128,7 @@ const TestButton = ({
           </>
         )}
       </div>
-    </button>
+    </a>
   );
 };
 
