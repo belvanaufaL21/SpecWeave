@@ -274,10 +274,13 @@ function constructGherkinPrompt(userStory, patterns = []) {
     fewShotExamples = '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
     fewShotExamples += '⚠️ PENTING TENTANG CONTOH REFERENSI:\n';
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += 'Contoh-contoh berikut HANYA untuk pembelajaran pola transformasi:\n';
-    fewShotExamples += '• ✅ BOLEH: Pelajari struktur, tingkat detail, dan pola INPUT → OUTPUT\n';
-    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara langsung\n';
-    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang 100% sesuai konteks user story baru\n\n';
+    fewShotExamples += 'Contoh-contoh berikut adalah STANDAR POLA yang HARUS Anda ikuti:\n';
+    fewShotExamples += '• ✅ WAJIB: Ikuti POLA yang sama persis (struktur, format, tingkat detail)\n';
+    fewShotExamples += '• ✅ WAJIB: Pastikan KONSISTENSI dengan contoh (panjang kalimat, kedalaman penjelasan)\n';
+    fewShotExamples += '• ✅ WAJIB: Gunakan TINGKAT DETAIL yang sama seperti contoh (spesifik, lengkap, tidak generic)\n';
+    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara verbatim\n';
+    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang 100% sesuai konteks user story baru\n';
+    fewShotExamples += '• ✅ WAJIB: Output Anda harus memiliki KUALITAS dan FORMAT yang identik dengan contoh\n\n';
     
     // Examples Section
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
@@ -308,15 +311,22 @@ function constructGherkinPrompt(userStory, patterns = []) {
     
     // Closing: Summary of learning points
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    fewShotExamples += '⚡ RANGKUMAN PEMBELAJARAN:\n';
+    fewShotExamples += '⚡ RANGKUMAN PEMBELAJARAN & STANDAR POLA:\n';
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += 'Dari contoh-contoh di atas, perhatikan:\n';
-    fewShotExamples += '1. Bagaimana user story (INPUT) ditransformasi menjadi JSON terstruktur (OUTPUT)\n';
-    fewShotExamples += '2. Tingkat kedetailan di field given/when/then (kalimat lengkap, bukan poin singkat)\n';
-    fewShotExamples += '3. Spesifisitas development tasks (actionable, bukan template generik)\n';
-    fewShotExamples += '4. Kualitas bahasa Indonesia yang profesional dan jelas\n\n';
-    fewShotExamples += 'PENTING: Ikuti standar kualitas yang sama, tetapi gunakan kata-kata Anda\n';
-    fewShotExamples += 'sendiri yang spesifik untuk user story baru di bawah ini.\n\n';
+    fewShotExamples += 'Dari contoh-contoh di atas, perhatikan dan IKUTI POLA INI:\n';
+    fewShotExamples += '1. ✅ STRUKTUR: Bagaimana user story (INPUT) ditransformasi menjadi JSON terstruktur (OUTPUT)\n';
+    fewShotExamples += '2. ✅ TINGKAT DETAIL: Kalimat lengkap dan spesifik di given/when/then (bukan poin singkat/generic)\n';
+    fewShotExamples += '3. ✅ KEDALAMAN: Development tasks actionable dan spesifik (bukan template generik)\n';
+    fewShotExamples += '4. ✅ BAHASA: Profesional, jelas, dan konsisten dalam bahasa Indonesia\n';
+    fewShotExamples += '5. ✅ KONSISTENSI: Panjang kalimat, format, dan gaya penulisan harus SAMA dengan contoh\n\n';
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    fewShotExamples += '🎯 ATURAN KETAT:\n';
+    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    fewShotExamples += '• Output Anda HARUS memiliki KUALITAS dan POLA yang IDENTIK dengan contoh\n';
+    fewShotExamples += '• Jika contoh menggunakan kalimat 15-20 kata, Anda juga harus menggunakan 15-20 kata\n';
+    fewShotExamples += '• Jika contoh menjelaskan detail teknis, Anda juga harus menjelaskan detail teknis\n';
+    fewShotExamples += '• Jika contoh memiliki 8 development tasks, Anda juga harus membuat 6-8 tasks\n';
+    fewShotExamples += '• KONSISTENSI POLA adalah prioritas tertinggi - ikuti standar yang sudah ditunjukkan\n\n';
     
     console.log(`✅ [AI-SERVICE] Few-shot prompting enabled with INPUT-OUTPUT pairs (${selectedReferences.length} references)`);
     
