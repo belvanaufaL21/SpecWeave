@@ -996,78 +996,9 @@ class TestingService {
   }
 
   /**
-   * Run METEOR test with real-time progress via SSE
-   * @param {Object} testData - Test data
-   * @param {Function} onProgress - Progress callback (stage, progress, details)
-   * @returns {Promise<Object>} Final test result
+   * NOTE: METEOR evaluation has been removed from the system.
+   * Only Sentence-BERT is used for scenario quality testing.
    */
-  static async runMeteorTestSSE(testData, onProgress) {
-    return new Promise((resolve, reject) => {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5003/api';
-      const url = `${API_URL}/testing/meteor/stream`;
-      
-      // DEBUG: Check token
-      const token = localStorage.getItem('token');
-      console.log('🔐 [FRONTEND-SSE] Token check:', {
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NONE'
-      });
-      
-      // Use fetch for SSE
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}`
-        },
-        body: JSON.stringify(testData)
-      }).then(response => {
-        console.log('📡 [FRONTEND-SSE] Response status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        const readStream = () => {
-          reader.read().then(({ done, value }) => {
-            if (done) {
-              return;
-            }
-            
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // Keep incomplete line in buffer
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  
-                  if (data.stage === 'complete') {
-                    resolve(data);
-                  } else if (data.stage === 'error') {
-                    reject(new Error(data.error));
-                  } else {
-                    onProgress(data.stage, data.progress, data);
-                  }
-                } catch (e) {
-                  console.error('Failed to parse SSE data:', e);
-                }
-              }
-            }
-            
-            readStream();
-          }).catch(reject);
-        };
-        
-        readStream();
-      }).catch(reject);
-    });
-  }
 
   /**
    * Run Sentence-BERT test with real-time progress via SSE

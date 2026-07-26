@@ -1,20 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Modal from '../common/Modal';
 import ComparisonTable from '../common/ComparisonTable';
 import TestingService from '../../services/testingService';
 
 // ── Stage definitions ────────────────────────────────────────────────────────
-const METEOR_STAGES = [
-  { id: 'preparing',   label: 'Mempersiapkan Data',         description: 'Menyiapkan teks skenario untuk dianalisis',            weight: 10 },
-  { id: 'precision',   label: 'Analisis Presisi',           description: 'Menghitung tingkat ketepatan kata yang cocok',         weight: 18 },
-  { id: 'recall',      label: 'Analisis Recall',            description: 'Menghitung tingkat kelengkapan kata yang ditemukan',   weight: 18 },
-  { id: 'fmean',       label: 'Analisis F-Mean Score',      description: 'Menghitung harmonic mean dari precision dan recall',   weight: 18 },
-  { id: 'penalty',     label: 'Analisis Penalti',           description: 'Menghitung penalti fragmentasi urutan kata',           weight: 18 },
-  { id: 'meteor',      label: 'Analisis METEOR Score',      description: 'Menghitung skor akhir METEOR',                         weight: 13 },
-  { id: 'finalizing',  label: 'Analisis Selesai',           description: 'Menyusun hasil pengujian',                             weight: 5 },
-];
-
 const SBERT_STAGES = [
   { id: 'preparing',     label: 'Mempersiapkan Data',                          description: 'Menyiapkan teks skenario untuk dianalisis',        weight: 8 },
   { id: 'tokenizing',    label: 'Analisis Tokenisasi dan Input Embedding',     description: 'Mengubah teks menjadi token dan embedding',        weight: 18 },
@@ -29,8 +18,6 @@ function buildThresholds(stages) {
   let acc = 0;
   return stages.map(s => { const start = acc; acc += s.weight; return { ...s, start, end: acc }; });
 }
-const METEOR_THRESHOLDS = buildThresholds(METEOR_STAGES);
-const SBERT_THRESHOLDS  = buildThresholds(SBERT_STAGES);
 
 // ── EvalProgressPanel ────────────────────────────────────────────────────────
 const EvalProgressPanel = ({ stages, progress, color }) => {
@@ -129,7 +116,7 @@ const EvalProgressPanel = ({ stages, progress, color }) => {
   );
 };
 
-// ── DualTestingModal ─────────────────────────────────────────────────────────
+// ── DualTestingModal (now Sentence-BERT only) ─────────────────────────────────────────────────────────
 const DualTestingModal = memo(({
   isOpen, onClose, scenarioText = '', scenarioId = null,
   initialReferenceScenario = '', onSubmitTest, loading = false
@@ -138,15 +125,11 @@ const DualTestingModal = memo(({
   const [validationError, setValidationError]     = useState('');
   const [isSubmitting, setIsSubmitting]           = useState(false);
 
-  // Per-tab state
-  const [meteorProgress, setMeteorProgress] = useState(0);
-  const [meteorStatus,   setMeteorStatus]   = useState('idle'); // idle|running|done|error
+  // Sentence-BERT state only
   const [sbertProgress,  setSbertProgress]  = useState(0);
-  const [sbertStatus,    setSbertStatus]    = useState('idle');
-  const [activeTab,      setActiveTab]      = useState('meteor');
+  const [sbertStatus,    setSbertStatus]    = useState('idle'); // idle|running|done|error
 
-  // Results
-  const [meteorResult, setMeteorResult] = useState(null);
+  // Results - Sentence-BERT only
   const [sbertResult,  setSbertResult]  = useState(null);
   const [showResults,  setShowResults]  = useState(false);
 
@@ -158,8 +141,8 @@ const DualTestingModal = memo(({
   const activeTestRef = React.useRef({ active: false, scenarioId: null });
 
   const isLoading    = loading || isSubmitting;
-  const isEvaluating = meteorStatus === 'running' || sbertStatus === 'running';
-  const isCompleted  = meteorStatus === 'done' && sbertStatus === 'done'; // Both tests completed
+  const isEvaluating = sbertStatus === 'running';
+  const isCompleted  = sbertStatus === 'done'; // Sentence-BERT test completed
   const shouldShowProgress = isEvaluating || isCompleted; // Show progress during and after completion
 
   // Load suggestions
@@ -178,10 +161,10 @@ const DualTestingModal = memo(({
       // Cancel any active test
       activeTestRef.current.active = false;
       
-      setShowResults(false); setMeteorResult(null); setSbertResult(null);
-      setMeteorProgress(0); setSbertProgress(0);
-      setMeteorStatus('idle'); setSbertStatus('idle');
-      setActiveTab('meteor'); setValidationError('');
+      setShowResults(false); setSbertResult(null);
+      setSbertProgress(0);
+      setSbertStatus('idle');
+      setValidationError('');
       setIsSubmitting(false);
     }
   }, [isOpen]);
@@ -198,13 +181,9 @@ const DualTestingModal = memo(({
         
         // Reset all state
         setShowResults(false);
-        setMeteorResult(null);
         setSbertResult(null);
-        setMeteorProgress(0);
         setSbertProgress(0);
-        setMeteorStatus('idle');
         setSbertStatus('idle');
-        setActiveTab('meteor');
         setValidationError('');
         setIsSubmitting(false);
       }
@@ -231,33 +210,12 @@ const DualTestingModal = memo(({
     
     try {
       setValidationError(''); setIsSubmitting(true); setShowResults(false);
-      setMeteorProgress(0); setSbertProgress(0);
-      setMeteorStatus('running'); setSbertStatus('idle');
+      setSbertProgress(0);
+      setSbertStatus('running');
 
       const testData = { scenarioId, generatedText: scenarioText, referenceText: referenceScenario.trim() };
 
-      // ── METEOR with Real-Time SSE ──
-      console.log('🚀 Starting METEOR test with SSE...');
-      const meteorData = await TestingService.runMeteorTestSSE(testData, (stage, progress, details) => {
-        if (!getActive()) {
-          console.log('⚠️ METEOR progress ignored - test cancelled or scenario changed');
-          return;
-        }
-        setMeteorProgress(progress);
-        console.log(`📊 METEOR ${stage}: ${progress}%`, details.message);
-      });
-      
-      if (!getActive()) {
-        console.log('⚠️ METEOR completed but test was cancelled');
-        return;
-      }
-      
-      const rawMeteor = meteorData.meteorMetrics;
-      setMeteorProgress(100); setMeteorStatus('done'); setMeteorResult(rawMeteor);
-      console.log('✅ METEOR completed:', rawMeteor);
-      
-      // ── Sentence-BERT with Real-Time SSE ──
-      setSbertStatus('running');
+      // ── Sentence-BERT Only with Real-Time SSE ──
       console.log('🚀 Starting Sentence-BERT test with SSE...');
       
       let rawSbert = null;
@@ -291,39 +249,11 @@ const DualTestingModal = memo(({
         
         // Show user-friendly error message
         const errorMsg = sbertError.message || 'Gagal menjalankan pengujian Sentence-BERT';
-        setValidationError(`METEOR berhasil, tetapi Sentence-BERT gagal: ${errorMsg}. Anda tetap dapat melihat hasil METEOR.`);
-        
-        // Still show results with METEOR only
-        setShowResults(true);
-        
-        // Save METEOR result only
-        if (onSubmitTest && rawMeteor) {
-          const meteorMetrics = rawMeteor?.meteorMetrics || rawMeteor;
-          const meteorDetails = meteorMetrics?.detailed_metrics || meteorMetrics?.details || {};
-
-          const formatted = {
-            timestamp: new Date().toISOString(),
-            generatedText: scenarioText,
-            referenceText: referenceScenario.trim(),
-            meteor: meteorMetrics ? {
-              success: true,
-              score: meteorMetrics.score || 0,
-              precision: meteorDetails.precision || 0,
-              recall: meteorDetails.recall || 0,
-              f_mean: meteorDetails.f_mean || 0,
-              penalty: meteorDetails.penalty || 0,
-              matches: meteorDetails.matches || 0,
-              chunks: meteorMetrics.translation_info || null,
-              formattedScore: TestingService.formatScore(meteorMetrics.score, 'meteor'),
-              qualityLevel: TestingService.getQualityLevel(meteorMetrics.score),
-            } : null,
-            sentence_bert: null, // Mark as failed
-          };
-          await onSubmitTest(formatted);
-        }
+        setValidationError(`Sentence-BERT gagal: ${errorMsg}`);
         
         // Mark test as complete
         activeTestRef.current.active = false;
+        setIsSubmitting(false);
         return; // Exit early
       }
 
@@ -338,7 +268,7 @@ const DualTestingModal = memo(({
         await TestingService.saveScenarioReference({
           referenceText: referenceScenario.trim(),
           description: `Reference for scenario ${scenarioId}`,
-          tags: ['dual-evaluation', 'auto-saved'],
+          tags: ['sentence-bert', 'auto-saved'],
         });
       } catch (_) {}
 
@@ -347,29 +277,14 @@ const DualTestingModal = memo(({
 
       if (onSubmitTest) {
         // Build the formatted result that ChatRefined expects:
-        const meteorMetrics = rawMeteor?.meteorMetrics || rawMeteor;
         const sbertMetrics  = rawSbert?.sentenceBertMetrics || rawSbert?.sentence_bert_metrics || rawSbert;
-
-        const meteorDetails = meteorMetrics?.detailed_metrics || meteorMetrics?.details || {};
         const sbertDetails  = sbertMetrics?.details || {};
 
         const formatted = {
           timestamp: new Date().toISOString(),
           generatedText: scenarioText,
           referenceText: referenceScenario.trim(),
-          meteor: meteorMetrics ? {
-            success: true,
-            score: meteorMetrics.score || 0,
-            precision: meteorDetails.precision || 0,
-            recall: meteorDetails.recall || 0,
-            f_mean: meteorDetails.f_mean || 0,
-            penalty: meteorDetails.penalty || 0,
-            matches: meteorDetails.matches || 0,
-            chunks: meteorDetails.chunks || 0,
-            translation_info: meteorMetrics.translation_info || null,
-            formattedScore: TestingService.formatScore(meteorMetrics.score, 'meteor'),
-            qualityLevel: TestingService.getQualityLevel(meteorMetrics.score),
-          } : null,
+          meteor: null, // METEOR removed
           sentence_bert: sbertMetrics ? {
             success: true,
             score: sbertMetrics.score || 0,
@@ -397,13 +312,12 @@ const DualTestingModal = memo(({
       
       console.error('❌ Test execution error:', error);
       setValidationError(error.message || 'Gagal menjalankan pengujian. Silakan coba lagi.');
-      if (meteorStatus === 'running') setMeteorStatus('error');
       if (sbertStatus   === 'running') setSbertStatus('error');
       setIsSubmitting(false); // Only reset on error
     } finally {
       // Don't reset isSubmitting here - it's handled in success/error paths
     }
-  }, [isFormValid, scenarioId, scenarioText, referenceScenario, onSubmitTest, meteorStatus, sbertStatus]);
+  }, [isFormValid, scenarioId, scenarioText, referenceScenario, onSubmitTest, sbertStatus]);
 
   const handleReferenceChange = useCallback((e) => {
     setReferenceScenario(e.target.value);
@@ -473,8 +387,8 @@ const DualTestingModal = memo(({
     return (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
-          <span>Dual Evaluation: METEOR + Sentence-BERT</span>
+          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-400" />
+          <span>Sentence-BERT Evaluation</span>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <button 
@@ -501,7 +415,6 @@ const DualTestingModal = memo(({
   if (!isOpen) return null;
 
   const tabs = [
-    { key: 'meteor',        label: 'METEOR',        color: 'purple', status: meteorStatus, progress: meteorProgress, stages: METEOR_STAGES, result: meteorResult },
     { key: 'sentence_bert', label: 'Sentence-BERT', color: 'pink',   status: sbertStatus,  progress: sbertProgress,  stages: SBERT_STAGES,  result: sbertResult, customBg: '#160D14', customText: '#FF7AD0'  },
   ];
 
@@ -524,9 +437,9 @@ const DualTestingModal = memo(({
           </div>
         )}
 
-        {/* ── Dual evaluation panels (visible while evaluating or completed) ── */}
+        {/* ── Sentence-BERT evaluation panel (visible while evaluating or completed) ── */}
         {shouldShowProgress && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {tabs.map(tab => {
               const textColor = tab.key === 'meteor' ? '#C27AFF' : '#FF7AD0';
               
@@ -556,7 +469,7 @@ const DualTestingModal = memo(({
                     {tab.status === 'idle' && (
                       <div className="flex items-center gap-3 py-4 text-gray-500 text-sm">
                         <div className="w-5 h-5 rounded-full border-2 border-dashed border-gray-600" />
-                        Menunggu evaluasi METEOR selesai...
+                        Menunggu evaluasi dimulai...
                       </div>
                     )}
                   </div>
@@ -572,16 +485,12 @@ const DualTestingModal = memo(({
 
               {/* Method description */}
               <div className="p-4 rounded-xl" style={{ backgroundColor: '#09090A', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <h3 className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300 text-sm">Dual Evaluation</h3>
-                <p className="text-xs text-gray-400 mt-1">METEOR dijalankan terlebih dahulu, kemudian Sentence-BERT. Pantau progress masing-masing di tab.</p>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="p-2.5 rounded-lg" style={{ backgroundColor: '#120C18' }}>
-                    <div className="text-xs font-medium" style={{ color: '#C27AFF' }}>METEOR</div>
-                    <div className="text-xs text-gray-400 mt-0.5">Kecocokan kata & urutan</div>
-                  </div>
+                <h3 className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-pink-300 text-sm">Sentence-BERT Evaluation</h3>
+                <p className="text-xs text-gray-400 mt-1">Evaluasi menggunakan Sentence-BERT untuk mengukur kesamaan semantik antara skenario yang dihasilkan dengan skenario referensi.</p>
+                <div className="mt-3">
                   <div className="p-2.5 rounded-lg" style={{ backgroundColor: '#160D14' }}>
                     <div className="text-xs font-medium" style={{ color: '#FF7AD0' }}>Sentence-BERT</div>
-                    <div className="text-xs text-gray-400 mt-0.5">Kesamaan semantik</div>
+                    <div className="text-xs text-gray-400 mt-0.5">Kesamaan semantik dengan transformers</div>
                   </div>
                 </div>
               </div>
