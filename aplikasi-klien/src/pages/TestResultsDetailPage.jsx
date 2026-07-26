@@ -19,22 +19,15 @@ const TestResultsDetailPage = () => {
   const { handleError, clearError } = useError();
 
   // State management
-  const [activeTab, setActiveTab] = useState('meteor');
+  const [activeTab, setActiveTab] = useState('sentence_bert');
   const [testResults, setTestResults] = useState({});
   const [error, setError] = useState(null);
   const [showTestingModal, setShowTestingModal] = useState(false);
 
   const loading = getLoadingState(LOADING_TYPES.METEOR_ANALYSIS).isLoading;
 
-  // Tab configuration - SpecWeave Brand Colors
+  // Tab configuration - SpecWeave Brand Colors (Sentence-BERT only)
   const tabs = [
-    {
-      id: 'meteor',
-      label: 'METEOR',
-      description: 'Evaluasi berdasarkan unigram matching, stemming, dan synonymy',
-      color: 'purple',
-      gradient: 'from-purple-600 to-purple-500',
-    },
     {
       id: 'sentence_bert',
       label: 'Sentence-BERT',
@@ -239,70 +232,8 @@ const TestResultsDetailPage = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-6 relative z-10">
-        {/* Tab Navigation - METEOR / Sentence-BERT */}
-        <div className="mb-6">
-          <div
-            className="flex gap-2 bg-black/60 backdrop-blur-xl p-1.5 rounded-2xl"
-            style={{ borderWidth: '1px', borderStyle: 'solid', borderColor: '#0D0D0D' }}
-          >
-            {tabs.map((tab) => {
-              const tabResult = getLatestResult(tab.id);
-              const hasTabResult = tabResult !== null;
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group relative flex items-center gap-3 px-5 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 flex-1 overflow-hidden ${
-                    activeTab === tab.id ? 'text-white' : 'text-gray-400 hover:text-gray-300'
-                  }`}
-                  style={
-                    activeTab === tab.id && tab.id === 'meteor'
-                      ? { backgroundColor: '#120C18' }
-                      : activeTab === tab.id && tab.customBg
-                      ? { backgroundColor: tab.customBg }
-                      : {}
-                  }
-                >
-                  {activeTab === tab.id && tab.id !== 'meteor' && !tab.customBg && (
-                    <div className={`absolute inset-0 bg-gradient-to-r ${tab.gradient} opacity-20`}></div>
-                  )}
-
-                  <div className="relative flex items-center gap-3 flex-1">
-                    <div className="text-left flex-1">
-                      <div className="font-semibold flex items-center gap-2">
-                        <span
-                          className={
-                            activeTab === tab.id && tab.id !== 'meteor' && !tab.customText
-                              ? `bg-gradient-to-r ${tab.gradient} bg-clip-text text-transparent`
-                              : ''
-                          }
-                          style={
-                            activeTab === tab.id && tab.id === 'meteor'
-                              ? { color: '#C27AFF' }
-                              : activeTab === tab.id && tab.customText
-                              ? { color: tab.customText }
-                              : {}
-                          }
-                        >
-                          {tab.label}
-                        </span>
-                        {hasTabResult && (
-                          <div
-                            className={`w-1.5 h-1.5 bg-gradient-to-r ${tab.gradient} rounded-full ${
-                              activeTab === tab.id ? 'animate-pulse' : ''
-                            }`}
-                          ></div>
-                        )}
-                      </div>
-                      <div className="text-xs opacity-70 line-clamp-1">{tab.description}</div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* Hidden Tab Navigation - Only Sentence-BERT now */}
+        {/* Since we only have one evaluation method, tab navigation is hidden */}
 
         {/* Score Display + Tab Content */}
         <div className="relative">
