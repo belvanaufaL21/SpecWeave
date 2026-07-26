@@ -274,13 +274,16 @@ function constructGherkinPrompt(userStory, patterns = []) {
     fewShotExamples = '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
     fewShotExamples += '⚠️ PENTING TENTANG CONTOH REFERENSI:\n';
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += 'Contoh-contoh berikut adalah STANDAR POLA yang HARUS Anda ikuti:\n';
-    fewShotExamples += '• ✅ WAJIB: Ikuti POLA yang sama persis (struktur, format, tingkat detail)\n';
-    fewShotExamples += '• ✅ WAJIB: Pastikan KONSISTENSI dengan contoh (panjang kalimat, kedalaman penjelasan)\n';
-    fewShotExamples += '• ✅ WAJIB: Gunakan TINGKAT DETAIL yang sama seperti contoh (spesifik, lengkap, tidak generic)\n';
-    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara verbatim\n';
-    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang 100% sesuai konteks user story baru\n';
-    fewShotExamples += '• ✅ WAJIB: Output Anda harus memiliki KUALITAS dan FORMAT yang identik dengan contoh\n\n';
+    fewShotExamples += 'Contoh-contoh berikut membantu Anda memahami pola transformasi user\n';
+    fewShotExamples += 'story menjadi skenario Gherkin yang sesuai standar tim:\n\n';
+    fewShotExamples += '• ✅ BOLEH: Pelajari jenis informasi yang perlu dicakup pada given/when/then,\n';
+    fewShotExamples += '  dan bagaimana suatu requirement diterjemahkan menjadi kondisi, aksi, dan hasil\n';
+    fewShotExamples += '• ✅ BOLEH: Jadikan acuan gaya bahasa yang profesional dan konsisten\n';
+    fewShotExamples += '  dengan standar tim\n';
+    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara langsung\n';
+    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang sepenuhnya sesuai konteks user story\n';
+    fewShotExamples += '  baru, dengan tingkat kedetailan yang relevan terhadap kompleksitas user\n';
+    fewShotExamples += '  story tersebut\n\n';
     
     // Examples Section
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
@@ -309,26 +312,8 @@ function constructGherkinPrompt(userStory, patterns = []) {
       fewShotExamples += `═══════════════════════════════════════════════════════════\n\n`;
     });
     
-    // Closing: Summary of learning points
-    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    fewShotExamples += '⚡ ATURAN FEW-SHOT PROMPTING:\n';
+    // Closing: Tidak ada checklist literal
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += '🎯 PRIORITAS UTAMA: IKUTI POLA CONTOH APA ADANYA\n\n';
-    fewShotExamples += '1. ✅ REPLICATE PATTERN: Perhatikan bagaimana INPUT → OUTPUT di setiap contoh\n';
-    fewShotExamples += '2. ✅ MIRROR STYLE: Jika contoh singkat, output Anda singkat. Jika detail, output Anda detail\n';
-    fewShotExamples += '3. ✅ MATCH LENGTH: Panjang kalimat/paragraf harus mirip dengan contoh (~10% toleransi)\n';
-    fewShotExamples += '4. ✅ COPY STRUCTURE: Format, susunan, dan struktur JSON harus identik\n';
-    fewShotExamples += '5. ✅ MAINTAIN TONE: Gaya bahasa (formal/informal, teknis/bisnis) harus sama\n';
-    fewShotExamples += '6. ❌ NO VERBATIM: Jangan salin kata-kata persis, gunakan konteks user story baru\n\n';
-    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    fewShotExamples += '🔍 CHECKLIST KONSISTENSI:\n';
-    fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += 'Sebelum submit output, pastikan:\n';
-    fewShotExamples += '□ Jumlah kata per field mirip dengan contoh (±10%)\n';
-    fewShotExamples += '□ Jumlah development tasks sesuai pola contoh\n';
-    fewShotExamples += '□ Tingkat kedetailan (detail/ringkas) sama dengan contoh\n';
-    fewShotExamples += '□ Gaya bahasa (teknis/non-teknis) konsisten dengan contoh\n';
-    fewShotExamples += '□ Struktur kalimat (sederhana/kompleks) mengikuti contoh\n\n';
     
     console.log(`✅ [AI-SERVICE] Few-shot prompting enabled with INPUT-OUTPUT pairs (${selectedReferences.length} references)`);
     
@@ -347,96 +332,18 @@ function constructGherkinPrompt(userStory, patterns = []) {
     console.log('⚠️ [AI-SERVICE] Zero-shot prompting (no references available)');
   }
   
-  // 🔵 PROMPT CONTENT: GHERKIN GENERATION (Adaptive: Few-shot vs Zero-shot)
+  // 🔵 PROMPT CONTENT: GHERKIN GENERATION (v2.3 - Unified Template)
   // Lokasi: aiService.js - constructGherkinPrompt() - return statement
   // Tujuan: Template prompt lengkap untuk generate Gherkin JSON
-  // Adaptive Behavior:
-  // - FEW-SHOT (dengan references): Fokus pada "ikuti pola contoh"
-  // - ZERO-SHOT (tanpa references): Fokus pada "instruksi prescriptive"
+  // Struktur: Satu template dengan Persyaratan Format selalu ada,
+  //           contoh referensi disisipkan kondisional jika tersedia
   
-  const hasFewShot = selectedReferences.length > 0;
-  
-  // Build prompt berdasarkan mode (few-shot atau zero-shot)
-  if (hasFewShot) {
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // FEW-SHOT MODE: Fokus pada pattern matching
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    return `
+  return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 TUGAS ANDA (FEW-SHOT MODE):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Anda diberikan contoh-contoh transformasi user story → JSON Gherkin.
-Tugas Anda: Tiru pola yang sama untuk user story baru.
-${fewShotExamples}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 USER STORY BARU YANG AKAN DITRANSFORMASI:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-"${userStory}"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📐 STRUKTUR JSON YANG DIBUTUHKAN:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{
-  "feature": "Nama Fitur",
-  "description": "Deskripsi fitur",
-  "userStory": "User story asli",
-  "scenarios": [
-    {
-      "type": "Happy Path",
-      "title": "Judul scenario",
-      "given": "Kondisi awal",
-      "when": "Aksi",
-      "then": "Hasil"
-    },
-    {
-      "type": "Edge Case",
-      "title": "Judul scenario",
-      "given": "Kondisi awal",
-      "when": "Aksi",
-      "then": "Hasil"
-    },
-    {
-      "type": "Alternative Flow",
-      "title": "Judul scenario",
-      "given": "Kondisi awal",
-      "when": "Aksi",
-      "then": "Hasil"
-    }
-  ],
-  "developmentTasks": [
-    {
-      "role": "BE|FE|UI/UX|QA",
-      "description": "Task description",
-      "priority": "High|Medium|Low",
-      "status": "To Do"
-    }
-  ]
-}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ INSTRUKSI AKHIR:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Analisis POLA dari contoh-contoh di atas (panjang, detail, gaya)
-2. REPLICATE pola yang sama untuk user story baru
-3. Output JSON valid tanpa markdown/code block
-4. Gunakan kata-kata sendiri yang sesuai konteks user story baru
-
-Hasilkan respons JSON sekarang:`;
-  } else {
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ZERO-SHOT MODE: Instruksi prescriptive lengkap
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    return `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 TUGAS ANDA (ZERO-SHOT MODE):
+📋 TUGAS ANDA:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Analisis satu user story dan hasilkan spesifikasi fitur lengkap dalam format JSON yang valid, tanpa markdown maupun penjelasan tambahan. Setiap field wajib diisi dengan konten spesifik dan detail berdasarkan konteks user story yang diberikan, bukan kerangka atau placeholder kosong.
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📐 PERSYARATAN FORMAT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -469,7 +376,7 @@ Analisis satu user story dan hasilkan spesifikasi fitur lengkap dalam format JSO
    • Fokus pada satu aksi dan satu hasil yang jelas per langkah, hindari pengulangan informasi yang tidak perlu
    • Description fitur menjelaskan nilai bisnis dan fungsi fitur dalam 2-3 kalimat
    • Field "userStory" berisi teks user story asli, dipertahankan persis seperti yang diberikan
-
+${fewShotExamples}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 TUGAS ANDA SEKARANG:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -526,7 +433,6 @@ Berikan output JSON yang LENGKAP dan DETAIL:
 • Output harus JSON valid tanpa markdown, code block, atau penjelasan tambahan
 
 Hasilkan respons JSON sekarang:`;
-  }
 }
 
 /**
