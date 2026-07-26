@@ -89,7 +89,7 @@ class LLMProviderService {
       // Parameter:
       // - model: Model yang dipilih user (Llama, Gemini, GPT, Claude, dll)
       // - messages: Array prompt dari aiService.js (system + user message)
-      // - temperature: 0.7 (kreativitas sedang)
+      // - temperature: 0.3 (konsisten untuk Gherkin generation)
       // - max_tokens: 4096 (maksimal panjang respons)
       // - timeout: 180000ms (3 menit)
       // Output: Response object dengan choices[0].message.content dan usage
@@ -98,7 +98,7 @@ class LLMProviderService {
       const response = await openrouter.chat.completions.create({
         model: modelName,
         messages,
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 4096,
       }, {
         timeout: 180000 // 3 minutes timeout
