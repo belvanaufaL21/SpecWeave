@@ -777,7 +777,10 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
                         {filteredReferences.map((reference) => {
-                          const scenarios = gherkinToStructured(reference.gherkinContent);
+                          // Handle both camelCase and snake_case from API
+                          const gherkinContent = reference.gherkinContent || reference.gherkin_content || '';
+                          const userStory = reference.userStory || reference.user_story || '';
+                          const scenarios = gherkinToStructured(gherkinContent);
                           const isExpanded = expandedRefs[reference.id];
                           
                           return (
@@ -834,13 +837,13 @@ const ReferenceLibraryWithAutoSettings = ({ isOpen, onClose }) => {
                               {isExpanded && (
                                 <div className="border-t border-white/5 bg-[#09090A]">
                                   {/* User Story Section (if available) */}
-                                  {reference.userStory && (
+                                  {userStory && (
                                     <div className="p-6 pb-0">
                                       <div className="bg-[#0D0D0D] border border-white/5 rounded-lg p-4">
                                         <div className="flex flex-col gap-2">
                                           <h5 className="text-sm font-semibold text-gray-400">User Story (Input)</h5>
                                           <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                                            {reference.userStory}
+                                            {userStory}
                                           </p>
                                         </div>
                                       </div>
