@@ -274,16 +274,20 @@ function constructGherkinPrompt(userStory, patterns = []) {
     fewShotExamples = '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
     fewShotExamples += '⚠️ PENTING TENTANG CONTOH REFERENSI:\n';
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    fewShotExamples += 'Contoh-contoh berikut membantu Anda memahami pola transformasi user\n';
-    fewShotExamples += 'story menjadi skenario Gherkin yang sesuai standar tim:\n\n';
-    fewShotExamples += '• ✅ BOLEH: Pelajari jenis informasi yang perlu dicakup pada given/when/then,\n';
-    fewShotExamples += '  dan bagaimana suatu requirement diterjemahkan menjadi kondisi, aksi, dan hasil\n';
-    fewShotExamples += '• ✅ BOLEH: Jadikan acuan gaya bahasa yang profesional dan konsisten\n';
-    fewShotExamples += '  dengan standar tim\n';
-    fewShotExamples += '• ❌ DILARANG: Menyalin kalimat atau frasa dari contoh secara langsung\n';
-    fewShotExamples += '• ✅ WAJIB: Buat redaksi sendiri yang sepenuhnya sesuai konteks user story\n';
-    fewShotExamples += '  baru, dengan tingkat kedetailan yang relevan terhadap kompleksitas user\n';
-    fewShotExamples += '  story tersebut\n\n';
+    fewShotExamples += 'Contoh-contoh referensi di bawah menunjukkan pola yang diterapkan tim\n';
+    fewShotExamples += 'dalam menyusun skenario Gherkin. Sebelum menulis skenario baru, amati\n';
+    fewShotExamples += 'pola yang KONSISTEN muncul di SELURUH contoh (bukan hanya satu contoh),\n';
+    fewShotExamples += 'khususnya pada:\n\n';
+    fewShotExamples += '- Tingkat kedetailan given/when/then (deskripsi teknis rinci, atau cukup\n';
+    fewShotExamples += '  kondisi/aksi/hasil tingkat tinggi?)\n';
+    fewShotExamples += '- Struktur kalimat (satu kalimat penuh, atau frasa singkat?)\n';
+    fewShotExamples += '- Cakupan dan variasi role pada Development Tasklist\n';
+    fewShotExamples += '- Gaya bahasa (formal, teknis, atau naratif?)\n\n';
+    fewShotExamples += 'Terapkan pola yang konsisten tersebut pada user story baru di bawah ini.\n\n';
+    fewShotExamples += '- ✅ WAJIB: Ikuti pola struktural yang konsisten di seluruh contoh\n';
+    fewShotExamples += '- ❌ DILARANG: Menyalin kalimat, frasa, atau detail spesifik dari salah satu contoh\n';
+    fewShotExamples += '- ✅ WAJIB: Seluruh konten (nama fitur, aktor, aksi, hasil) berasal sepenuhnya\n';
+    fewShotExamples += '  dari user story baru yang diberikan\n\n';
     
     // Examples Section
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
@@ -312,7 +316,7 @@ function constructGherkinPrompt(userStory, patterns = []) {
       fewShotExamples += `═══════════════════════════════════════════════════════════\n\n`;
     });
     
-    // Closing: Tidak ada checklist literal
+    // Closing: Simple separator
     fewShotExamples += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
     console.log(`✅ [AI-SERVICE] Few-shot prompting enabled with INPUT-OUTPUT pairs (${selectedReferences.length} references)`);
