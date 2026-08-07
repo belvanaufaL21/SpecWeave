@@ -15,18 +15,20 @@
 
 SpecWeave mengubah kebutuhan dalam bahasa natural menjadi skenario **Behavior-Driven Development (BDD)** berformat Gherkin yang terstruktur, lengkap dengan rincian *development task*, evaluasi kualitas otomatis, dan ekspor langsung ke JIRA sebagai backlog.
 
-## 🚀 Fitur Utama
+## 🚀 10 Use Case Utama
 
-| Kategori | Fitur | Deskripsi |
+| # | Use Case | Deskripsi |
 |---|---|---|
-| **Inti** | Generasi Gherkin dengan AI | Buat skenario BDD dari deskripsi kebutuhan (format Connextra) |
-| **Inti** | Evaluasi Kualitas Otomatis | Skor kemiripan semantik terhadap referensi via Sentence-BERT |
-| **Inti** | Integrasi JIRA | Ekspor skenario sebagai user story ke project/epic JIRA |
-| **Inti** | Manajemen Template | Buat & kelola template skenario yang dapat dipakai ulang |
-| **Inti** | Reference Library | Contoh skenario referensi untuk *few-shot prompting* |
-| **UX** | Interface Chat Interaktif | Pendekatan conversational, mendukung edit iteratif |
-| **UX** | Dashboard Analytics | Tren kualitas skenario & performa tim |
-| **UX** | Multi-project Support | Kelola beberapa project/epic JIRA sekaligus |
+| 1️⃣ | **Generate Skenario dari User Story** | Input user story format Connextra, dapatkan skenario Gherkin lengkap dengan Given-When-Then |
+| 2️⃣ | **Edit & Refine Iteratif** | Perbaiki skenario melalui chat interaktif sampai sesuai kebutuhan |
+| 3️⃣ | **Evaluasi Kualitas Otomatis** | Cek skor kemiripan semantik skenario terhadap best practice dengan Sentence-BERT |
+| 4️⃣ | **Ekspor ke JIRA** | Langsung push skenario sebagai user story ke project & epic JIRA pilihan Anda |
+| 5️⃣ | **Buat Template Skenario** | Simpan pola skenario yang sering dipakai untuk dipanggil ulang |
+| 6️⃣ | **Gunakan Reference Library** | Tambahkan contoh skenario terbaik untuk meningkatkan akurasi AI (few-shot learning) |
+| 7️⃣ | **Kelola Multi-Project JIRA** | Switch antar project/epic JIRA tanpa perlu login ulang |
+| 8️⃣ | **Lihat History Skenario** | Akses semua skenario yang pernah di-generate, edit, atau ekspor |
+| 9️⃣ | **Monitor Dashboard Analytics** | Tracking tren kualitas skenario dan performa tim dari waktu ke waktu |
+| 🔟 | **Development Task Breakdown** | Setiap skenario dilengkapi rincian task development yang actionable |
 
 ## 🧭 Cara Kerja
 
