@@ -147,7 +147,7 @@ Deploy ke VPS atau cloud provider dengan Docker.
 - ✅ **Custom configuration**
 - ✅ **Scalable infrastructure**
 
-📖 **[Panduan Deploy dengan Docker](./README-DOCKER.md)**
+📖 **Panduan Deploy dengan Docker** - Gunakan `docker-compose` untuk deployment (lihat bagian SSL Setup di bawah)
 
 ### Option 3: Local Development
 Jalankan di local machine untuk development.
@@ -242,7 +242,7 @@ npm run dev
 ### 2. Setup JIRA
 - Konfigurasi koneksi JIRA menggunakan API token
 - **Manual Setup**: Gunakan API token untuk autentikasi yang aman
-- Lihat [Dokumentasi Integrasi JIRA](./docs/README.md) untuk panduan detail
+- Ikuti langkah-langkah di bagian "JIRA Integration" di bawah
 
 ### 3. Generate Skenario
 - Gunakan interface chat untuk mendeskripsikan kebutuhan
@@ -329,6 +329,95 @@ python test_calculators.py
 python test_meteor_properties.py
 python test_sentence_bert_properties.py
 ```
+
+## 🐍 Python ML Services
+
+### Overview
+Python services menyediakan dua metode evaluasi similarity:
+1. **METEOR Calculator** - METEOR score dengan auto-translate
+2. **Sentence-BERT Calculator** - Semantic similarity dengan embeddings
+
+### Setup Python Environment
+```bash
+cd aplikasi-server/src/python
+pip install -r requirements.txt
+python -c "import nltk; nltk.download('punkt'); nltk.download('wordnet'); nltk.download('omw-1.4')"
+```
+
+### Usage Examples
+```bash
+# METEOR (automatic translation)
+python meteor_calculator.py "Given I am a user" "Ketika saya pengguna"
+
+# Sentence-BERT
+python sentence_bert_calculator.py "text 1" "text 2"
+```
+
+### Dependencies
+- **nltk** - Natural Language Toolkit
+- **sentence-transformers** - Sentence-BERT model
+- **deep-translator** - Google Translate API
+- **langdetect** - Language detection
+- **torch** - PyTorch backend
+
+## 🔒 SSL Certificate Setup
+
+### Option 1: Let's Encrypt (Production)
+```bash
+# Install certbot
+sudo apt-get update
+sudo apt-get install certbot
+
+# Generate certificates
+sudo certbot certonly --standalone -d yourdomain.com
+
+# Copy to nginx/ssl/
+sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ./nginx/ssl/certificate.crt
+sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem ./nginx/ssl/private.key
+```
+
+### Option 2: Self-Signed (Development)
+```bash
+cd nginx/ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ./private.key \
+  -out ./certificate.crt \
+  -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+```
+
+**Security Notes:**
+- Jangan commit private key ke git
+- Set permissions: `chmod 600 private.key`
+- Renew Let's Encrypt certificates tiap 90 hari
+
+### Enable HTTPS
+1. Place certificates di `nginx/ssl/`
+2. Edit `nginx/default.conf` - uncomment HTTPS block
+3. Restart: `docker-compose restart nginx`
+
+## 💾 Database Setup
+
+### Supabase Setup (Production)
+1. Buat project di [Supabase](https://supabase.com)
+2. Copy connection string dan API keys
+3. Set environment variables di `.env`
+4. Tables akan dibuat otomatis saat aplikasi start
+
+### Database Migrations
+```bash
+# Migrations ada di aplikasi-server/migrations/
+# Jalankan manual di Supabase SQL Editor jika diperlukan
+```
+
+### Migration 002: Separate Test Tables
+Migrasi ini memisahkan tabel `test_results` generic menjadi:
+- `meteor_test_results` - Hasil evaluasi METEOR
+- `sentence_bert_test_results` - Hasil evaluasi Sentence-BERT
+
+Benefits:
+- Query lebih cepat dengan direct column access
+- Schema lebih jelas dengan column names yang descriptive
+- Type safety dengan proper column types
 
 ## 📁 Struktur Project
 
@@ -473,9 +562,9 @@ Untuk dokumentasi API lengkap, lihat endpoint aplikasi atau hubungi tim developm
 ## 📚 Dokumentasi
 
 - **[Design System](./aplikasi-klien/SPECWEAVE_DESIGN_SYSTEM.md)** - Panduan design system SpecWeave
-- **[Integrasi JIRA](./docs/README.md)** - Dokumentasi integrasi JIRA
-- **[Development Docs](./pengembangan/README.md)** - Dokumentasi development dan arsitektur
-- **[Python Evaluation](./aplikasi-server/src/python/README.md)** - Dokumentasi sistem evaluasi Python
+- **Python Evaluation** - Lihat bagian "Python ML Services" di bawah untuk dokumentasi METEOR & Sentence-BERT
+- **SSL Setup** - Lihat bagian "SSL Certificate Setup" di bawah untuk konfigurasi HTTPS
+- **Database Migrations** - Lihat bagian "Database Setup" di bawah untuk informasi migrations
 
 ## 📄 Lisensi
 
@@ -524,4 +613,4 @@ Project ini dilisensikan di bawah MIT License - lihat file [LICENSE](LICENSE) un
 
 ---
 
-Untuk informasi lebih lanjut, kunjungi [dokumentasi](./pengembangan/README.md) atau hubungi tim development.
+Untuk informasi lebih lanjut, buka issue di GitHub atau hubungi tim development.
