@@ -15,20 +15,20 @@
 
 SpecWeave mengubah kebutuhan dalam bahasa natural menjadi skenario **Behavior-Driven Development (BDD)** berformat Gherkin yang terstruktur, lengkap dengan rincian *development task*, evaluasi kualitas otomatis, dan ekspor langsung ke JIRA sebagai backlog.
 
-## 🚀 10 Use Case Utama
+## 🚀 10 Fitur Utama
 
-| # | Use Case | Deskripsi |
+| # | Fitur | Deskripsi |
 |---|---|---|
-| 1️⃣ | **Generate Skenario dari User Story** | Input user story format Connextra, dapatkan skenario Gherkin lengkap dengan Given-When-Then |
-| 2️⃣ | **Edit & Refine Iteratif** | Perbaiki skenario melalui chat interaktif sampai sesuai kebutuhan |
-| 3️⃣ | **Evaluasi Kualitas Otomatis** | Cek skor kemiripan semantik skenario terhadap best practice dengan Sentence-BERT |
-| 4️⃣ | **Ekspor ke JIRA** | Langsung push skenario sebagai user story ke project & epic JIRA pilihan Anda |
-| 5️⃣ | **Buat Template Skenario** | Simpan pola skenario yang sering dipakai untuk dipanggil ulang |
-| 6️⃣ | **Gunakan Reference Library** | Tambahkan contoh skenario terbaik untuk meningkatkan akurasi AI (few-shot learning) |
-| 7️⃣ | **Kelola Multi-Project JIRA** | Switch antar project/epic JIRA tanpa perlu login ulang |
-| 8️⃣ | **Lihat History Skenario** | Akses semua skenario yang pernah di-generate, edit, atau ekspor |
-| 9️⃣ | **Monitor Dashboard Analytics** | Tracking tren kualitas skenario dan performa tim dari waktu ke waktu |
-| 🔟 | **Development Task Breakdown** | Setiap skenario dilengkapi rincian task development yang actionable |
+| 1️⃣ | **Login & Signup** | Autentikasi user dengan Supabase untuk akses ke workspace pribadi |
+| 2️⃣ | **Mengelola Template User Story** | Buat, edit, dan kelola template skenario untuk konsistensi dan efisiensi |
+| 3️⃣ | **Mengelola Reference Library** | Simpan contoh skenario terbaik untuk meningkatkan akurasi AI (few-shot learning) |
+| 4️⃣ | **Mengintegrasikan JIRA** | Connect ke JIRA instance dengan kredensial, kelola project & epic |
+| 5️⃣ | **Mengirim Input User Story** | Input user story format Connextra untuk di-generate menjadi skenario Gherkin |
+| 6️⃣ | **Mengedit Input Prompt** | Ubah dan refine input melalui interface chat yang interaktif |
+| 7️⃣ | **Mengekspor ke JIRA** | Push skenario yang sudah di-generate langsung ke JIRA sebagai user story |
+| 8️⃣ | **Mengevaluasi Skenario** | Cek kualitas skenario dengan skor kemiripan semantik via Sentence-BERT |
+| 9️⃣ | **Tindak Lanjut Chat** | Kelola riwayat chat, hapus chat, atau ubah nama chat untuk organisasi lebih baik |
+| 🔟 | **Mengelola Profile** | Update informasi profile dan logout dari sistem |
 
 ## 🧭 Cara Kerja
 
